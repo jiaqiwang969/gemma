@@ -16,7 +16,7 @@ import PIL.Image
 MODEL_NAME = "google/gemma-3n-E2B-it"  # start smaller; swap to E4B later
 DATA_PATH  = "train.jsonl"
 OUTPUT_DIR = "outputs/lora"
-MPS_GB     = "10GiB"  # adjust to your Mac
+MPS_GB     = "64GiB"  # M4 with 128GB unified memory
 # ---------------
 
 print("[0] Starting LoRA fine-tuning script")
@@ -35,18 +35,18 @@ print(f"    ✓ Tokenizer loaded with vocab size: {len(tok)}")
 
 # Load base model with auto offload (same pattern you used)
 print("[3] Loading base model...")
-max_memory = {"mps": MPS_GB, "cpu": "48GiB"}
+max_memory = {"mps": MPS_GB, "cpu": "64GiB"}
 print(f"    Memory config: {max_memory}")
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    device_map="cpu",  
+    device_map="auto",  # Use MPS when possible
     max_memory=max_memory,
     low_cpu_mem_usage=True,
     offload_folder="./offload",
     offload_state_dict=True,
     trust_remote_code=True,
-    dtype=torch.float32,
+    torch_dtype=torch.float32,
 )
 print(f"    ✓ Model loaded successfully")
 print(f"    Device map: {getattr(model, 'hf_device_map', 'Not available')}")
@@ -72,11 +72,11 @@ simplestTargetModules = [
     "q_proj", "v_proj",  # Only attention, skip MLP
 ]
 lora_cfg = LoraConfig(
-    r=8, # ideal would be 16
-    lora_alpha=16, # ideal would be 32
-    lora_dropout=0.1, # ideal would be 0.05
+    r=16,  # Higher rank for better quality (128GB can handle it)
+    lora_alpha=32,  # Standard 2x of r
+    lora_dropout=0.05,  # Lower dropout for stability
     bias="none",
-    target_modules=simplestTargetModules
+    target_modules=normalTargetModules  # Full modules for better results
 )
 print(f"    ✓ LoRA config created: r={lora_cfg.r}, alpha={lora_cfg.lora_alpha}")
 print(f"    Target modules: {lora_cfg.target_modules}")
@@ -128,21 +128,22 @@ except Exception as e:
 print("[10] Setting up training arguments...")
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
-    per_device_train_batch_size=1,     # tiny batch on MPS
-    gradient_accumulation_steps=4,     # ideal would be 8, but 4 safer for MPS
-    learning_rate=5e-4,            # ideal would be 2e-4, but 5e-4 safer for MPS
-    num_train_epochs=1,
+    per_device_train_batch_size=4,     # Larger batch with 128GB memory
+    gradient_accumulation_steps=8,     # Effective batch size = 32
+    learning_rate=2e-4,                # Standard learning rate
+    num_train_epochs=3,                # More epochs for better learning
     lr_scheduler_type="cosine",
     warmup_ratio=0.03,
-    logging_steps=1, # frequent logging
-    save_steps=200,
-    bf16=False, 
+    logging_steps=1,
+    save_steps=100,
+    bf16=False,
     fp16=False,              # Disable fp16 for MPS compatibility
     optim="adamw_torch",
     report_to="none",
     remove_unused_columns=False,
-    dataloader_num_workers=0,          # Single-threaded
+    dataloader_num_workers=0,          # Single-threaded for MPS
     dataloader_pin_memory=False,       # Disable for MPS
+    max_grad_norm=1.0,                 # Gradient clipping for stability
 )
 print(f"    ✓ Training arguments configured")
 print(f"    Batch size: {training_args.per_device_train_batch_size}")

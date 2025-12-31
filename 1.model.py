@@ -9,8 +9,8 @@ model_name = "google/gemma-3n-E2B-it"       # change to E2B-it if you prefer
 
 # Cap per-device memory and allow offload (key to avoiding the 10+ GiB warm-up)
 max_memory = {
-    "mps": "8GiB",   # adjust: 8-12GiB depending on your Mac
-    "cpu": "48GiB",   # plenty of CPU RAM for offload buffers
+    "mps": "64GiB",   # M4 with 128GB unified memory
+    "cpu": "64GiB",
 }
 
 print("[1] Loading model …")
@@ -21,9 +21,9 @@ model = AutoModelForCausalLM.from_pretrained(
     low_cpu_mem_usage=True,        # streaming load, less peak RAM
     offload_folder="./offload",    # where to place offloaded weights
     offload_state_dict=True,
-    dtype=torch.float16,
+    torch_dtype=torch.float16,
     trust_remote_code=True,
-    local_files_only=True, 
+    local_files_only=False,
 )
 print(f"[1] Model loaded in {time.perf_counter()-t0:.1f}s")
 # Check placement of layers

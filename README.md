@@ -2,13 +2,13 @@
 
 A working solution for fine-tuning Google's Gemma 3n E2B-IT model on macOS using LoRA (Low-Rank Adaptation) with MPS acceleration.
 
-## 🍎 macOS Compatibility
+## macOS Compatibility
 
-- **Tested on**: M3 MacBook Air (should work on M1/M2/M3)
-- **Memory management**: Handles unified memory constraints
+- **Tested on**: M3/M4 MacBook (optimized for M4 Max with 128GB unified memory)
+- **Memory management**: Handles unified memory with configurable MPS allocation
 - **MPS backend**: Optimized for Metal Performance Shaders
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Setup Environment
 
@@ -50,49 +50,300 @@ python3.11 2.finetune_lora.py
 python3.11 3.test_finetuned_model.py
 ```
 
-## 📁 Files Overview
+## Examples
 
-- `1.model.py` - Base model inference (test original model)
-- `2.finetune_lora.py` - LoRA fine-tuning script
-- `3.test_finetuned_model.py` - Test fine-tuned model
-- `train.jsonl` - Training data in chat format
+All examples are in the `examples/` folder. Each can be run with a simple bash command:
 
-## ⚙️ Key Features
+```bash
+cd examples
 
-- **Memory Efficient**: Uses CPU offloading for large models
-- **MPS Optimized**: Handles macOS Metal Performance Shaders quirks
+# 多模态推理
+./run_1_text.sh      # 文本推理
+./run_2_vision.sh    # 图像理解
+./run_3_audio.sh     # 音频转录
+
+# 微调流程
+./run_4_finetune.sh        # LoRA 微调
+./run_5_test_finetuned.sh  # 测试微调模型
+./run_6_merge.sh           # 合并 LoRA 权重
+./run_7_gguf.sh "问题"     # llama.cpp 推理
+
+# 交互式菜单
+./run_all.sh
+```
+
+| 脚本 | 说明 |
+|------|------|
+| `run_1_text.sh` | 基础文本生成 |
+| `run_2_vision.sh` | 图像描述 (下载蜜蜂图片测试) |
+| `run_3_audio.sh` | 音频转录 (下载 MLK 演讲测试) |
+| `run_4_finetune.sh` | LoRA 微调 (使用 train.jsonl) |
+| `run_5_test_finetuned.sh` | 测试微调效果 (BANANA 测试) |
+| `run_6_merge.sh` | 合并 LoRA 到基础模型 |
+| `run_7_gguf.sh` | 使用 llama.cpp 推理 GGUF 模型 |
+| `run_all.sh` | 交互式菜单，选择运行哪个示例 |
+
+## Files Overview
+
+| File | Description |
+|------|-------------|
+| `examples/` | 示例脚本目录 |
+| `train.jsonl` | 训练数据 (chat format) |
+| `outputs/lora/` | LoRA 适配器输出 |
+| `outputs/merged_model/` | 合并后的模型 |
+| `outputs/*.gguf` | GGUF 量化模型 |
+| `llama.cpp/` | llama.cpp 子模块 |
+
+## Multimodal Capabilities
+
+Gemma 3n is a multimodal model supporting text, image, and audio inputs.
+
+### Image Understanding (5.test_vision.py)
+
+Test the model's ability to describe images:
+
+```bash
+python3.11 5.test_vision.py
+```
+
+**Example code:**
+
+```python
+from transformers import AutoProcessor, Gemma3nForConditionalGeneration
+from PIL import Image
+import requests
+
+model_name = "google/gemma-3n-E2B-it"
+processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+model = Gemma3nForConditionalGeneration.from_pretrained(
+    model_name,
+    device_map="auto",
+    max_memory={"mps": "64GiB", "cpu": "64GiB"},
+    torch_dtype=torch.bfloat16,
+    trust_remote_code=True,
+)
+
+# Load image
+url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
+image = Image.open(requests.get(url, stream=True).raw)
+
+# Build multimodal input
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "image", "image": image},
+            {"type": "text", "text": "Describe this image in detail."}
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    add_generation_prompt=True,
+    tokenize=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+
+# Move to device
+input_ids = inputs["input_ids"].to(model.device)
+attention_mask = inputs["attention_mask"].to(model.device)
+pixel_values = inputs["pixel_values"].to(model.device, dtype=model.dtype)
+
+# Generate
+outputs = model.generate(
+    input_ids=input_ids,
+    attention_mask=attention_mask,
+    pixel_values=pixel_values,
+    max_new_tokens=256,
+    do_sample=False,
+)
+
+response = processor.tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
+print(response)
+```
+
+**Example output:**
+
+```
+Captured in a close-up shot, a vibrant pink cosmos flower takes center stage,
+its delicate petals radiating outwards in a soft, slightly ruffled manner.
+The flower is in full bloom, showcasing a bright yellow center surrounded by
+the pink petals. A small, fuzzy bumblebee is diligently perched on the flower's
+center, its body a mix of black and yellow stripes...
+```
+
+### Audio Understanding (6.test_audio.py)
+
+Test the model's ability to transcribe and understand audio:
+
+```bash
+pip install librosa  # Required for audio processing
+python3.11 6.test_audio.py
+```
+
+**Example code:**
+
+```python
+from transformers import AutoProcessor, Gemma3nForConditionalGeneration
+import librosa
+import requests
+
+model_name = "google/gemma-3n-E2B-it"
+processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+model = Gemma3nForConditionalGeneration.from_pretrained(
+    model_name,
+    device_map="auto",
+    max_memory={"mps": "64GiB", "cpu": "64GiB"},
+    torch_dtype=torch.bfloat16,
+    trust_remote_code=True,
+)
+
+# Load audio (16kHz required)
+audio_url = "https://huggingface.co/datasets/Narsil/asr_dummy/resolve/main/mlk.flac"
+audio_path = "/tmp/test_audio.flac"
+response = requests.get(audio_url)
+with open(audio_path, "wb") as f:
+    f.write(response.content)
+audio_array, sampling_rate = librosa.load(audio_path, sr=16000)
+
+# Build multimodal input
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {"type": "audio", "audio": audio_array, "sample_rate": sampling_rate},
+            {"type": "text", "text": "Please transcribe this audio."}
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    add_generation_prompt=True,
+    tokenize=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+
+# Move to device
+input_ids = inputs["input_ids"].to(model.device)
+attention_mask = inputs["attention_mask"].to(model.device)
+input_features = inputs["input_features"].to(model.device, dtype=model.dtype)
+input_features_mask = inputs["input_features_mask"].to(model.device)
+
+# Generate
+outputs = model.generate(
+    input_ids=input_ids,
+    attention_mask=attention_mask,
+    input_features=input_features,
+    input_features_mask=input_features_mask,
+    max_new_tokens=256,
+    do_sample=False,
+)
+
+response = processor.tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
+print(response)
+```
+
+**Example output (MLK speech):**
+
+```
+I have a dream that one day this nation will rise up and live up to the true
+meaning of its creed.
+```
+
+## GGUF Conversion & llama.cpp
+
+Convert the fine-tuned model to GGUF format for faster inference:
+
+### 1. Convert to GGUF (FP16)
+
+```bash
+python llama.cpp/convert_hf_to_gguf.py outputs/merged_model \
+  --outfile outputs/gemma-3n-finetuned-fp16.gguf \
+  --outtype f16
+```
+
+### 2. Quantize to Q4_K_M
+
+```bash
+./llama.cpp/build/bin/llama-quantize \
+  outputs/gemma-3n-finetuned-fp16.gguf \
+  outputs/gemma-3n-finetuned-Q4_K_M.gguf \
+  Q4_K_M
+```
+
+### 3. Run with llama.cpp
+
+```bash
+./run_gguf.sh "What is the capital of France?"
+```
+
+Or directly:
+
+```bash
+./llama.cpp/build/bin/llama-simple \
+  -m outputs/gemma-3n-finetuned-Q4_K_M.gguf \
+  -ngl 99 \
+  -n 100 \
+  -p "Your question here"
+```
+
+### Performance Comparison
+
+| Method | Speed |
+|--------|-------|
+| PyTorch (MPS) | ~15.7 tokens/s |
+| llama.cpp (Metal) | ~93.9 tokens/s (6x faster) |
+
+## Key Features
+
+- **Memory Efficient**: Configurable MPS/CPU memory allocation
+- **MPS Optimized**: Handles macOS Metal Performance Shaders
 - **LoRA Training**: Parameter-efficient fine-tuning (only ~8MB adapter)
 - **Chat Format**: Supports conversational training data
+- **Multimodal**: Image and audio understanding capabilities
+- **GGUF Export**: Convert to quantized format for faster inference
 
-## 🔧 Configuration
+## Configuration
 
 Adjust these settings in `2.finetune_lora.py`:
 
-- `MPS_GB = "8GiB"` - GPU memory limit (adjust for your Mac)
-- `r=8, lora_alpha=16` - LoRA parameters (higher = more capacity)
-- `num_train_epochs=1` - Training epochs
+```python
+MPS_GB = "64GiB"      # GPU memory limit (adjust for your Mac)
+r=16, lora_alpha=32   # LoRA parameters (higher = more capacity)
+num_train_epochs=3    # Training epochs
+per_device_train_batch_size=4
+gradient_accumulation_steps=8
+```
 
-## 📊 Expected Results
+## Expected Results (M4 Max 128GB)
 
-- **Training time**: ~8-10 minutes per epoch on M3 MacBook Air
+- **Model loading**: ~3.7 seconds
+- **Training time**: ~37 seconds for 3 epochs
+- **Inference**: ~15.7 tokens/s (PyTorch) / ~93.9 tokens/s (llama.cpp)
 - **Model size**: Base model (~5GB) + LoRA adapter (~8MB)
-- **Memory usage**: ~10-12GB total (6GB MPS + 4GB CPU)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-**Model loading slowly?** Reduce `MPS_GB` to free up memory.
+**Model loading slowly?** Check device_map and max_memory settings.
 
 **Training stuck?** Check `train.jsonl` format and reduce batch size.
 
-**Out of memory?** Set `device_map="cpu"` in fine-tuning script.
+**Out of memory?** Reduce `MPS_GB` or set `device_map="cpu"`.
 
-## 🎯 Use Cases
+**Vision test empty output?** Use `Gemma3nForConditionalGeneration` with `bfloat16`.
 
-Perfect for:
+**Audio test fails?** Ensure `input_features_mask` is passed to generate().
+
+## Use Cases
 
 - Custom instruction following
 - Domain-specific responses
 - Persona training
+- Image/audio understanding tasks
 - Small-scale fine-tuning experiments
 
-Built for macOS developers who want to fine-tune LLMs locally without cloud dependencies.
+Built for macOS developers who want to fine-tune multimodal LLMs locally without cloud dependencies.
