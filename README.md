@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 ### 2. Prepare Training Data
 
-Create `train.jsonl` with your examples:
+Create `assets/data/train.jsonl` with your examples:
 
 ```json
 {
@@ -41,32 +41,32 @@ Create `train.jsonl` with your examples:
 ### 3. Run Fine-tuning
 
 ```bash
-python3.11 2.finetune_lora.py
+python3.11 contexts/training/scripts/finetune_lora.py
 ```
 
 ### 4. Test Your Model
 
 ```bash
-python3.11 3.test_finetuned_model.py
+python3.11 contexts/training/scripts/test_finetuned_model.py
 ```
 
 ## Examples
 
-All examples are in the `examples/` folder. Each can be run with a simple bash command:
+All examples are in the `apps/examples/` folder. Each can be run with a simple bash command:
 
 ```bash
-cd examples
+cd apps/examples
 
 # 多模态推理
-./run_1_text.sh      # 文本推理
-./run_2_vision.sh    # 图像理解
-./run_3_audio.sh     # 音频转录
+./run_text.sh      # 文本推理
+./run_vision.sh    # 图像理解
+./run_audio.sh     # 音频转录
 
 # 微调流程
-./run_4_finetune.sh        # LoRA 微调
-./run_5_test_finetuned.sh  # 测试微调模型
-./run_6_merge.sh           # 合并 LoRA 权重
-./run_7_gguf.sh "问题"     # llama.cpp 推理
+./run_finetune.sh        # LoRA 微调
+./run_test_finetuned.sh  # 测试微调模型
+./run_merge.sh           # 合并 LoRA 权重
+./run_gguf.sh "问题"     # llama.cpp 推理
 
 # 交互式菜单
 ./run_all.sh
@@ -74,36 +74,43 @@ cd examples
 
 | 脚本 | 说明 |
 |------|------|
-| `run_1_text.sh` | 基础文本生成 |
-| `run_2_vision.sh` | 图像描述 (下载蜜蜂图片测试) |
-| `run_3_audio.sh` | 音频转录 (下载 MLK 演讲测试) |
-| `run_4_finetune.sh` | LoRA 微调 (使用 train.jsonl) |
-| `run_5_test_finetuned.sh` | 测试微调效果 (BANANA 测试) |
-| `run_6_merge.sh` | 合并 LoRA 到基础模型 |
-| `run_7_gguf.sh` | 使用 llama.cpp 推理 GGUF 模型 |
+| `run_text.sh` | 基础文本生成 |
+| `run_vision.sh` | 图像描述 (下载蜜蜂图片测试) |
+| `run_audio.sh` | 音频转录 (下载 MLK 演讲测试) |
+| `run_finetune.sh` | LoRA 微调 (使用 assets/data/train.jsonl) |
+| `run_test_finetuned.sh` | 测试微调效果 (BANANA 测试) |
+| `run_merge.sh` | 合并 LoRA 到基础模型 |
+| `run_gguf.sh` | 使用 llama.cpp 推理 GGUF 模型 |
 | `run_all.sh` | 交互式菜单，选择运行哪个示例 |
 
 ## Files Overview
 
 | File | Description |
 |------|-------------|
-| `examples/` | 示例脚本目录 |
-| `train.jsonl` | 训练数据 (chat format) |
-| `outputs/lora/` | LoRA 适配器输出 |
-| `outputs/merged_model/` | 合并后的模型 |
-| `outputs/*.gguf` | GGUF 量化模型 |
-| `llama.cpp/` | llama.cpp 子模块 |
+| `apps/examples/` | 示例脚本目录 |
+| `assets/data/train.jsonl` | 训练数据 (chat format) |
+| `artifacts/lora/` | LoRA 适配器输出 |
+| `artifacts/merged_model/` | 合并后的模型 |
+| `artifacts/gguf/` | GGUF 模型与 mmproj |
+| `infra/llama.cpp/` | llama.cpp 子模块 |
+
+All entrypoints live under `apps/` or `scripts/`, and data/artifacts live under `assets/` and `artifacts/`.
+
+## Architecture
+
+See `docs/architecture/README.md` for DDD context map and directory layout.
+See `docs/architecture/naming-conventions.md` for file and artifact naming rules.
 
 ## Multimodal Capabilities
 
 Gemma 3n is a multimodal model supporting text, image, and audio inputs.
 
-### Image Understanding (5.test_vision.py)
+### Image Understanding (experiments/vision/test_vision.py)
 
 Test the model's ability to describe images:
 
 ```bash
-python3.11 5.test_vision.py
+python3.11 experiments/vision/test_vision.py
 ```
 
 **Example code:**
@@ -174,13 +181,13 @@ the pink petals. A small, fuzzy bumblebee is diligently perched on the flower's
 center, its body a mix of black and yellow stripes...
 ```
 
-### Audio Understanding (6.test_audio.py)
+### Audio Understanding (experiments/audio/test_audio.py)
 
 Test the model's ability to transcribe and understand audio:
 
 ```bash
 pip install librosa  # Required for audio processing
-python3.11 6.test_audio.py
+python3.11 experiments/audio/test_audio.py
 ```
 
 **Example code:**
@@ -261,31 +268,31 @@ Convert the fine-tuned model to GGUF format for faster inference:
 ### 1. Convert to GGUF (FP16)
 
 ```bash
-python llama.cpp/convert_hf_to_gguf.py outputs/merged_model \
-  --outfile outputs/gemma-3n-finetuned-fp16.gguf \
+python infra/llama.cpp/convert_hf_to_gguf.py artifacts/merged_model \
+  --outfile artifacts/gguf/gemma-3n-finetuned-fp16.gguf \
   --outtype f16
 ```
 
 ### 2. Quantize to Q4_K_M
 
 ```bash
-./llama.cpp/build/bin/llama-quantize \
-  outputs/gemma-3n-finetuned-fp16.gguf \
-  outputs/gemma-3n-finetuned-Q4_K_M.gguf \
+./infra/llama.cpp/build/bin/llama-quantize \
+  artifacts/gguf/gemma-3n-finetuned-fp16.gguf \
+  artifacts/gguf/gemma-3n-finetuned-Q4_K_M.gguf \
   Q4_K_M
 ```
 
 ### 3. Run with llama.cpp
 
 ```bash
-./run_gguf.sh "What is the capital of France?"
+./scripts/bootstrap/run_gguf.sh "What is the capital of France?"
 ```
 
 Or directly:
 
 ```bash
-./llama.cpp/build/bin/llama-simple \
-  -m outputs/gemma-3n-finetuned-Q4_K_M.gguf \
+./infra/llama.cpp/build/bin/llama-simple \
+  -m artifacts/gguf/gemma-3n-finetuned-Q4_K_M.gguf \
   -ngl 99 \
   -n 100 \
   -p "Your question here"
@@ -309,7 +316,7 @@ Or directly:
 
 ## Configuration
 
-Adjust these settings in `2.finetune_lora.py`:
+Adjust these settings in `contexts/training/scripts/finetune_lora.py`:
 
 ```python
 MPS_GB = "64GiB"      # GPU memory limit (adjust for your Mac)
@@ -330,7 +337,7 @@ gradient_accumulation_steps=8
 
 **Model loading slowly?** Check device_map and max_memory settings.
 
-**Training stuck?** Check `train.jsonl` format and reduce batch size.
+**Training stuck?** Check `assets/data/train.jsonl` format and reduce batch size.
 
 **Out of memory?** Reduce `MPS_GB` or set `device_map="cpu"`.
 

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>惊讶度驱动帧选择 - 可视化验证</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .video-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .video-section h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 12px;
+            background: #000;
+        }
+
+        .chart-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .chart-section h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #7b2ff7;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .current-time {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #00d4ff;
+        }
+
+        .current-surprise {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 5px;
+        }
+
+        .frames-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+
+        .frames-section h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .frames-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        .frame-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .frame-card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+        }
+
+        .frame-card.active {
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0,212,255,0.3);
+        }
+
+        .frame-card.selected {
+            border-color: #7b2ff7;
+            background: rgba(123, 47, 247, 0.2);
+        }
+
+        .frame-card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .frame-card .time {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .frame-card .surprise {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .frame-card .surprise.high {
+            color: #ff4757;
+        }
+
+        .frame-card .surprise.medium {
+            color: #ffa502;
+        }
+
+        .frame-card .surprise.low {
+            color: #2ed573;
+        }
+
+        .frame-card .label {
+            font-size: 11px;
+            margin-top: 5px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .frame-card .label.key {
+            background: rgba(123, 47, 247, 0.3);
+            color: #b794f6;
+        }
+
+        .frame-card .label.event {
+            background: rgba(255, 71, 87, 0.3);
+            color: #ff6b7a;
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .comparison-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .comparison-section h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #2ed573;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .comparison-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .comparison-card h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #888;
+        }
+
+        .comparison-card .result {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2ed573;
+        }
+
+        .comparison-card .detail {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.selected {
+            background: #7b2ff7;
+        }
+
+        .legend-dot.normal {
+            background: #444;
+        }
+
+        .insight-box {
+            background: linear-gradient(135deg, rgba(123, 47, 247, 0.2), rgba(0, 212, 255, 0.2));
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid rgba(123, 47, 247, 0.3);
+        }
+
+        .insight-box h3 {
+            font-size: 14px;
+            color: #b794f6;
+            margin-bottom: 10px;
+        }
+
+        .insight-box p {
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .insight-box .quote {
+            font-style: italic;
+            color: #00d4ff;
+            margin-top: 10px;
+            padding-left: 15px;
+            border-left: 3px solid #7b2ff7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>惊讶度驱动帧选择验证</h1>
+        <p class="subtitle">Cambrian-S 启发的 V-JEPA2 + Gemma 3n 协作机制</p>
+
+        <!-- 统计卡片 -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="value">0.7547</div>
+                <div class="label">最高惊讶度 (帧4)</div>
+            </div>
+            <div class="stat-card">
+                <div class="value">0.4887</div>
+                <div class="label">平均惊讶度</div>
+            </div>
+            <div class="stat-card">
+                <div class="value">2</div>
+                <div class="label">选中帧数</div>
+            </div>
+            <div class="stat-card">
+                <div class="value">60%</div>
+                <div class="label">效率提升</div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="video-section">
+                <h2>📹 原始视频</h2>
+                <video id="video" controls>
+                    <source src="../../data/test-video/识别笔记本电脑台数.mp4" type="video/mp4">
+                    您的浏览器不支持视频播放
+                </video>
+                <div class="current-time">当前时间: <span id="timeDisplay">0.00s</span></div>
+                <div class="current-surprise">惊讶度: <span id="surpriseDisplay">0.0000</span></div>
+            </div>
+
+            <div class="chart-section">
+                <h2>📈 惊讶度曲线</h2>
+                <div class="chart-container">
+                    <canvas id="surpriseChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot selected"></div>
+                        <span>选中帧 (帧1, 帧4)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot normal"></div>
+                        <span>未选中帧</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 关键帧展示 -->
+        <div class="frames-section">
+            <h2>🎞️ 关键帧与惊讶度分析</h2>
+            <div class="frames-grid">
+                <div class="frame-card selected" data-time="0" onclick="seekTo(0)">
+                    <img src="../../data/test-video/keyframes/frame_01_0.0s.jpg" alt="帧1">
+                    <div class="time">0.0s</div>
+                    <div class="surprise low">S = 0.0000</div>
+                    <div class="label key">首帧 (必选)</div>
+                </div>
+                <div class="frame-card" data-time="2" onclick="seekTo(2)">
+                    <img src="../../data/test-video/keyframes/frame_02_2.0s.jpg" alt="帧2">
+                    <div class="time">2.0s</div>
+                    <div class="surprise medium">S = 0.3741</div>
+                    <div class="label event">事件边界</div>
+                </div>
+                <div class="frame-card" data-time="4" onclick="seekTo(4)">
+                    <img src="../../data/test-video/keyframes/frame_03_4.0s.jpg" alt="帧3">
+                    <div class="time">4.0s</div>
+                    <div class="surprise high">S = 0.6247</div>
+                    <div class="label event">事件边界</div>
+                </div>
+                <div class="frame-card selected" data-time="6" onclick="seekTo(6)">
+                    <img src="../../data/test-video/keyframes/frame_04_6.0s.jpg" alt="帧4">
+                    <div class="time">6.0s</div>
+                    <div class="surprise high">S = 0.7547</div>
+                    <div class="label event">最高惊讶度!</div>
+                </div>
+                <div class="frame-card" data-time="8" onclick="seekTo(8)">
+                    <img src="../../data/test-video/keyframes/frame_05_8.0s.jpg" alt="帧5">
+                    <div class="time">8.0s</div>
+                    <div class="surprise high">S = 0.6899</div>
+                    <div class="label event">事件边界</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 对比结果 -->
+        <div class="comparison-section">
+            <h2>🎯 识别结果对比</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h3>方案 A: 全部 5 帧</h3>
+                    <div class="result">✓ 识别到 2 台笔记本</div>
+                    <div class="detail">
+                        • MacBook Pro (显示 Google 搜索)<br>
+                        • Dell 笔记本 (显示红色终端界面)
+                    </div>
+                </div>
+                <div class="comparison-card">
+                    <h3>方案 B: 惊讶度选择 2 帧</h3>
+                    <div class="result">✓ 识别到 2 台笔记本</div>
+                    <div class="detail">
+                        • MacBook Pro (显示 Google/地图)<br>
+                        • Dell 笔记本 (显示终端窗口)<br>
+                        <strong style="color: #7b2ff7;">节省 60% 输入，相同准确率!</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-box">
+                <h3>💡 Cambrian-S 核心洞察</h3>
+                <p>
+                    帧4 获得最高惊讶度 (0.7547)，正好对应 Dell 笔记本首次出现的时刻。
+                    这证明了"预测误差"能够有效捕捉视频中的关键变化点。
+                </p>
+                <p class="quote">
+                    "人类不会保留每一个视觉细节，而是学习生成过程，用预测误差来定义什么是重要的"
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 惊讶度数据
+        const surpriseData = {
+            times: [0, 2, 4, 6, 8],
+            scores: [0.0000, 0.3741, 0.6247, 0.7547, 0.6899],
+            selected: [true, false, false, true, false]
+        };
+
+        // 创建图表
+        const ctx = document.getElementById('surpriseChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: surpriseData.times.map(t => t + 's'),
+                datasets: [{
+                    label: '惊讶度',
+                    data: surpriseData.scores,
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: surpriseData.selected.map(s => s ? 12 : 6),
+                    pointBackgroundColor: surpriseData.selected.map(s => s ? '#7b2ff7' : '#00d4ff'),
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1,
+                        grid: {
+                            color: 'rgba(255,255,255,0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        },
+                        title: {
+                            display: true,
+                            text: '惊讶度',
+                            color: '#888'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255,255,255,0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        },
+                        title: {
+                            display: true,
+                            text: '时间',
+                            color: '#888'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    annotation: {
+                        annotations: {
+                            threshold: {
+                                type: 'line',
+                                yMin: 0.15,
+                                yMax: 0.15,
+                                borderColor: 'rgba(255, 71, 87, 0.5)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: {
+                                    display: true,
+                                    content: '事件阈值',
+                                    position: 'end'
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 视频时间更新
+        const video = document.getElementById('video');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const surpriseDisplay = document.getElementById('surpriseDisplay');
+        const frameCards = document.querySelectorAll('.frame-card');
+
+        video.addEventListener('timeupdate', function() {
+            const currentTime = video.currentTime;
+            timeDisplay.textContent = currentTime.toFixed(2) + 's';
+
+            // 插值计算当前惊讶度
+            let surprise = 0;
+            for (let i = 0; i < surpriseData.times.length - 1; i++) {
+                if (currentTime >= surpriseData.times[i] && currentTime <= surpriseData.times[i + 1]) {
+                    const t = (currentTime - surpriseData.times[i]) / (surpriseData.times[i + 1] - surpriseData.times[i]);
+                    surprise = surpriseData.scores[i] + t * (surpriseData.scores[i + 1] - surpriseData.scores[i]);
+                    break;
+                }
+            }
+            if (currentTime > surpriseData.times[surpriseData.times.length - 1]) {
+                surprise = surpriseData.scores[surpriseData.scores.length - 1];
+            }
+
+            surpriseDisplay.textContent = surprise.toFixed(4);
+
+            // 设置颜色
+            if (surprise > 0.5) {
+                surpriseDisplay.style.color = '#ff4757';
+            } else if (surprise > 0.2) {
+                surpriseDisplay.style.color = '#ffa502';
+            } else {
+                surpriseDisplay.style.color = '#2ed573';
+            }
+
+            // 高亮当前帧
+            frameCards.forEach(card => {
+                const cardTime = parseFloat(card.dataset.time);
+                if (Math.abs(currentTime - cardTime) < 1) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        });
+
+        // 点击帧卡片跳转
+        function seekTo(time) {
+            video.currentTime = time;
+            video.play();
+        }
+    </script>
+</body>
+</html>

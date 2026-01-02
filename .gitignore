@@ -81,17 +81,34 @@ tmp/
 
 # offloads
 lora_offload/*
-outputs/finalized_models/*
+artifacts/finalized_models/*
 offload_cache/*
 
-# Submodules
-llama.cpp/
-
-# Large model files (GGUF)
-outputs/*.gguf
+# Generated model artifacts
+artifacts/lora/
+artifacts/merged_model/
+artifacts/gguf/*.gguf
 
 # Rust build artifacts
 ai_glasses_rust/target/
+**/target/
 
 # Large video files
-data/videos/*.mp4
+assets/data/videos/*.mp4
+assets/data/test-video/*.mp4
+
+# llama.cpp infrastructure (keep local, don't push)
+infra/llama.cpp/
+
+# Large files (models, weights, etc.)
+*.gguf
+*.onnx
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.parquet
+*.arrow
+*.feather
