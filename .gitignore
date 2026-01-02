@@ -86,3 +86,12 @@ offload_cache/*
 
 # Submodules
 llama.cpp/
+
+# Large model files (GGUF)
+outputs/*.gguf
+
+# Rust build artifacts
+ai_glasses_rust/target/
+
+# Large video files
+data/videos/*.mp4
