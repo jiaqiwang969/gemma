@@ -13,6 +13,7 @@
 //! - 密钥派生: SHA-256 + HMAC-SHA256
 
 use pyo3::prelude::*;
+use pyo3::types::PyModule;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use chacha20poly1305::{
@@ -962,7 +963,7 @@ pub fn base64_decode(encoded: &str) -> PyResult<Vec<u8>> {
 // ========== Python 模块 ==========
 
 #[pymodule]
-fn lingkong_crypto(_py: Python, m: &PyModule) -> PyResult<()> {
+fn lingkong_crypto(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<UserKeys>()?;
     m.add_class::<KemEncapsulation>()?;
     m.add_class::<ChainKey>()?;

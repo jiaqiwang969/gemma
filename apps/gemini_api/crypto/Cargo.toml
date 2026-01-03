@@ -10,8 +10,8 @@ name = "lingkong_crypto"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# PyO3 for Python bindings
-pyo3 = { version = "0.20", features = ["extension-module"] }
+# PyO3 for Python bindings (abi3 for forward compatibility)
+pyo3 = { version = "0.23", features = ["extension-module", "abi3-py39"] }
 
 # Cryptographic primitives
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }

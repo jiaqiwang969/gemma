@@ -593,22 +593,36 @@ def start_llama_mmproj_server():
     return False
 
 
-def run_llama_mmproj(prompt, image_path=None, audio_path=None):
+def run_llama_mmproj(prompt, image_path=None, audio_path=None,
+                     messages_history=None, session_id=None, has_media=False):
     """
     使用 llama-server with mmproj 生成回复
     优先使用持久化服务 (16x 更快)，失败时回退到 CLI
+
+    Args:
+        prompt: 用户输入的文本
+        image_path: 图片路径
+        audio_path: 音频路径
+        messages_history: 历史消息列表 [{"role": "user/assistant", "text": "..."}]
+        session_id: 会话ID (用于 thought signature)
+        has_media: 当前消息是否包含媒体
     """
     global llama_mmproj_server_ready
 
+    # 构建包含上下文的完整 prompt
+    full_prompt = _build_mmproj_prompt(
+        prompt, messages_history, session_id, has_media
+    )
+
     # 音频暂不支持 server 模式，回退到 CLI
     if audio_path:
-        return run_llama_mmproj_cli(prompt, image_path, audio_path)
+        return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
 
     # 尝试使用 server 模式
     if not llama_mmproj_server_ready:
         if not start_llama_mmproj_server():
             print("[mmproj] Server 启动失败，回退到 CLI 模式")
-            return run_llama_mmproj_cli(prompt, image_path, audio_path)
+            return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
 
     start = time.time()
     try:
@@ -624,7 +638,7 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None):
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
             })
-        content.append({"type": "text", "text": prompt})
+        content.append({"type": "text", "text": full_prompt})
 
         resp = requests.post(
             f"http://127.0.0.1:{LLAMA_MMPROJ_SERVER_PORT}/v1/chat/completions",
@@ -642,7 +656,7 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None):
         if resp.status_code != 200:
             # 服务器可能出错，回退到 CLI
             llama_mmproj_server_ready = False
-            return run_llama_mmproj_cli(prompt, image_path, audio_path)
+            return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
 
         data = resp.json()
         response = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -665,7 +679,53 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None):
         # 服务器可能挂了，标记为不可用并回退到 CLI
         print(f"[mmproj] Server 请求失败: {e}，回退到 CLI 模式")
         llama_mmproj_server_ready = False
-        return run_llama_mmproj_cli(prompt, image_path, audio_path)
+        return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
+
+
+def _build_mmproj_prompt(prompt, messages_history=None, session_id=None, has_media=False):
+    """
+    构建包含历史上下文和媒体理解的完整 prompt
+
+    策略:
+    - 如果有新媒体: 不注入历史上下文，让模型专注于当前媒体
+    - 如果没有新媒体: 注入历史对话 + 媒体理解 (thought signature)
+    """
+    if has_media:
+        # 有新媒体时，直接返回原始 prompt
+        print(f"[mmproj] 有新媒体，跳过历史上下文注入")
+        return prompt
+
+    context_parts = []
+
+    # 1. 获取媒体理解上下文 (thought signature 压缩记忆)
+    if session_id:
+        media_context = get_session_media_context(session_id)
+        if media_context:
+            context_parts.append(f"[Previous Media Understanding]\n{media_context}")
+            print(f"[mmproj] 注入媒体理解上下文: {len(media_context)} 字符")
+
+    # 2. 获取历史对话上下文
+    if messages_history:
+        history_parts = []
+        for msg in messages_history[-MAX_HISTORY_TURNS * 2:]:
+            role = "User" if msg["role"] == "user" else "Assistant"
+            history_parts.append(f"{role}: {msg['text']}")
+        if history_parts:
+            history_context = "\n".join(history_parts)
+            context_parts.append(f"[Previous Conversation]\n{history_context}")
+            print(f"[mmproj] 注入历史对话: {len(history_parts)} 条消息")
+
+    # 3. 构建完整 prompt
+    if context_parts:
+        context_str = "\n\n".join(context_parts)
+        full_prompt = f"""{context_str}
+
+[Current Message]: {prompt}
+
+Please respond to the current message, taking into account the context above."""
+        return full_prompt
+    else:
+        return prompt
 
 
 def run_llama_mmproj_cli(prompt, image_path=None, audio_path=None):
@@ -1097,6 +1157,14 @@ Please respond to the current message, taking into account the context above."""
 def index():
     return send_from_directory("static", "index.html")
 
+@app.route("/chat")
+def chat_page():
+    return send_from_directory("static", "chat.html")
+
+@app.route("/docs")
+def docs_page():
+    return send_from_directory("static", "docs.html")
+
 @app.route("/api/status")
 def status():
     hw_stats = get_hardware_stats() if model_loaded else {}
@@ -1396,15 +1464,17 @@ def chat():
                 result = query_llama_server(text, history_context)
         else:
             # llama.cpp/mmproj 模式
-            # 直接使用用户文本，llama-mtmd-cli 会自动处理媒体嵌入
-            # 不需要添加 <__media__> 标记或 chat template
+            # 传入历史消息和 session_id，支持多轮对话和 thought signature
             mm_prompt = text or "Please describe what you see/hear."
             print(f"[DEBUG mmproj] backend={backend}, text={repr(text)}, image_path={image_path}, audio_path={audio_path}")
 
             result = run_llama_mmproj(
                 mm_prompt,
                 image_path=image_path,
-                audio_path=audio_path
+                audio_path=audio_path,
+                messages_history=session["messages"],
+                session_id=session_id,
+                has_media=has_media
             )
 
         if "error" not in result:

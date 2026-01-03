@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LingKong AI API 文档 - Gemma 3N 本地推理</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-tertiary: #18181b;
+            --bg-card: #1a1a1d;
+            --bg-code: #0d1117;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #6366f1;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --border-color: rgba(255,255,255,0.08);
+            --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Layout */
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--gradient-purple);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .logo-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .logo-badge {
+            font-size: 0.65rem;
+            background: var(--accent-green);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        .nav-section {
+            padding: 1rem 0;
+        }
+
+        .nav-title {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0.5rem 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.6rem 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-primary);
+            border-right: 2px solid var(--accent-primary);
+        }
+
+        .nav-item .method {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .method.get { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .method.post { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .method.delete { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .main-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .breadcrumb a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            color: var(--accent-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-purple);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Content Area */
+        .content {
+            padding: 2rem;
+            max-width: 1200px;
+        }
+
+        .api-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Endpoint Card */
+        .endpoint-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .endpoint-header {
+            padding: 1rem 1.5rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .endpoint-method {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .endpoint-method.post { background: var(--accent-blue); color: white; }
+        .endpoint-method.get { background: var(--accent-green); color: white; }
+
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .endpoint-body {
+            padding: 1.5rem;
+        }
+
+        .endpoint-desc {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        /* Parameters Table */
+        .params-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .params-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .params-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .params-table th {
+            text-align: left;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .params-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .params-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .param-name {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+        }
+
+        .param-type {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-orange);
+        }
+
+        .param-required {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+
+        .param-optional {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(113, 113, 122, 0.15);
+            color: var(--text-muted);
+        }
+
+        /* Code Blocks */
+        .code-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: -1px;
+        }
+
+        .code-tab {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .code-tab.active {
+            background: var(--bg-code);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 0 8px 8px 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .code-copy {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .code-copy:hover {
+            color: var(--text-primary);
+        }
+
+        .code-content {
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .code-content pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #e6edf3;
+        }
+
+        /* Syntax Highlighting */
+        .hljs-keyword { color: #ff7b72; }
+        .hljs-string { color: #a5d6ff; }
+        .hljs-number { color: #79c0ff; }
+        .hljs-property { color: #7ee787; }
+        .hljs-comment { color: #8b949e; }
+
+        /* Response Section */
+        .response-section {
+            margin-top: 1.5rem;
+        }
+
+        .response-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .status-200 { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .status-400 { background: rgba(245, 158, 11, 0.15); color: var(--accent-orange); }
+        .status-500 { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+
+        /* Info Boxes */
+        .info-box {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .info-box.tip {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .info-box.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .info-box.security {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .info-box .icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .info-box .content {
+            flex: 1;
+        }
+
+        .info-box .title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .info-box .text {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+
+        .feature-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card .title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card .desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Try It Section */
+        .try-section {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .try-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .try-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .try-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        .try-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .try-output {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        .try-output.success { border-color: var(--accent-green); }
+        .try-output.error { border-color: var(--accent-red); }
+
+        /* Encryption Section */
+        .encryption-flow {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .flow-step {
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .flow-step .icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-purple);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin: 0 auto 0.5rem;
+        }
+
+        .flow-step .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .flow-arrow {
+            color: var(--accent-primary);
+            font-size: 1.5rem;
+        }
+
+        /* Footer */
+        .docs-footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <div class="logo-icon">LK</div>
+                    <span class="logo-text">LingKong</span>
+                    <span class="logo-badge">v1.0</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">概述</div>
+                <a class="nav-item active" href="#introduction">简介</a>
+                <a class="nav-item" href="#quickstart">快速开始</a>
+                <a class="nav-item" href="#authentication">认证方式</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">核心 API</div>
+                <a class="nav-item" href="#generate-content">
+                    <span class="method post">POST</span>
+                    generateContent
+                </a>
+                <a class="nav-item" href="#list-models">
+                    <span class="method get">GET</span>
+                    listModels
+                </a>
+                <a class="nav-item" href="#health">
+                    <span class="method get">GET</span>
+                    health
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">高级功能</div>
+                <a class="nav-item" href="#thinking">思考模式</a>
+                <a class="nav-item" href="#tools">工具调用</a>
+                <a class="nav-item" href="#multimodal">多模态</a>
+                <a class="nav-item" href="#thought-signature">思维签名</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">加密通信</div>
+                <a class="nav-item" href="#e2e-overview">端到端加密</a>
+                <a class="nav-item" href="#key-exchange">密钥交换</a>
+                <a class="nav-item" href="#message-encryption">消息加密</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">资源</div>
+                <a class="nav-item" href="#errors">错误处理</a>
+                <a class="nav-item" href="#examples">代码示例</a>
+                <a class="nav-item" href="/chat">在线演示</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <header class="main-header">
+                <div class="breadcrumb">
+                    <a href="/">首页</a>
+                    <span>/</span>
+                    <span>API 文档</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="window.open('/chat')">
+                        <span>&#128172;</span> 在线演示
+                    </button>
+                    <a href="/" class="btn btn-primary">
+                        <span>&#127968;</span> 返回首页
+                    </a>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- Introduction -->
+                <section id="introduction" class="api-section">
+                    <div class="section-header">
+                        <h1 class="section-title">
+                            <span>&#128640;</span>
+                            LingKong AI API
+                        </h1>
+                        <p class="section-desc">
+                            基于 Gemma 3N 的本地推理 API，完全兼容 Google Gemini 3 Pro Preview 格式，支持端到端加密通信。
+                        </p>
+                    </div>
+
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="icon">&#128274;</div>
+                            <div class="title">端到端加密</div>
+                            <div class="desc">ChaCha20-Poly1305 + X25519 ECDH，消息全程加密传输</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#9889;</div>
+                            <div class="title">本地推理</div>
+                            <div class="desc">基于 llama.cpp，GPU 加速，零网络延迟</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#128247;</div>
+                            <div class="title">多模态支持</div>
+                            <div class="desc">支持图像理解和音频转录，视觉+听觉双模态</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#129504;</div>
+                            <div class="title">思考模式</div>
+                            <div class="desc">支持 thinkingLevel 配置，模拟深度推理</div>
+                        </div>
+                    </div>
+
+                    <div class="info-box tip">
+                        <div class="icon">&#128161;</div>
+                        <div class="content">
+                            <div class="title">API 兼容性</div>
+                            <div class="text">本 API 完全兼容 Google Gemini API 格式，现有 Gemini 客户端只需修改 base URL 即可接入。</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Quick Start -->
+                <section id="quickstart" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">快速开始</h2>
+                        <p class="section-desc">5 分钟内完成 API 调用</p>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="endpoint-method post">POST</span>
+                            <span class="endpoint-path">/v1beta/models/gemini-3-pro-preview:generateContent</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <p class="endpoint-desc">
+                                生成文本内容的核心接口。支持纯文本、多模态输入，以及工具调用。
+                            </p>
+
+                            <div class="code-tabs">
+                                <div class="code-tab active" data-lang="curl">cURL</div>
+                                <div class="code-tab" data-lang="python">Python</div>
+                                <div class="code-tab" data-lang="javascript">JavaScript</div>
+                            </div>
+
+                            <div class="code-block" id="code-curl">
+                                <div class="code-header">
+                                    <span class="code-lang">Bash</span>
+                                    <button class="code-copy" onclick="copyCode('curl')">
+                                        <span>&#128203;</span> 复制
+                                    </button>
+                                </div>
+                                <div class="code-content">
+<pre><span class="hljs-comment"># 基础文本生成</span>
+curl -X POST http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent \
+  -H <span class="hljs-string">"Content-Type: application/json"</span> \
+  -d <span class="hljs-string">'{
+    "contents": [
+      {"parts": [{"text": "你好，请介绍一下你自己"}]}
+    ],
+    "generationConfig": {
+      "maxOutputTokens": 512,
+      "temperature": 0.7
+    }
+  }'</span></pre>
+                                </div>
+                            </div>
+
+                            <div class="code-block" id="code-python" style="display:none;">
+                                <div class="code-header">
+                                    <span class="code-lang">Python</span>
+                                    <button class="code-copy" onclick="copyCode('python')">
+                                        <span>&#128203;</span> 复制
+                                    </button>
+                                </div>
+                                <div class="code-content">
+<pre><span class="hljs-keyword">import</span> requests
+
+url = <span class="hljs-string">"http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent"</span>
+
+payload = {
+    <span class="hljs-string">"contents"</span>: [
+        {<span class="hljs-string">"parts"</span>: [{<span class="hljs-string">"text"</span>: <span class="hljs-string">"你好，请介绍一下你自己"</span>}]}
+    ],
+    <span class="hljs-string">"generationConfig"</span>: {
+        <span class="hljs-string">"maxOutputTokens"</span>: <span class="hljs-number">512</span>,
+        <span class="hljs-string">"temperature"</span>: <span class="hljs-number">0.7</span>
+    }
+}
+
+response = requests.post(url, json=payload)
+result = response.json()
+
+<span class="hljs-comment"># 提取回复文本</span>
+text = result[<span class="hljs-string">"candidates"</span>][<span class="hljs-number">0</span>][<span class="hljs-string">"content"</span>][<span class="hljs-string">"parts"</span>][<span class="hljs-number">0</span>][<span class="hljs-string">"text"</span>]
+<span class="hljs-keyword">print</span>(text)</pre>
+                                </div>
+                            </div>
+
+                            <div class="code-block" id="code-javascript" style="display:none;">
+                                <div class="code-header">
+                                    <span class="code-lang">JavaScript</span>
+                                    <button class="code-copy" onclick="copyCode('javascript')">
+                                        <span>&#128203;</span> 复制
+                                    </button>
+                                </div>
+                                <div class="code-content">
+<pre><span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> fetch(
+  <span class="hljs-string">'http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent'</span>,
+  {
+    method: <span class="hljs-string">'POST'</span>,
+    headers: { <span class="hljs-string">'Content-Type'</span>: <span class="hljs-string">'application/json'</span> },
+    body: JSON.stringify({
+      contents: [
+        { parts: [{ text: <span class="hljs-string">'你好，请介绍一下你自己'</span> }] }
+      ],
+      generationConfig: {
+        maxOutputTokens: <span class="hljs-number">512</span>,
+        temperature: <span class="hljs-number">0.7</span>
+      }
+    })
+  }
+);
+
+<span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> response.json();
+<span class="hljs-keyword">const</span> text = data.candidates[<span class="hljs-number">0</span>].content.parts[<span class="hljs-number">0</span>].text;
+console.log(text);</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Generate Content API -->
+                <section id="generate-content" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">generateContent</h2>
+                        <p class="section-desc">生成文本内容的核心接口</p>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="endpoint-method post">POST</span>
+                            <span class="endpoint-path">/v1beta/models/{model}:generateContent</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <div class="params-section">
+                                <div class="params-title">
+                                    <span>&#128195;</span> 路径参数
+                                </div>
+                                <table class="params-table">
+                                    <thead>
+                                        <tr>
+                                            <th>参数名</th>
+                                            <th>类型</th>
+                                            <th>必填</th>
+                                            <th>说明</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">model</span></td>
+                                            <td><span class="param-type">string</span></td>
+                                            <td><span class="param-required">必填</span></td>
+                                            <td>模型名称，支持 <code>gemini-3-pro-preview</code> 或 <code>gemini-3-flash-preview</code></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="params-section">
+                                <div class="params-title">
+                                    <span>&#128230;</span> 请求体参数
+                                </div>
+                                <table class="params-table">
+                                    <thead>
+                                        <tr>
+                                            <th>参数名</th>
+                                            <th>类型</th>
+                                            <th>必填</th>
+                                            <th>说明</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="param-name">contents</span></td>
+                                            <td><span class="param-type">array</span></td>
+                                            <td><span class="param-required">必填</span></td>
+                                            <td>对话内容数组，每个元素包含 role 和 parts</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">generationConfig</span></td>
+                                            <td><span class="param-type">object</span></td>
+                                            <td><span class="param-optional">可选</span></td>
+                                            <td>生成配置，包括 maxOutputTokens, temperature, thinkingConfig 等</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">systemInstruction</span></td>
+                                            <td><span class="param-type">object</span></td>
+                                            <td><span class="param-optional">可选</span></td>
+                                            <td>系统指令/人设设定</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">tools</span></td>
+                                            <td><span class="param-type">array</span></td>
+                                            <td><span class="param-optional">可选</span></td>
+                                            <td>工具/函数声明列表</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="param-name">toolConfig</span></td>
+                                            <td><span class="param-type">object</span></td>
+                                            <td><span class="param-optional">可选</span></td>
+                                            <td>工具调用配置，mode 可选 AUTO/ANY/NONE</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="response-section">
+                                <div class="response-title">
+                                    <span class="status-badge status-200">200 OK</span>
+                                    响应示例
+                                </div>
+                                <div class="code-block">
+                                    <div class="code-content">
+<pre>{
+  <span class="hljs-property">"candidates"</span>: [{
+    <span class="hljs-property">"content"</span>: {
+      <span class="hljs-property">"role"</span>: <span class="hljs-string">"model"</span>,
+      <span class="hljs-property">"parts"</span>: [{
+        <span class="hljs-property">"text"</span>: <span class="hljs-string">"你好！我是 LingKong AI..."</span>,
+        <span class="hljs-property">"thoughtSignature"</span>: <span class="hljs-string">"EoQDCAIS..."</span>
+      }]
+    },
+    <span class="hljs-property">"finishReason"</span>: <span class="hljs-string">"STOP"</span>,
+    <span class="hljs-property">"index"</span>: <span class="hljs-number">0</span>
+  }],
+  <span class="hljs-property">"usageMetadata"</span>: {
+    <span class="hljs-property">"promptTokenCount"</span>: <span class="hljs-number">15</span>,
+    <span class="hljs-property">"candidatesTokenCount"</span>: <span class="hljs-number">128</span>,
+    <span class="hljs-property">"totalTokenCount"</span>: <span class="hljs-number">143</span>,
+    <span class="hljs-property">"thoughtsTokenCount"</span>: <span class="hljs-number">50</span>
+  },
+  <span class="hljs-property">"modelVersion"</span>: <span class="hljs-string">"gemma-3n-local"</span>
+}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Thinking Mode -->
+                <section id="thinking" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>&#129504;</span>
+                            思考模式 (thinkingConfig)
+                        </h2>
+                        <p class="section-desc">启用深度推理，让模型在回答前进行思考</p>
+                    </div>
+
+                    <div class="info-box security">
+                        <div class="icon">&#128171;</div>
+                        <div class="content">
+                            <div class="title">思考模式说明</div>
+                            <div class="text">
+                                思考模式通过 prompt engineering 模拟 Gemini 3 的 thinking 功能。
+                                模型会先在 &lt;thinking&gt; 标签中进行推理，然后在 &lt;answer&gt; 标签中给出答案。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">thinkingLevel 可选值</div>
+                        <table class="params-table">
+                            <thead>
+                                <tr>
+                                    <th>值</th>
+                                    <th>思考深度</th>
+                                    <th>输出格式</th>
+                                    <th>适用场景</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="param-name">none</span></td>
+                                    <td>禁用</td>
+                                    <td>直接输出答案</td>
+                                    <td>简单问答、快速响应</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">minimal</span></td>
+                                    <td>极简</td>
+                                    <td>1-2 句思考</td>
+                                    <td>简单任务</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">low</span></td>
+                                    <td>浅层</td>
+                                    <td>简短思考（不显示）</td>
+                                    <td>日常对话</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">medium</span></td>
+                                    <td>中等（默认）</td>
+                                    <td>结构化思考</td>
+                                    <td>一般问题</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">high</span></td>
+                                    <td>深度</td>
+                                    <td>详细推理过程</td>
+                                    <td>复杂问题、数学、逻辑</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">请求示例</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"contents"</span>: [{<span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"解释量子纠缠现象"</span>}]}],
+  <span class="hljs-property">"generationConfig"</span>: {
+    <span class="hljs-property">"thinkingConfig"</span>: {
+      <span class="hljs-property">"thinkingLevel"</span>: <span class="hljs-string">"high"</span>,
+      <span class="hljs-property">"includeThoughts"</span>: <span class="hljs-keyword">true</span>
+    },
+    <span class="hljs-property">"maxOutputTokens"</span>: <span class="hljs-number">1024</span>
+  }
+}</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tools / Function Calling -->
+                <section id="tools" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>&#128295;</span>
+                            工具调用 (Function Calling)
+                        </h2>
+                        <p class="section-desc">让模型调用外部函数，支持并行调用</p>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">工具声明示例</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"contents"</span>: [{<span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"查询北京和上海的天气"</span>}]}],
+  <span class="hljs-property">"tools"</span>: [{
+    <span class="hljs-property">"functionDeclarations"</span>: [{
+      <span class="hljs-property">"name"</span>: <span class="hljs-string">"get_weather"</span>,
+      <span class="hljs-property">"description"</span>: <span class="hljs-string">"获取指定城市的天气信息"</span>,
+      <span class="hljs-property">"parameters"</span>: {
+        <span class="hljs-property">"type"</span>: <span class="hljs-string">"object"</span>,
+        <span class="hljs-property">"properties"</span>: {
+          <span class="hljs-property">"location"</span>: {
+            <span class="hljs-property">"type"</span>: <span class="hljs-string">"string"</span>,
+            <span class="hljs-property">"description"</span>: <span class="hljs-string">"城市名称"</span>
+          }
+        },
+        <span class="hljs-property">"required"</span>: [<span class="hljs-string">"location"</span>]
+      }
+    }]
+  }],
+  <span class="hljs-property">"toolConfig"</span>: {
+    <span class="hljs-property">"functionCallingConfig"</span>: {
+      <span class="hljs-property">"mode"</span>: <span class="hljs-string">"AUTO"</span>  <span class="hljs-comment">// AUTO | ANY | NONE</span>
+    }
+  }
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">toolConfig.mode 说明</div>
+                        <table class="params-table">
+                            <thead>
+                                <tr>
+                                    <th>模式</th>
+                                    <th>行为</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="param-name">AUTO</span></td>
+                                    <td>模型自动决定是否调用工具（默认）</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">ANY</span></td>
+                                    <td>强制调用工具，不返回纯文本</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">NONE</span></td>
+                                    <td>禁用工具调用，只返回文本</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Multimodal -->
+                <section id="multimodal" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>&#128247;</span>
+                            多模态支持
+                        </h2>
+                        <p class="section-desc">支持图像理解和音频转录</p>
+                    </div>
+
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="icon">&#127912;</div>
+                            <div class="title">图像理解</div>
+                            <div class="desc">支持 PNG, JPEG, WebP, GIF 格式<br>通过 Vision mmproj 处理</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#127908;</div>
+                            <div class="title">音频转录</div>
+                            <div class="desc">支持 WAV, MP3, FLAC, OGG 格式<br>通过 Audio mmproj 处理</div>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">图像理解示例</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"contents"</span>: [{
+    <span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>,
+    <span class="hljs-property">"parts"</span>: [
+      {<span class="hljs-property">"text"</span>: <span class="hljs-string">"描述这张图片的内容"</span>},
+      {
+        <span class="hljs-property">"inlineData"</span>: {
+          <span class="hljs-property">"mimeType"</span>: <span class="hljs-string">"image/png"</span>,
+          <span class="hljs-property">"data"</span>: <span class="hljs-string">"iVBORw0KGgoAAAANSUhEUgAA..."</span>  <span class="hljs-comment">// Base64</span>
+        }
+      }
+    ]
+  }]
+}</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Thought Signature -->
+                <section id="thought-signature" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>&#128273;</span>
+                            思维签名 (Thought Signature)
+                        </h2>
+                        <p class="section-desc">AI 的"工作记忆"，实现真正的有状态推理</p>
+                    </div>
+
+                    <div class="info-box security">
+                        <div class="icon">&#129504;</div>
+                        <div class="content">
+                            <div class="title">核心概念</div>
+                            <div class="text">
+                                传统 LLM 像患有"短期记忆丧失症"的天才，每次对话都要重新阅读历史。
+                                Thought Signature 通过 KV Cache 持久化，让 AI 具备真正的工作记忆。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="encryption-flow">
+                        <div class="flow-step">
+                            <div class="icon">&#129504;</div>
+                            <div class="label">推理生成</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128190;</div>
+                            <div class="label">KV Cache 捕获</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128196;</div>
+                            <div class="label">Base64 签名</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128257;</div>
+                            <div class="label">状态恢复</div>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">多轮对话中使用 thoughtSignature</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"contents"</span>: [
+    {<span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>, <span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"我想学 Python"</span>}]},
+    {
+      <span class="hljs-property">"role"</span>: <span class="hljs-string">"model"</span>,
+      <span class="hljs-property">"parts"</span>: [
+        {<span class="hljs-property">"text"</span>: <span class="hljs-string">"Python 是很好的选择..."</span>},
+        {<span class="hljs-property">"thoughtSignature"</span>: <span class="hljs-string">"EoQDCAISOg..."</span>}  <span class="hljs-comment">// 上一轮的签名</span>
+      ]
+    },
+    {<span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>, <span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"有什么推荐的资源吗？"</span>}]}
+  ]
+}</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- E2E Encryption -->
+                <section id="e2e-overview" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>&#128274;</span>
+                            端到端加密通信
+                        </h2>
+                        <p class="section-desc">确保 AI 对话的绝对隐私</p>
+                    </div>
+
+                    <div class="info-box tip">
+                        <div class="icon">&#128161;</div>
+                        <div class="content">
+                            <div class="title">为什么需要加密？</div>
+                            <div class="text">
+                                即使使用本地推理，消息在传输过程中仍可能被截获。端到端加密确保只有你和 AI 能读取对话内容。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="encryption-flow">
+                        <div class="flow-step">
+                            <div class="icon">&#128272;</div>
+                            <div class="label">生成密钥对</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128257;</div>
+                            <div class="label">X25519 ECDH</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128274;</div>
+                            <div class="label">ChaCha20 加密</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#9989;</div>
+                            <div class="label">Poly1305 验证</div>
+                        </div>
+                    </div>
+
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <div class="icon">&#128273;</div>
+                            <div class="title">X25519 密钥交换</div>
+                            <div class="desc">椭圆曲线 Diffie-Hellman，安全建立共享密钥</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#128274;</div>
+                            <div class="title">ChaCha20-Poly1305</div>
+                            <div class="desc">AEAD 认证加密，机密性+完整性保障</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#9999;</div>
+                            <div class="title">Ed25519 签名</div>
+                            <div class="desc">数字签名验证消息真实性，防篡改</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="icon">&#128260;</div>
+                            <div class="title">前向保密</div>
+                            <div class="desc">每次会话使用新密钥，历史消息不可破解</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Key Exchange -->
+                <section id="key-exchange" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">密钥交换流程</h2>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">Python 示例</span>
+                        </div>
+                        <div class="code-content">
+<pre><span class="hljs-keyword">from</span> nacl.public <span class="hljs-keyword">import</span> PrivateKey, Box
+<span class="hljs-keyword">from</span> nacl.signing <span class="hljs-keyword">import</span> SigningKey
+
+<span class="hljs-comment"># 1. 生成身份密钥对 (Ed25519)</span>
+signing_key = SigningKey.generate()
+verify_key = signing_key.verify_key
+user_id = verify_key.encode().hex()
+
+<span class="hljs-comment"># 2. 生成加密密钥对 (X25519)</span>
+private_key = PrivateKey.generate()
+public_key = private_key.public_key
+
+<span class="hljs-comment"># 3. 与服务器交换公钥</span>
+server_public_key = ...  <span class="hljs-comment"># 从服务器获取</span>
+
+<span class="hljs-comment"># 4. 建立加密通道</span>
+box = Box(private_key, server_public_key)
+
+<span class="hljs-comment"># 5. 加密消息</span>
+message = <span class="hljs-string">"Hello, AI!"</span>
+encrypted = box.encrypt(message.encode())
+
+<span class="hljs-comment"># 6. 签名</span>
+signature = signing_key.sign(encrypted)
+</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Message Encryption -->
+                <section id="message-encryption" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">消息加密格式</h2>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">加密消息结构</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"envelope"</span>: {
+    <span class="hljs-property">"sender_id"</span>: <span class="hljs-string">"ed25519_public_key_hex"</span>,
+    <span class="hljs-property">"recipient_id"</span>: <span class="hljs-string">"server_public_key_hex"</span>,
+    <span class="hljs-property">"timestamp"</span>: <span class="hljs-number">1735862400</span>,
+    <span class="hljs-property">"nonce"</span>: <span class="hljs-string">"24_bytes_random_base64"</span>
+  },
+  <span class="hljs-property">"ciphertext"</span>: <span class="hljs-string">"chacha20_poly1305_encrypted_base64"</span>,
+  <span class="hljs-property">"signature"</span>: <span class="hljs-string">"ed25519_signature_base64"</span>
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="info-box warning">
+                        <div class="icon">&#9888;</div>
+                        <div class="content">
+                            <div class="title">安全提示</div>
+                            <div class="text">
+                                每条消息都应使用唯一的 nonce（随机数）。重用 nonce 会破坏加密安全性。
+                                建议使用 crypto.getRandomValues() 或 os.urandom() 生成。
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Errors -->
+                <section id="errors" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">错误处理</h2>
+                    </div>
+
+                    <table class="params-table">
+                        <thead>
+                            <tr>
+                                <th>状态码</th>
+                                <th>错误类型</th>
+                                <th>说明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="status-badge status-200">200</span></td>
+                                <td>成功</td>
+                                <td>请求处理成功</td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-badge status-400">400</span></td>
+                                <td>请求错误</td>
+                                <td>请求参数无效或缺失</td>
+                            </tr>
+                            <tr>
+                                <td><span class="status-badge status-500">500</span></td>
+                                <td>服务器错误</td>
+                                <td>推理服务异常</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">错误响应格式</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"error"</span>: {
+    <span class="hljs-property">"message"</span>: <span class="hljs-string">"contents 不能为空"</span>,
+    <span class="hljs-property">"code"</span>: <span class="hljs-string">"400"</span>
+  }
+}</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Try It -->
+                <section id="try-it" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>&#128187;</span>
+                            在线测试
+                        </h2>
+                    </div>
+
+                    <div class="try-section">
+                        <div class="try-header">
+                            <div class="try-title">
+                                <span class="endpoint-method post">POST</span>
+                                /v1beta/models/gemini-3-pro-preview:generateContent
+                            </div>
+                            <button class="btn btn-primary" onclick="runTest()">
+                                <span>&#9654;</span> 发送请求
+                            </button>
+                        </div>
+
+                        <textarea class="try-input" id="tryInput">{
+  "contents": [
+    {"parts": [{"text": "你好，用一句话介绍你自己"}]}
+  ],
+  "generationConfig": {
+    "maxOutputTokens": 256,
+    "thinkingConfig": {
+      "thinkingLevel": "medium"
+    }
+  }
+}</textarea>
+
+                        <div class="response-title">响应</div>
+                        <div class="try-output" id="tryOutput">点击"发送请求"查看响应...</div>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <footer class="docs-footer">
+                    <p>LingKong AI API v1.0 | 基于 Gemma 3N 本地推理</p>
+                    <p style="margin-top: 0.5rem;">
+                        <a href="/" style="color: var(--accent-primary); text-decoration: none;">首页</a>
+                        &nbsp;|&nbsp;
+                        <a href="/chat" style="color: var(--accent-primary); text-decoration: none;">在线演示</a>
+                        &nbsp;|&nbsp;
+                        <a href="https://github.com" style="color: var(--accent-primary); text-decoration: none;">GitHub</a>
+                    </p>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Code tab switching
+        document.querySelectorAll('.code-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const lang = tab.dataset.lang;
+                const parent = tab.closest('.endpoint-body') || tab.closest('.api-section');
+
+                parent.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                parent.querySelectorAll('.code-block[id^="code-"]').forEach(block => {
+                    block.style.display = block.id === `code-${lang}` ? 'block' : 'none';
+                });
+            });
+        });
+
+        // Navigation active state
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (item.getAttribute('href')?.startsWith('#')) {
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // Copy code
+        function copyCode(lang) {
+            const block = document.querySelector(`#code-${lang} pre`);
+            if (block) {
+                navigator.clipboard.writeText(block.textContent);
+                alert('代码已复制到剪贴板');
+            }
+        }
+
+        // Try It section
+        async function runTest() {
+            const input = document.getElementById('tryInput');
+            const output = document.getElementById('tryOutput');
+
+            output.textContent = '请求中...';
+            output.className = 'try-output';
+
+            try {
+                const payload = JSON.parse(input.value);
+                const resp = await fetch('/v1beta/models/gemini-3-pro-preview:generateContent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+                output.textContent = JSON.stringify(data, null, 2);
+                output.className = 'try-output ' + (resp.ok ? 'success' : 'error');
+            } catch (e) {
+                output.textContent = '错误: ' + e.message + '\n\n请确保本地服务器运行中:\npython apps/gemini_api/server.py';
+                output.className = 'try-output error';
+            }
+        }
+
+        // Scroll spy for navigation
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.id;
+                    document.querySelectorAll('.nav-item').forEach(item => {
+                        item.classList.remove('active');
+                        if (item.getAttribute('href') === `#${id}`) {
+                            item.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        document.querySelectorAll('.api-section').forEach(section => {
+            if (section.id) observer.observe(section);
+        });
+    </script>
+</body>
+</html>

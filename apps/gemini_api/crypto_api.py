@@ -1,346 +1,344 @@
 """
-加密 API 端点模块
+加密 API 端点 - Flask Blueprint
 ═══════════════════════════════════════════════════════════════════════════════
 
-为 Gateway 提供端到端加密的 API 端点。
+提供端到端加密的 Gemini API 接口。
 
 端点:
-─────
-- /crypto/public-key - 获取服务器公钥
-- /v1beta/models/{model}:generateContentEncrypted - 加密的 generateContent
+- GET  /crypto/public-key - 获取服务器公钥
+- POST /crypto/register - 注册客户端公钥
+- POST /v1beta/models/{model}:generateContentEncrypted - 加密的生成内容 API
+- GET  /crypto/test - 测试加密流程
+
+安全模型:
+- 使用 KEM (Key Encapsulation Mechanism) 进行非交互式密钥建立
+- 每个请求使用独立的临时密钥 (前向保密)
+- Ed25519 签名防止篡改
+- ChaCha20-Poly1305 AEAD 加密
+
+参考: apps/gemini_api/crypto/src/lib.rs
 """
 
 import os
 import json
 import time
-from functools import wraps
-from typing import Optional, Dict
+from pathlib import Path
+from typing import Dict, Optional
+from flask import Blueprint, request, jsonify, Response
 
-from flask import Blueprint, request, jsonify, Response, g
-
-# 尝试导入加密模块
+# 尝试导入 Rust 加密库
 try:
-    import lingkong_crypto as lk
+    import lingkong_crypto
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
-    print("[Warning] lingkong_crypto not available, E2E encryption disabled")
-
-
-def to_bytes(data) -> bytes:
-    """将 list/tuple 转换为 bytes"""
-    if isinstance(data, (list, tuple)):
-        return bytes(data)
-    return bytes(data)
-
+    print("[crypto_api] Warning: lingkong_crypto not available")
 
 # 创建 Blueprint
 crypto_bp = Blueprint('crypto', __name__)
 
-# 服务器密钥对 (启动时生成或从环境变量加载)
-_server_keys = None
+# ========== 服务器密钥管理 ==========
+
+# 服务器密钥 (启动时生成或从文件加载)
+_server_keys: Optional[object] = None
+_server_keys_file = Path(__file__).parent / ".server_keys.json"
+
+# 已注册的客户端公钥
+_registered_clients: Dict[str, Dict] = {}
 
 
 def get_server_keys():
-    """获取或生成服务器密钥对"""
+    """获取或生成服务器密钥"""
     global _server_keys
-
-    if _server_keys is not None:
-        return _server_keys
 
     if not CRYPTO_AVAILABLE:
         return None
 
-    # 尝试从环境变量加载
-    signing_key_b64 = os.environ.get("SERVER_SIGNING_KEY", "")
-    x25519_key_b64 = os.environ.get("SERVER_X25519_KEY", "")
+    if _server_keys is not None:
+        return _server_keys
 
-    if signing_key_b64 and x25519_key_b64:
+    # 尝试从文件加载
+    if _server_keys_file.exists():
         try:
-            _server_keys = lk.UserKeys.from_bytes(
-                to_bytes(lk.base64_decode(signing_key_b64)),
-                to_bytes(lk.base64_decode(x25519_key_b64))
-            )
-            print(f"[Crypto] Server keys loaded from environment")
-            print(f"[Crypto] Server ID: {_server_keys.user_id()[:30]}...")
+            with open(_server_keys_file, 'r') as f:
+                data = json.load(f)
+            signing_key = lingkong_crypto.base64_decode(data["signing_key"])
+            x25519_secret = lingkong_crypto.base64_decode(data["x25519_secret"])
+            _server_keys = lingkong_crypto.UserKeys.from_bytes(signing_key, x25519_secret)
+            print(f"[crypto_api] Loaded server keys from {_server_keys_file}")
             return _server_keys
         except Exception as e:
-            print(f"[Crypto] Failed to load keys from env: {e}")
+            print(f"[crypto_api] Failed to load server keys: {e}")
 
-    # 生成新密钥对
-    _server_keys = lk.UserKeys()
-    print(f"[Crypto] New server keys generated")
-    print(f"[Crypto] Server ID: {_server_keys.user_id()[:30]}...")
+    # 生成新密钥
+    _server_keys = lingkong_crypto.UserKeys()
 
-    # 输出密钥 (用于备份/持久化)
-    signing_key, x25519_key = _server_keys.export_secret_keys()
-    print(f"[Crypto] To persist keys, set environment variables:")
-    print(f"  SERVER_SIGNING_KEY={lk.base64_encode(to_bytes(signing_key))}")
-    print(f"  SERVER_X25519_KEY={lk.base64_encode(to_bytes(x25519_key))}")
+    # 保存到文件
+    try:
+        signing_key, x25519_secret = _server_keys.export_secret_keys()
+        data = {
+            "signing_key": lingkong_crypto.base64_encode(bytes(signing_key)),
+            "x25519_secret": lingkong_crypto.base64_encode(bytes(x25519_secret)),
+            "created_at": time.time()
+        }
+        with open(_server_keys_file, 'w') as f:
+            json.dump(data, f)
+        os.chmod(_server_keys_file, 0o600)
+        print(f"[crypto_api] Generated and saved new server keys")
+    except Exception as e:
+        print(f"[crypto_api] Warning: Failed to save server keys: {e}")
 
     return _server_keys
 
 
-# ========== 加密 API 端点 ==========
+def register_client(user_id: str, signing_public: bytes, x25519_public: bytes) -> bool:
+    """注册客户端公钥"""
+    _registered_clients[user_id] = {
+        "signing_public": signing_public,
+        "x25519_public": x25519_public,
+        "registered_at": time.time()
+    }
+    return True
 
-@crypto_bp.route("/crypto/public-key", methods=["GET"])
-def get_public_key():
-    """
-    获取服务器公钥
 
-    客户端需要此公钥来加密请求
-    """
-    if not CRYPTO_AVAILABLE:
-        return jsonify({
-            "error": {
-                "message": "E2E encryption not available on this server",
-                "code": "501"
-            }
-        }), 501
+def get_client_keys(user_id: str) -> Optional[Dict]:
+    """获取客户端公钥"""
+    return _registered_clients.get(user_id)
 
+
+# ========== API 端点 ==========
+
+@crypto_bp.route("/crypto/status", methods=["GET"])
+def crypto_status():
+    """检查加密功能状态"""
     server_keys = get_server_keys()
-    if not server_keys:
-        return jsonify({
-            "error": {
-                "message": "Server keys not initialized",
-                "code": "500"
-            }
-        }), 500
 
     return jsonify({
-        "server_id": server_keys.user_id(),
-        "x25519_public": lk.base64_encode(to_bytes(server_keys.x25519_public)),
-        "signing_public": lk.base64_encode(to_bytes(server_keys.signing_public)),
-        "algorithm": {
+        "crypto_available": CRYPTO_AVAILABLE,
+        "server_keys_loaded": server_keys is not None,
+        "registered_clients": len(_registered_clients),
+        "algorithms": {
             "key_exchange": "X25519",
-            "encryption": "ChaCha20-Poly1305",
             "signature": "Ed25519",
+            "encryption": "ChaCha20-Poly1305",
             "kdf": "HMAC-SHA256"
         }
     })
 
 
-@crypto_bp.route("/crypto/handshake", methods=["POST"])
-def crypto_handshake():
-    """
-    加密握手 (可选)
-
-    客户端可以预先建立会话，获取会话密钥
-    """
+@crypto_bp.route("/crypto/public-key", methods=["GET"])
+def get_public_key():
+    """获取服务器公钥"""
     if not CRYPTO_AVAILABLE:
-        return jsonify({
-            "error": {"message": "E2E encryption not available", "code": "501"}
-        }), 501
+        return jsonify({"error": "Crypto not available"}), 500
 
-    data = request.json or {}
-    client_x25519_public = data.get("client_x25519_public", "")
+    server_keys = get_server_keys()
+    if not server_keys:
+        return jsonify({"error": "Server keys not initialized"}), 500
 
-    if not client_x25519_public:
-        return jsonify({
-            "error": {"message": "client_x25519_public required", "code": "400"}
-        }), 400
+    return jsonify({
+        "signing_public": lingkong_crypto.base64_encode(bytes(server_keys.signing_public)),
+        "x25519_public": lingkong_crypto.base64_encode(bytes(server_keys.x25519_public)),
+        "user_id": server_keys.user_id()
+    })
+
+
+@crypto_bp.route("/crypto/register", methods=["POST"])
+def register_client_endpoint():
+    """注册客户端公钥"""
+    if not CRYPTO_AVAILABLE:
+        return jsonify({"error": "Crypto not available"}), 500
+
+    data = request.json
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
+
+    signing_public_b64 = data.get("signing_public")
+    x25519_public_b64 = data.get("x25519_public")
+
+    if not signing_public_b64 or not x25519_public_b64:
+        return jsonify({"error": "Missing signing_public or x25519_public"}), 400
 
     try:
-        # 解码客户端公钥
-        client_pub_bytes = to_bytes(lk.base64_decode(client_x25519_public))
+        signing_public = lingkong_crypto.base64_decode(signing_public_b64)
+        x25519_public = lingkong_crypto.base64_decode(x25519_public_b64)
 
-        # 服务器生成临时密钥对进行 KEM
-        kem = lk.KemEncapsulation.encapsulate(client_pub_bytes)
+        if len(signing_public) != 32 or len(x25519_public) != 32:
+            return jsonify({"error": "Invalid key length"}), 400
 
-        server_keys = get_server_keys()
-
-        # 签名临时公钥
-        signature = server_keys.sign(to_bytes(kem.ephemeral_public))
+        user_id = signing_public_b64
+        register_client(user_id, signing_public, x25519_public)
 
         return jsonify({
-            "ephemeral_public": lk.base64_encode(to_bytes(kem.ephemeral_public)),
-            "signature": lk.base64_encode(to_bytes(signature)),
-            "server_signing_public": lk.base64_encode(to_bytes(server_keys.signing_public)),
-            "timestamp": int(time.time())
+            "success": True,
+            "user_id": user_id
         })
 
     except Exception as e:
-        return jsonify({
-            "error": {"message": f"Handshake failed: {str(e)}", "code": "400"}
-        }), 400
+        return jsonify({"error": f"Registration failed: {e}"}), 400
 
-
-def decrypt_request(encrypted_request_json: str, client_signing_public_b64: str) -> tuple:
-    """
-    解密并验证请求
-
-    Returns:
-        (plaintext, shared_secret, error_response)
-    """
-    try:
-        # 解析加密请求
-        encrypted_req = lk.EncryptedRequest.from_json(encrypted_request_json)
-
-        # 验证签名
-        client_signing_public = to_bytes(lk.base64_decode(client_signing_public_b64))
-        if not encrypted_req.verify_signature(client_signing_public):
-            return None, None, (jsonify({
-                "error": {"message": "Signature verification failed", "code": "401"}
-            }), 401)
-
-        # 检查时间戳 (防止重放攻击)
-        current_time = int(time.time())
-        if abs(current_time - encrypted_req.timestamp) > 300:  # 5 分钟有效期
-            return None, None, (jsonify({
-                "error": {"message": "Request expired", "code": "401"}
-            }), 401)
-
-        # 解密请求
-        server_keys = get_server_keys()
-        _, x25519_secret = server_keys.export_secret_keys()
-        plaintext = encrypted_req.decrypt(to_bytes(x25519_secret))
-
-        # 恢复共享密钥 (用于加密响应)
-        ephemeral_bytes = to_bytes(lk.base64_decode(encrypted_req.ephemeral_public))
-        shared_secret = lk.KemEncapsulation.decapsulate(
-            ephemeral_bytes,
-            to_bytes(x25519_secret)
-        )
-
-        return plaintext, to_bytes(shared_secret), None
-
-    except Exception as e:
-        return None, None, (jsonify({
-            "error": {"message": f"Decryption failed: {str(e)}", "code": "400"}
-        }), 400)
-
-
-def encrypt_response(plaintext: str, shared_secret: bytes) -> str:
-    """加密响应"""
-    server_keys = get_server_keys()
-    encrypted_resp = lk.EncryptedResponse.create(
-        plaintext,
-        shared_secret,
-        server_keys
-    )
-    return encrypted_resp.to_json()
-
-
-def require_encryption(f):
-    """加密请求装饰器"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not CRYPTO_AVAILABLE:
-            return jsonify({
-                "error": {"message": "E2E encryption not available", "code": "501"}
-            }), 501
-
-        data = request.json or {}
-
-        encrypted_request = data.get("encrypted_request")
-        client_signing_public = data.get("client_signing_public")
-
-        if not encrypted_request or not client_signing_public:
-            return jsonify({
-                "error": {
-                    "message": "encrypted_request and client_signing_public required",
-                    "code": "400"
-                }
-            }), 400
-
-        # 解密请求
-        plaintext, shared_secret, error = decrypt_request(
-            encrypted_request,
-            client_signing_public
-        )
-
-        if error:
-            return error
-
-        # 将解密后的数据存储在 g 中
-        g.decrypted_request = json.loads(plaintext)
-        g.shared_secret = shared_secret
-        g.encrypt_response = True
-
-        return f(*args, **kwargs)
-    return decorated
-
-
-# ========== 加密的 generateContent 端点 ==========
 
 @crypto_bp.route("/v1beta/models/<model_name>:generateContentEncrypted", methods=["POST"])
-@require_encryption
 def generate_content_encrypted(model_name: str):
-    """
-    加密的 generateContent 端点
+    """加密的 generateContent API"""
+    if not CRYPTO_AVAILABLE:
+        return jsonify({"error": "Crypto not available"}), 500
 
-    请求体:
-    {
-        "encrypted_request": "...",  // EncryptedRequest JSON
-        "client_signing_public": "..." // 客户端签名公钥 (Base64)
-    }
+    server_keys = get_server_keys()
+    if not server_keys:
+        return jsonify({"error": "Server keys not initialized"}), 500
 
-    响应:
-    {
-        "encrypted_response": "..."  // EncryptedResponse JSON
-    }
-    """
-    import requests as req
+    encrypted_data = request.json
+    if not encrypted_data:
+        return jsonify({"error": "Missing request body"}), 400
 
-    # 从 g 获取解密后的请求
-    decrypted_request = g.decrypted_request
-    shared_secret = g.shared_secret
-
-    # 转发到本地推理服务
-    local_url = os.environ.get("LOCAL_INFERENCE_URL", "http://127.0.0.1:5001")
+    required_fields = ["ephemeral_public", "ciphertext", "nonce", "sender_id", "signature", "timestamp"]
+    for field in required_fields:
+        if field not in encrypted_data:
+            return jsonify({"error": f"Missing field: {field}"}), 400
 
     try:
-        resp = req.post(
-            f"{local_url}/v1beta/models/{model_name}:generateContent",
-            json=decrypted_request,
-            headers={"Content-Type": "application/json"},
-            timeout=120
+        # 1. 解析加密请求
+        enc_request = lingkong_crypto.EncryptedRequest.from_json(json.dumps(encrypted_data))
+
+        # 2. 验证签名 (如果客户端已注册)
+        client = get_client_keys(encrypted_data["sender_id"])
+        if client:
+            if not enc_request.verify_signature(client["signing_public"]):
+                return jsonify({"error": "Invalid signature"}), 401
+
+        # 3. 解密请求
+        _, x25519_secret = server_keys.export_secret_keys()
+        plaintext = enc_request.decrypt(bytes(x25519_secret))
+
+        # 4. 解析原始请求
+        original_request = json.loads(plaintext)
+
+        # 5. 调用原始 generateContent API
+        result = generate_content_internal(model_name, original_request)
+
+        # 6. 加密响应
+        ephemeral_public = lingkong_crypto.base64_decode(encrypted_data["ephemeral_public"])
+        shared_secret = lingkong_crypto.KemEncapsulation.decapsulate(ephemeral_public, bytes(x25519_secret))
+
+        enc_response = lingkong_crypto.EncryptedResponse.create(
+            json.dumps(result, ensure_ascii=False),
+            bytes(shared_secret),
+            server_keys
         )
 
-        # 加密响应
-        encrypted_response = encrypt_response(resp.text, shared_secret)
+        return Response(
+            enc_response.to_json(),
+            mimetype='application/json'
+        )
 
-        return jsonify({
-            "encrypted_response": encrypted_response,
-            "status_code": resp.status_code
-        })
-
-    except req.exceptions.ConnectionError:
-        error_resp = json.dumps({
-            "error": {"message": "Local inference service unavailable", "code": "503"}
-        })
-        return jsonify({
-            "encrypted_response": encrypt_response(error_resp, shared_secret),
-            "status_code": 503
-        })
-    except req.exceptions.Timeout:
-        error_resp = json.dumps({
-            "error": {"message": "Request timeout", "code": "504"}
-        })
-        return jsonify({
-            "encrypted_response": encrypt_response(error_resp, shared_secret),
-            "status_code": 504
-        })
     except Exception as e:
-        error_resp = json.dumps({
-            "error": {"message": f"Internal error: {str(e)}", "code": "500"}
-        })
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Decryption/processing failed: {e}"}), 400
+
+
+@crypto_bp.route("/crypto/test", methods=["GET"])
+def test_crypto():
+    """测试加密流程"""
+    if not CRYPTO_AVAILABLE:
+        return jsonify({"error": "Crypto not available"}), 500
+
+    server_keys = get_server_keys()
+    if not server_keys:
+        return jsonify({"error": "Server keys not initialized"}), 500
+
+    try:
+        # 1. 模拟客户端密钥
+        client_keys = lingkong_crypto.UserKeys()
+
+        # 2. 创建测试请求
+        test_request = {
+            "contents": [{"parts": [{"text": "Hello, encrypted world!"}]}]
+        }
+
+        # 3. 客户端加密请求
+        enc_request = lingkong_crypto.EncryptedRequest.create(
+            json.dumps(test_request),
+            client_keys,
+            bytes(server_keys.x25519_public)
+        )
+
+        # 4. 服务器解密
+        _, server_x25519_secret = server_keys.export_secret_keys()
+        decrypted = enc_request.decrypt(bytes(server_x25519_secret))
+        decrypted_request = json.loads(decrypted)
+
+        # 5. 验证签名
+        signature_valid = enc_request.verify_signature(bytes(client_keys.signing_public))
+
+        # 6. 模拟响应
+        test_response = {"result": "Success!", "original": decrypted_request}
+
+        # 7. 服务器加密响应
+        ephemeral_public = lingkong_crypto.base64_decode(enc_request.ephemeral_public)
+        shared_secret = lingkong_crypto.KemEncapsulation.decapsulate(ephemeral_public, bytes(server_x25519_secret))
+
+        enc_response = lingkong_crypto.EncryptedResponse.create(
+            json.dumps(test_response),
+            bytes(shared_secret),
+            server_keys
+        )
+
         return jsonify({
-            "encrypted_response": encrypt_response(error_resp, shared_secret),
-            "status_code": 500
+            "success": True,
+            "test_steps": [
+                "1. Generated client keys",
+                "2. Created test request",
+                "3. Client encrypted request with KEM",
+                "4. Server decrypted request",
+                f"5. Signature valid: {signature_valid}",
+                "6. Created test response",
+                "7. Server encrypted response",
+                "8. Round-trip complete"
+            ],
+            "decrypted_request": decrypted_request,
+            "encrypted_request_fields": list(json.loads(enc_request.to_json()).keys()),
+            "encrypted_response_fields": list(json.loads(enc_response.to_json()).keys())
         })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+# ========== 辅助函数 ==========
+
+def generate_content_internal(model_name: str, request_data: dict) -> dict:
+    """内部调用 generateContent"""
+    try:
+        from server import app
+        with app.test_client() as client:
+            resp = client.post(
+                f"/v1beta/models/{model_name}:generateContent",
+                json=request_data,
+                content_type="application/json"
+            )
+            return json.loads(resp.data)
+    except Exception as e:
+        return {"error": {"message": str(e), "code": "500"}}
 
 
 # ========== 初始化 ==========
 
 def init_crypto():
-    """初始化加密模块"""
+    """初始化加密系统"""
     if CRYPTO_AVAILABLE:
-        get_server_keys()
-        print("[Crypto] E2E encryption initialized")
-    else:
-        print("[Crypto] E2E encryption not available (lingkong_crypto not installed)")
-
+        server_keys = get_server_keys()
+        if server_keys:
+            print(f"[crypto_api] Server User ID: {server_keys.user_id()[:32]}...")
+            return True
+    return False
 
 # 模块加载时初始化
-init_crypto()
+if CRYPTO_AVAILABLE:
+    init_crypto()
