@@ -54,7 +54,7 @@ def save_session(session_id):
 # ========== 静态文件 ==========
 @app.route("/")
 def index():
-    return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory(app.static_folder, "home.html")
 
 @app.route("/static/<path:filename>")
 def static_files(filename):
