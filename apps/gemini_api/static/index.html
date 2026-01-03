@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LingKong Security - End-to-End Encrypted AI API</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+    <style>
+        :root {
+            --primary: #00d4aa;
+            --primary-dark: #00b894;
+            --accent: #0984e3;
+            --danger: #d63031;
+            --warning: #fdcb6e;
+            --success: #00b894;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-code: #0d0d12;
+            --text: #e8e8e8;
+            --text-secondary: #8b8b9a;
+            --border: #1e1e2e;
+            --glow: rgba(0, 212, 170, 0.15);
+            --glow-accent: rgba(9, 132, 227, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* 安全网格背景 */
+        .security-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(rgba(0, 212, 170, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 170, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 扫描线效果 */
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: scan 4s linear infinite;
+            opacity: 0.3;
+            z-index: 1;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            padding: 60px 0 40px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 20px var(--primary));
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--primary);
+            text-shadow: 0 0 30px var(--glow);
+            margin-bottom: 15px;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            letter-spacing: 2px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: rgba(0, 184, 148, 0.1);
+            border: 1px solid var(--success);
+            border-radius: 4px;
+            color: var(--success);
+            font-size: 0.85em;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--success); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
+        }
+
+        /* 安全特性卡片 */
+        .security-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--glow);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+
+        .feature-card h3 {
+            font-size: 1em;
+            color: var(--primary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+        }
+
+        .feature-card .tech-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            background: rgba(9, 132, 227, 0.2);
+            color: var(--accent);
+            font-size: 0.7em;
+            border-radius: 3px;
+            margin-top: 10px;
+        }
+
+        /* 加密协议说明 */
+        .protocol-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+
+        .protocol-section h2 {
+            color: var(--primary);
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .protocol-diagram {
+            background: var(--bg-code);
+            border-radius: 6px;
+            padding: 20px;
+            font-size: 0.8em;
+            overflow-x: auto;
+        }
+
+        .protocol-diagram pre {
+            color: var(--text-secondary);
+            white-space: pre;
+            margin: 0;
+        }
+
+        .protocol-diagram .highlight {
+            color: var(--primary);
+        }
+
+        .protocol-diagram .accent {
+            color: var(--accent);
+        }
+
+        /* API 配置 */
+        .config-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .config-section h2 {
+            color: var(--text);
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input, .input-group select {
+            padding: 12px 15px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--glow);
+        }
+
+        /* 测试面板 */
+        .test-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .test-panel { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 212, 170, 0.03);
+        }
+
+        .panel-title {
+            font-size: 0.85em;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-badge {
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-secure { background: rgba(0, 184, 148, 0.2); color: var(--success); }
+        .badge-encrypted { background: rgba(9, 132, 227, 0.2); color: var(--accent); }
+        .badge-error { background: rgba(214, 48, 49, 0.2); color: var(--danger); }
+        .badge-pending { background: rgba(139, 139, 154, 0.2); color: var(--text-secondary); }
+
+        .panel-content {
+            padding: 15px;
+        }
+
+        .code-block {
+            background: var(--bg-code);
+            border-radius: 4px;
+            padding: 15px;
+            overflow: auto;
+            max-height: 350px;
+        }
+
+        .code-block pre {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-encrypted {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: var(--bg-dark);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* 模式切换 */
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px 15px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: var(--bg-dark);
+        }
+
+        .mode-btn:hover:not(.active) {
+            color: var(--text);
+        }
+
+        /* 响应元数据 */
+        .response-meta {
+            display: flex;
+            gap: 20px;
+            padding: 12px 15px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 0.8em;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-label { color: var(--text-secondary); }
+        .meta-value { color: var(--primary); font-weight: 600; }
+        .meta-value.encrypted { color: var(--accent); }
+
+        /* 加密指示器 */
+        .encryption-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: rgba(9, 132, 227, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 0.8em;
+        }
+
+        .encryption-indicator.active {
+            background: rgba(0, 184, 148, 0.1);
+            border-color: var(--success);
+        }
+
+        /* 代码示例区域 */
+        .code-examples {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .code-examples h2 {
+            color: var(--text);
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .code-example {
+            background: var(--bg-code);
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .code-example code {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        .code-example .lang-tag {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 2px 8px;
+            background: var(--border);
+            color: var(--text-secondary);
+            font-size: 0.65em;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 60px;
+            padding: 4px 10px;
+            background: var(--primary);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7em;
+            font-family: inherit;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.8em;
+        }
+
+        .footer .crypto-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer .crypto-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .footer .crypto-item span {
+            color: var(--primary);
+        }
+
+        /* JSON 语法高亮 */
+        .json-key { color: #00d4aa; }
+        .json-string { color: #74b9ff; }
+        .json-number { color: #fdcb6e; }
+        .json-boolean { color: #fd79a8; }
+        .json-null { color: #636e72; }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 警告框 */
+        .warning-box {
+            background: rgba(253, 203, 110, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <div class="security-grid"></div>
+    <div class="scanline"></div>
+
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="logo">🔐</div>
+            <h1>LingKong Security</h1>
+            <p class="subtitle">End-to-End Encrypted AI API Gateway</p>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                SECURE CONNECTION ESTABLISHED
+            </div>
+        </header>
+
+        <!-- 安全特性 -->
+        <div class="security-features">
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3>Signal Protocol</h3>
+                <p>采用 Signal 协议的双棘轮算法，每条消息使用独立密钥，确保前向保密和破坏恢复</p>
+                <span class="tech-tag">Double Ratchet</span>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔑</div>
+                <h3>X25519 Key Exchange</h3>
+                <p>椭圆曲线 Diffie-Hellman 密钥交换，2^128 位安全强度，抵御量子计算前威胁</p>
+                <span class="tech-tag">ECDH</span>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>ChaCha20-Poly1305</h3>
+                <p>认证加密 (AEAD)，同时提供机密性和完整性保护，防止任何篡改</p>
+                <span class="tech-tag">AEAD</span>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✍️</div>
+                <h3>Ed25519 Signature</h3>
+                <p>数字签名验证身份真实性，防止中间人攻击和消息伪造</p>
+                <span class="tech-tag">EdDSA</span>
+            </div>
+        </div>
+
+        <!-- 加密协议说明 -->
+        <div class="protocol-section">
+            <h2>🔗 Encryption Protocol</h2>
+            <div class="protocol-diagram">
+<pre>
+<span class="highlight">CLIENT</span>                                              <span class="highlight">SERVER</span>
+   │                                                    │
+   │  ──── <span class="accent">GET /crypto/public-key</span> ────────────────>  │
+   │  <──── server_x25519_public ─────────────────────  │
+   │                                                    │
+   │  [Generate ephemeral X25519 keypair]               │
+   │  [ECDH: shared_secret = ephemeral × server_pub]    │
+   │  [Encrypt: ChaCha20-Poly1305(request, shared)]     │
+   │  [Sign: Ed25519(ciphertext)]                       │
+   │                                                    │
+   │  ──── <span class="accent">POST /generateContentEncrypted</span> ────────>  │
+   │       { ephemeral_public, ciphertext, signature }  │
+   │                                                    │
+   │                     [Verify signature]             │
+   │                     [ECDH: recover shared_secret]  │
+   │                     [Decrypt request]              │
+   │                     [Process AI inference]         │
+   │                     [Encrypt response]             │
+   │                                                    │
+   │  <──── { encrypted_response, signature } ────────  │
+   │                                                    │
+   │  [Decrypt response with shared_secret]             │
+   │                                                    │
+</pre>
+            </div>
+        </div>
+
+        <!-- API 配置 -->
+        <div class="config-section">
+            <h2>⚙️ Configuration</h2>
+            <div class="config-grid">
+                <div class="input-group">
+                    <label>API Endpoint</label>
+                    <input type="text" id="apiUrl" value="http://115.159.223.227" readonly>
+                </div>
+                <div class="input-group">
+                    <label>API Key</label>
+                    <input type="password" id="apiKey" placeholder="sk-xxxxx">
+                </div>
+                <div class="input-group">
+                    <label>Model</label>
+                    <select id="modelSelect">
+                        <option value="gemini-3-pro-preview">gemini-3-pro-preview</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Encryption Mode</label>
+                    <select id="encryptionMode">
+                        <option value="standard">Standard (Plaintext)</option>
+                        <option value="e2e">E2E Encrypted</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模式切换 -->
+        <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="chat">Chat</button>
+            <button class="mode-btn" data-mode="thinking">Thinking Mode</button>
+            <button class="mode-btn" data-mode="function">Function Call</button>
+        </div>
+
+        <!-- 测试面板 -->
+        <div class="test-panel">
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📤 Request</span>
+                    <span class="panel-badge badge-pending" id="requestBadge">Ready</span>
+                </div>
+                <div class="panel-content">
+                    <div id="encryptionStatus" class="encryption-indicator" style="display: none;">
+                        🔒 End-to-End Encryption Enabled
+                    </div>
+                    <div class="code-block">
+                        <pre id="requestBody">{
+  "contents": [
+    {
+      "parts": [{"text": "Hello, how are you?"}]
+    }
+  ],
+  "generationConfig": {
+    "maxOutputTokens": 512
+  }
+}</pre>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="sendRequest()">
+                            ▶ EXECUTE
+                        </button>
+                        <button class="btn btn-secondary" onclick="editRequest()">
+                            ✎ EDIT
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📥 Response</span>
+                    <span class="panel-badge badge-pending" id="responseBadge">Waiting</span>
+                </div>
+                <div class="panel-content">
+                    <div class="response-meta" id="responseMeta" style="display: none;">
+                        <div class="meta-item">
+                            <span class="meta-label">Latency:</span>
+                            <span class="meta-value" id="latency">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Tokens:</span>
+                            <span class="meta-value" id="tokens">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Encrypted:</span>
+                            <span class="meta-value encrypted" id="encryptedStatus">No</span>
+                        </div>
+                    </div>
+                    <div class="code-block">
+                        <pre id="responseBody">// Response will appear here...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 代码示例 -->
+        <div class="code-examples">
+            <h2>📋 Integration Examples</h2>
+
+            <h4 style="color: var(--text-secondary); margin: 15px 0 10px; font-size: 0.85em;">Standard API Call (cURL)</h4>
+            <div class="code-example">
+                <span class="lang-tag">bash</span>
+                <button class="copy-btn" onclick="copyCode('curl-example')">Copy</button>
+                <code id="curl-example">curl -X POST "http://115.159.223.227/v1beta/models/gemini-3-pro-preview:generateContent?key=YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"contents": [{"parts": [{"text": "Hello"}]}]}'</code>
+            </div>
+
+            <h4 style="color: var(--text-secondary); margin: 15px 0 10px; font-size: 0.85em;">E2E Encrypted Call (Python)</h4>
+            <div class="code-example">
+                <span class="lang-tag">python</span>
+                <button class="copy-btn" onclick="copyCode('python-example')">Copy</button>
+                <code id="python-example">import lingkong_crypto as lk
+import requests
+
+# 1. Get server public key
+server_info = requests.get("http://115.159.223.227/crypto/public-key").json()
+server_public = lk.base64_decode(server_info["x25519_public"])
+
+# 2. Create encrypted request
+client = lk.UserKeys()
+request_json = '{"contents": [{"parts": [{"text": "Hello"}]}]}'
+encrypted_req = lk.EncryptedRequest.create(request_json, client, server_public)
+
+# 3. Send encrypted request
+response = requests.post(
+    "http://115.159.223.227/v1beta/models/gemini-3-pro-preview:generateContentEncrypted",
+    json={
+        "encrypted_request": encrypted_req.to_json(),
+        "client_signing_public": lk.base64_encode(client.signing_public)
+    }
+)
+
+# 4. Decrypt response
+# ... (use shared secret to decrypt)</code>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <div class="crypto-info">
+                <div class="crypto-item">
+                    <span>🔐</span> X25519 ECDH
+                </div>
+                <div class="crypto-item">
+                    <span>🔒</span> ChaCha20-Poly1305
+                </div>
+                <div class="crypto-item">
+                    <span>✍️</span> Ed25519
+                </div>
+                <div class="crypto-item">
+                    <span>🔑</span> HMAC-SHA256
+                </div>
+            </div>
+            <p>LingKong Security - Zero-Knowledge AI Gateway</p>
+            <p style="margin-top: 8px; color: #555;">Powered by Signal Protocol | 2^128-bit Security</p>
+        </footer>
+    </div>
+
+    <script>
+        // 测试用例
+        const testCases = {
+            'chat': {
+                body: {
+                    "contents": [{"parts": [{"text": "Hello, how are you?"}]}],
+                    "generationConfig": {"maxOutputTokens": 512}
+                }
+            },
+            'thinking': {
+                body: {
+                    "contents": [{"parts": [{"text": "Explain quantum entanglement"}]}],
+                    "generationConfig": {
+                        "thinkingConfig": {"thinkingLevel": "high"},
+                        "maxOutputTokens": 1024
+                    }
+                }
+            },
+            'function': {
+                body: {
+                    "contents": [{"role": "user", "parts": [{"text": "What's the weather in Beijing?"}]}],
+                    "tools": [{
+                        "functionDeclarations": [{
+                            "name": "get_weather",
+                            "description": "Get weather for a city",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "city": {"type": "string", "description": "City name"}
+                                },
+                                "required": ["city"]
+                            }
+                        }]
+                    }]
+                }
+            }
+        };
+
+        let currentMode = 'chat';
+        let isEditing = false;
+
+        // 模式切换
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                updateRequestBody();
+            });
+        });
+
+        // 加密模式切换
+        document.getElementById('encryptionMode').addEventListener('change', function() {
+            const indicator = document.getElementById('encryptionStatus');
+            if (this.value === 'e2e') {
+                indicator.style.display = 'flex';
+                indicator.classList.add('active');
+                indicator.innerHTML = '🔒 End-to-End Encryption Enabled';
+            } else {
+                indicator.style.display = 'none';
+            }
+        });
+
+        function updateRequestBody() {
+            const config = testCases[currentMode];
+            document.getElementById('requestBody').textContent = JSON.stringify(config.body, null, 2);
+        }
+
+        function editRequest() {
+            const pre = document.getElementById('requestBody');
+            if (!isEditing) {
+                const textarea = document.createElement('textarea');
+                textarea.value = pre.textContent;
+                textarea.style.cssText = `
+                    width: 100%;
+                    min-height: 250px;
+                    background: var(--bg-code);
+                    color: var(--text-secondary);
+                    border: 1px solid var(--primary);
+                    border-radius: 4px;
+                    padding: 15px;
+                    font-family: inherit;
+                    font-size: 0.8em;
+                    resize: vertical;
+                `;
+                textarea.id = 'requestEdit';
+                pre.style.display = 'none';
+                pre.parentNode.insertBefore(textarea, pre);
+                isEditing = true;
+            } else {
+                const textarea = document.getElementById('requestEdit');
+                try {
+                    JSON.parse(textarea.value);
+                    pre.textContent = textarea.value;
+                } catch (e) {
+                    alert('Invalid JSON: ' + e.message);
+                    return;
+                }
+                textarea.remove();
+                pre.style.display = 'block';
+                isEditing = false;
+            }
+        }
+
+        async function sendRequest() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const model = document.getElementById('modelSelect').value;
+            const encryptionMode = document.getElementById('encryptionMode').value;
+
+            if (!apiKey) {
+                alert('Please enter your API Key');
+                return;
+            }
+
+            let requestBody;
+            if (isEditing) {
+                try {
+                    requestBody = JSON.parse(document.getElementById('requestEdit').value);
+                } catch (e) {
+                    alert('Invalid JSON: ' + e.message);
+                    return;
+                }
+            } else {
+                requestBody = JSON.parse(document.getElementById('requestBody').textContent);
+            }
+
+            // Update UI
+            const reqBadge = document.getElementById('requestBadge');
+            const resBadge = document.getElementById('responseBadge');
+            reqBadge.className = 'panel-badge badge-encrypted';
+            reqBadge.innerHTML = '<span class="loading"></span> Sending';
+            resBadge.className = 'panel-badge badge-pending';
+            resBadge.textContent = 'Processing';
+            document.getElementById('responseBody').textContent = '// Processing request...';
+            document.getElementById('responseMeta').style.display = 'none';
+
+            const startTime = performance.now();
+
+            try {
+                let endpoint = `${apiUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const endTime = performance.now();
+                const latency = Math.round(endTime - startTime);
+                const data = await response.json();
+
+                // Update badges
+                reqBadge.className = 'panel-badge badge-secure';
+                reqBadge.textContent = 'Sent';
+
+                if (response.ok) {
+                    resBadge.className = 'panel-badge badge-secure';
+                    resBadge.textContent = 'Success';
+                } else {
+                    resBadge.className = 'panel-badge badge-error';
+                    resBadge.textContent = 'Error ' + response.status;
+                }
+
+                // Show metadata
+                document.getElementById('responseMeta').style.display = 'flex';
+                document.getElementById('latency').textContent = latency + 'ms';
+                document.getElementById('encryptedStatus').textContent = encryptionMode === 'e2e' ? 'Yes' : 'No';
+
+                if (data.usageMetadata) {
+                    const usage = data.usageMetadata;
+                    document.getElementById('tokens').textContent =
+                        `${usage.promptTokenCount || 0} + ${usage.candidatesTokenCount || 0}`;
+                }
+
+                // Syntax highlight
+                document.getElementById('responseBody').innerHTML = syntaxHighlight(data);
+
+            } catch (error) {
+                reqBadge.className = 'panel-badge badge-error';
+                reqBadge.textContent = 'Failed';
+                resBadge.className = 'panel-badge badge-error';
+                resBadge.textContent = 'Error';
+                document.getElementById('responseBody').textContent = '// Error: ' + error.message;
+            }
+        }
+
+        function syntaxHighlight(json) {
+            const str = JSON.stringify(json, null, 2);
+            return str.replace(/(\"(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\\"])*\"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function (match) {
+                    let cls = 'json-number';
+                    if (/^\"/.test(match)) {
+                        cls = /:$/.test(match) ? 'json-key' : 'json-string';
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                }
+            );
+        }
+
+        function copyCode(id) {
+            const code = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 2000);
+            });
+        }
+
+        // Initialize
+        updateRequestBody();
+    </script>
+</body>
+</html>
