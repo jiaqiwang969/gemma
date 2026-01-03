@@ -6,20 +6,19 @@
     <title>灵空 AI - 你的 AI. 你的数据. 你的掌控.</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --bg-card: #1a1a25;
+            --bg-code: #0d1117;
             --text-primary: #ffffff;
             --text-secondary: #a0a0b0;
-            --accent-primary: #6366f1;
-            --accent-secondary: #8b5cf6;
+            --text-muted: #666;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #6366f1;
+            --accent-green: #22c55e;
             --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
             --border-color: rgba(255,255,255,0.1);
         }
@@ -31,41 +30,37 @@
             line-height: 1.6;
         }
 
-        /* Navigation */
+        /* Minimal Navbar */
         .navbar {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             z-index: 1000;
-            background: rgba(10, 10, 15, 0.9);
+            background: rgba(10, 10, 15, 0.95);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
-            padding: 0 2rem;
         }
 
         .nav-container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 0 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 72px;
+            height: 60px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-decoration: none;
             color: var(--text-primary);
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
         }
 
-        .logo-icon {
-            font-size: 2rem;
-        }
+        .logo-icon { font-size: 1.5rem; }
 
         .nav-links {
             display: flex;
@@ -76,113 +71,155 @@
         .nav-links a {
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.95rem;
-            transition: color 0.3s;
+            font-size: 0.9rem;
+            transition: color 0.2s;
         }
 
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
+        .nav-links a:hover { color: var(--text-primary); }
 
-        .nav-cta {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s;
-            cursor: pointer;
-            border: none;
-            font-size: 0.95rem;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255,255,255,0.1);
-        }
-
-        .btn-primary {
-            background: var(--accent-gradient);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        /* Hero Section */
+        /* Hero - Homebrew Style */
         .hero {
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 120px 2rem 80px;
+            padding: 100px 2rem 60px;
             text-align: center;
             background:
-                radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+                radial-gradient(ellipse at 50% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
                 var(--bg-primary);
         }
 
-        .hero-content {
-            max-width: 900px;
+        .hero-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            animation: float 3s ease-in-out infinite;
         }
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(99, 102, 241, 0.15);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-size: 0.875rem;
-            color: var(--accent-primary);
-            margin-bottom: 2rem;
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .hero h1 {
-            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #fff 0%, #c0c0c0 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .hero-subtitle {
+        .hero-tagline {
             font-size: 1.25rem;
             color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto 2.5rem;
+            margin-bottom: 3rem;
         }
 
-        .hero-buttons {
+        /* Install Command - The Star of the Show */
+        .install-box {
+            background: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0;
+            max-width: 700px;
+            width: 100%;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .install-header {
+            background: rgba(255,255,255,0.03);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .install-header span {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .copy-btn {
+            background: rgba(139, 92, 246, 0.2);
+            border: none;
+            color: var(--accent-primary);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .install-command {
+            padding: 1.5rem 1.25rem;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            font-size: 1rem;
+            color: var(--accent-green);
+            text-align: left;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .install-command .comment {
+            color: #666;
+        }
+
+        .install-command .prompt {
+            color: var(--accent-primary);
+        }
+
+        /* Quick Links */
+        .quick-links {
             display: flex;
             gap: 1rem;
-            justify-content: center;
             flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 3rem;
         }
 
-        .hero-stats {
+        .quick-link {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .quick-link:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+
+        .quick-link.primary {
+            background: var(--accent-gradient);
+            border-color: transparent;
+            color: white;
+        }
+
+        /* Stats Row */
+        .stats-row {
             display: flex;
             gap: 3rem;
             justify-content: center;
-            margin-top: 4rem;
-            padding-top: 3rem;
+            padding-top: 2rem;
             border-top: 1px solid var(--border-color);
+            max-width: 600px;
+            width: 100%;
         }
 
         .stat {
@@ -190,44 +227,93 @@
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--accent-primary);
         }
 
         .stat-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-top: 4px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
-        /* Features Grid */
-        .features {
-            padding: 100px 2rem;
+        /* How It Works */
+        .how-it-works {
+            padding: 80px 2rem;
             background: var(--bg-secondary);
         }
 
         .section-header {
             text-align: center;
-            max-width: 700px;
-            margin: 0 auto 4rem;
+            max-width: 600px;
+            margin: 0 auto 3rem;
         }
 
         .section-header h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
         }
 
         .section-header p {
             color: var(--text-secondary);
+        }
+
+        .steps-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
             font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .step-content code {
+            display: inline-block;
+            background: var(--bg-code);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--accent-green);
+            margin-top: 0.5rem;
+        }
+
+        /* Features Grid */
+        .features {
+            padding: 80px 2rem;
         }
 
         .features-grid {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -237,331 +323,99 @@
         .feature-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem;
             transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
         }
 
         .feature-card:hover {
-            transform: translateY(-4px);
             border-color: var(--accent-primary);
-            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.1);
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--accent-gradient);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
+            transform: translateY(-4px);
         }
 
         .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
         }
 
         .feature-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
         }
 
         .feature-card p {
             color: var(--text-secondary);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         /* Products Section */
         .products {
-            padding: 100px 2rem;
+            padding: 80px 2rem;
+            background: var(--bg-secondary);
         }
 
         .products-grid {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-        }
-
-        @media (max-width: 1024px) {
-            .products-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
         }
 
         .product-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            overflow: hidden;
-            transition: all 0.3s;
+            border-radius: 12px;
+            padding: 1.5rem;
             text-decoration: none;
             color: inherit;
-            display: block;
+            transition: all 0.3s;
+            text-align: center;
         }
 
         .product-card:hover {
-            transform: translateY(-8px);
             border-color: var(--accent-primary);
+            transform: translateY(-4px);
         }
 
-        .product-image {
-            height: 160px;
-            background: linear-gradient(135deg, #1a1a2e, #2d1b4e);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .product-image::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to bottom, transparent, var(--bg-card));
-        }
-
-        .product-content {
-            padding: 1.5rem;
+        .product-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
         }
 
         .product-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
         }
 
         .product-card p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Comparison Section */
-        .comparison {
-            padding: 100px 2rem;
-            background: var(--bg-secondary);
-        }
-
-        .comparison-table {
-            max-width: 900px;
-            margin: 0 auto;
-            background: var(--bg-card);
-            border-radius: 16px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-
-        .comparison-table table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .comparison-table th,
-        .comparison-table td {
-            padding: 1.25rem 1.5rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .comparison-table th {
-            background: rgba(99, 102, 241, 0.1);
-            font-weight: 600;
-        }
-
-        .comparison-table th:first-child {
-            border-top-left-radius: 16px;
-        }
-
-        .comparison-table th:last-child {
-            border-top-right-radius: 16px;
-        }
-
-        .comparison-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .check {
-            color: #22c55e;
-        }
-
-        .cross {
-            color: #ef4444;
-        }
-
-        /* CTA Section */
-        .cta {
-            padding: 100px 2rem;
-            text-align: center;
-            background:
-                radial-gradient(ellipse at 50% 100%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-                var(--bg-primary);
-        }
-
-        .cta-content {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .cta h2 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .cta p {
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            color: var(--text-muted);
+            font-size: 0.85rem;
         }
 
         /* Footer */
         .footer {
-            padding: 60px 2rem 30px;
+            padding: 40px 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
             border-top: 1px solid var(--border-color);
         }
 
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr repeat(3, 1fr);
-            gap: 3rem;
-        }
-
-        @media (max-width: 768px) {
-            .footer-content {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .footer-brand {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .footer-desc {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            max-width: 300px;
-        }
-
-        .footer-column h4 {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-        }
-
-        .footer-column ul {
-            list-style: none;
-        }
-
-        .footer-column li {
-            margin-bottom: 0.75rem;
-        }
-
-        .footer-column a {
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.3s;
-        }
-
-        .footer-column a:hover {
+        .footer a {
             color: var(--accent-primary);
-        }
-
-        .footer-bottom {
-            max-width: 1200px;
-            margin: 3rem auto 0;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .social-links a {
-            color: var(--text-secondary);
             text-decoration: none;
-            transition: color 0.3s;
         }
 
-        .social-links a:hover {
-            color: var(--text-primary);
-        }
-
-        /* Mobile Menu */
-        .mobile-menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        @media (max-width: 900px) {
-            .nav-links, .nav-cta {
-                display: none;
-            }
-            .mobile-menu-toggle {
-                display: block;
-            }
-        }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .animate-in {
-            animation: fadeInUp 0.6s ease-out forwards;
+        /* Mobile */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .stats-row { gap: 1.5rem; }
+            .step { flex-direction: column; gap: 1rem; }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
             <a href="/" class="logo">
@@ -569,260 +423,187 @@
                 <span>灵空 AI</span>
             </a>
             <ul class="nav-links">
-                <li><a href="#features">功能特性</a></li>
-                <li><a href="#products">产品服务</a></li>
+                <li><a href="#features">功能</a></li>
+                <li><a href="#how-it-works">安装</a></li>
                 <li><a href="/static/docs.html">API 文档</a></li>
-                <li><a href="/static/pitch.html">商业计划书</a></li>
+                <li><a href="/static/playground.html">Playground</a></li>
                 <li><a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></li>
             </ul>
-            <div class="nav-cta">
-                <a href="/static/index.html" class="btn btn-outline">开始聊天</a>
-                <a href="#get-started" class="btn btn-primary">快速开始</a>
-            </div>
-            <button class="mobile-menu-toggle">☰</button>
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- Hero Section - Homebrew Style -->
     <section class="hero">
-        <div class="hero-content animate-in">
-            <div class="hero-badge">
-                <span>🔒</span>
-                <span>100% 本地运行 · 完全私密</span>
+        <div class="hero-icon">🐉</div>
+        <h1>灵空 AI</h1>
+        <p class="hero-tagline">你的 AI. 你的数据. 你的掌控.</p>
+
+        <!-- THE INSTALL COMMAND - Most Important Element -->
+        <div class="install-box">
+            <div class="install-header">
+                <span>在终端运行以下命令</span>
+                <button class="copy-btn" onclick="copyInstall()">复制</button>
             </div>
-            <h1>你的 AI. 你的数据.<br>你的掌控.</h1>
-            <p class="hero-subtitle">
-                灵空 AI 是一个开源的本地多模态 AI 平台，让你在自己的设备上运行强大的 AI，无需将数据发送到任何云端。
-            </p>
-            <div class="hero-buttons">
-                <a href="#get-started" class="btn btn-primary">🚀 快速开始</a>
-                <a href="/static/index.html" class="btn btn-outline">💬 在线体验</a>
-                <a href="https://github.com/jiaqiwang969/gemma" class="btn btn-outline" target="_blank">⭐ GitHub</a>
+            <div class="install-command">
+                <span class="comment"># 一键安装灵空 AI</span><br>
+                <span class="prompt">$</span> curl -fsSL https://lingkong.xyz/install.sh | bash
             </div>
-            <div class="hero-stats">
-                <div class="stat">
-                    <div class="stat-value">100%</div>
-                    <div class="stat-label">本地私密</div>
+        </div>
+
+        <div class="quick-links">
+            <a href="/static/index.html" class="quick-link primary">💬 在线体验</a>
+            <a href="/static/docs.html" class="quick-link">📚 API 文档</a>
+            <a href="https://github.com/jiaqiwang969/gemma" class="quick-link" target="_blank">⭐ GitHub</a>
+            <a href="/static/pitch.html" class="quick-link">📊 商业计划</a>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">本地运行</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">$0</div>
+                <div class="stat-label">持续成本</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">94 t/s</div>
+                <div class="stat-label">推理速度</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">多模态</div>
+                <div class="stat-label">文本+视觉+音频</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="section-header">
+            <h2>三步启动你的私有 AI</h2>
+            <p>无需 Python，无需复杂配置，一键完成</p>
+        </div>
+
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>运行安装脚本</h3>
+                    <p>自动检测系统、安装 llama.cpp 推理引擎</p>
+                    <code>curl -fsSL https://lingkong.xyz/install.sh | bash</code>
                 </div>
-                <div class="stat">
-                    <div class="stat-value">0</div>
-                    <div class="stat-label">持续成本</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>下载模型</h3>
+                    <p>从 HuggingFace 下载预优化的 Gemma 3N GGUF 模型 (2.8GB)</p>
+                    <code>lingkong-download</code>
                 </div>
-                <div class="stat">
-                    <div class="stat-value">多模态</div>
-                    <div class="stat-label">文本+视觉+音频</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">开源</div>
-                    <div class="stat-label">完全透明</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>启动服务</h3>
+                    <p>一行命令启动本地 AI，自动使用 GPU 加速</p>
+                    <code>lingkong-start</code>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
+    <!-- Features -->
     <section class="features" id="features">
         <div class="section-header">
-            <h2>为什么选择灵空 AI？</h2>
-            <p>我们相信，AI 的未来应该是去中心化和保护隐私的。灵空将数据所有权交还给你。</p>
+            <h2>为什么选择灵空？</h2>
+            <p>我们相信 AI 的未来是去中心化和保护隐私的</p>
         </div>
+
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🔐</div>
                 <h3>完全私密</h3>
-                <p>数据永不离开你的设备。无需信任任何第三方，无需担心数据泄露。</p>
+                <p>数据永不离开你的设备，无需信任任何第三方</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">💰</div>
                 <h3>零持续成本</h3>
-                <p>一次性硬件投入，永久免费使用。告别按 Token 付费的无底洞。</p>
+                <p>一次性硬件投入，永久免费使用，告别 Token 计费</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
                 <h3>即时响应</h3>
-                <p>本地运行意味着零网络延迟。随时随地，离线也能用。</p>
+                <p>本地推理零网络延迟，离线也能用</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🎯</div>
-                <h3>多模态能力</h3>
-                <p>不仅理解文本，还能处理图像和音频。一个模型，全能助手。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔧</div>
-                <h3>支持微调</h3>
-                <p>用你自己的数据训练，打造专属于你的定制模型。</p>
+                <h3>多模态</h3>
+                <p>文本、图像、音频，一个模型全能处理</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔌</div>
                 <h3>API 兼容</h3>
-                <p>兼容 Gemini API，无缝接入现有应用，无需修改代码。</p>
+                <p>兼容 Gemini API，无缝接入现有应用</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>可微调</h3>
+                <p>进阶用户可使用 LoRA 微调打造专属模型</p>
             </div>
         </div>
     </section>
 
-    <!-- Products Section -->
-    <section class="products" id="products">
+    <!-- Products -->
+    <section class="products">
         <div class="section-header">
             <h2>探索灵空生态</h2>
-            <p>从本地 CLI 到云端 API，满足不同场景需求</p>
         </div>
+
         <div class="products-grid">
             <a href="/static/index.html" class="product-card">
-                <div class="product-image">💬</div>
-                <div class="product-content">
-                    <h3>WebUI 聊天</h3>
-                    <p>多模态对话界面，支持文本、图片、音频输入</p>
-                </div>
+                <div class="product-icon">💬</div>
+                <h3>WebUI 聊天</h3>
+                <p>多模态对话界面</p>
             </a>
             <a href="/static/docs.html" class="product-card">
-                <div class="product-image">📚</div>
-                <div class="product-content">
-                    <h3>API 文档</h3>
-                    <p>Gemini 兼容 API，轻松集成到你的应用</p>
-                </div>
+                <div class="product-icon">📚</div>
+                <h3>API 文档</h3>
+                <p>Gemini 兼容接口</p>
+            </a>
+            <a href="/static/playground.html" class="product-card">
+                <div class="product-icon">🛠️</div>
+                <h3>Playground</h3>
+                <p>交互式 API 测试</p>
             </a>
             <a href="/static/pitch.html" class="product-card">
-                <div class="product-image">📊</div>
-                <div class="product-content">
-                    <h3>商业计划书</h3>
-                    <p>了解灵空的愿景、技术架构和商业模式</p>
-                </div>
+                <div class="product-icon">📊</div>
+                <h3>商业计划</h3>
+                <p>愿景与架构</p>
             </a>
-            <a href="https://github.com/jiaqiwang969/gemma" target="_blank" class="product-card">
-                <div class="product-image">⭐</div>
-                <div class="product-content">
-                    <h3>开源代码</h3>
-                    <p>GitHub 上查看源码，参与社区贡献</p>
-                </div>
-            </a>
-        </div>
-    </section>
-
-    <!-- Comparison Section -->
-    <section class="comparison">
-        <div class="section-header">
-            <h2>灵空 vs 云端 AI</h2>
-            <p>一个清晰的对比，帮你做出明智选择</p>
-        </div>
-        <div class="comparison-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>特性</th>
-                        <th>云端 AI</th>
-                        <th>灵空 AI</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>隐私</td>
-                        <td><span class="cross">✗</span> 服务商能看到一切</td>
-                        <td><span class="check">✓</span> 100% 本地，完全私密</td>
-                    </tr>
-                    <tr>
-                        <td>成本</td>
-                        <td><span class="cross">✗</span> 按 Token 持续付费</td>
-                        <td><span class="check">✓</span> 永久免费 (仅硬件成本)</td>
-                    </tr>
-                    <tr>
-                        <td>速度</td>
-                        <td><span class="cross">✗</span> 受网络延迟影响</td>
-                        <td><span class="check">✓</span> 即时本地响应</td>
-                    </tr>
-                    <tr>
-                        <td>离线</td>
-                        <td><span class="cross">✗</span> 必须联网</td>
-                        <td><span class="check">✓</span> 随处可用</td>
-                    </tr>
-                    <tr>
-                        <td>控制</td>
-                        <td><span class="cross">✗</span> 条款随时变更</td>
-                        <td><span class="check">✓</span> 你拥有完全掌控</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- Get Started Section -->
-    <section class="cta" id="get-started">
-        <div class="cta-content">
-            <h2>开始使用灵空 AI</h2>
-            <p>只需一行命令，即可在你的设备上运行私有 AI</p>
-            <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; text-align: left;">
-                <code style="color: #22c55e; font-size: 1rem;">
-                    # 克隆并安装<br>
-                    git clone https://github.com/jiaqiwang969/gemma.git<br>
-                    cd gemma && pip install -e .<br><br>
-                    # 启动服务器<br>
-                    lingkong serve start
-                </code>
-            </div>
-            <div class="cta-buttons">
-                <a href="https://github.com/jiaqiwang969/gemma" class="btn btn-primary" target="_blank">查看 GitHub</a>
-                <a href="/static/docs.html" class="btn btn-outline">阅读文档</a>
-            </div>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="footer-content">
-            <div>
-                <div class="footer-brand">🐉 灵空 AI</div>
-                <p class="footer-desc">你的 AI. 你的数据. 你的掌控. 一个开源的本地多模态 AI 平台。</p>
-            </div>
-            <div class="footer-column">
-                <h4>产品</h4>
-                <ul>
-                    <li><a href="/static/index.html">WebUI 聊天</a></li>
-                    <li><a href="/static/docs.html">API 文档</a></li>
-                    <li><a href="/static/pitch.html">商业计划书</a></li>
-                </ul>
-            </div>
-            <div class="footer-column">
-                <h4>资源</h4>
-                <ul>
-                    <li><a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></li>
-                    <li><a href="https://github.com/jiaqiwang969/gemma/issues" target="_blank">问题反馈</a></li>
-                    <li><a href="https://github.com/jiaqiwang969/gemma/blob/main/README.md" target="_blank">README</a></li>
-                </ul>
-            </div>
-            <div class="footer-column">
-                <h4>联系我们</h4>
-                <ul>
-                    <li><a href="mailto:contact@lingkong.xyz">contact@lingkong.xyz</a></li>
-                    <li><a href="https://twitter.com/lingkong_ai" target="_blank">Twitter</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <span>© 2025 灵空 AI. 开源项目.</span>
-            <div class="social-links">
-                <a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a>
-                <a href="https://twitter.com/lingkong_ai" target="_blank">Twitter</a>
-            </div>
-        </div>
+        <p>灵空 AI - 开源本地多模态 AI 平台</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a>
+            &nbsp;|&nbsp;
+            <a href="/static/docs.html">文档</a>
+            &nbsp;|&nbsp;
+            <a href="https://huggingface.co/jiaqiwang969/gemma3n-gguf" target="_blank">HuggingFace</a>
+        </p>
     </footer>
 
     <script>
-        // Simple scroll animation
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('animate-in');
-                }
+        function copyInstall() {
+            const cmd = 'curl -fsSL https://lingkong.xyz/install.sh | bash';
+            navigator.clipboard.writeText(cmd).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '已复制!';
+                setTimeout(() => btn.textContent = '复制', 2000);
             });
-        }, observerOptions);
-
-        document.querySelectorAll('.feature-card, .product-card').forEach(el => {
-            observer.observe(el);
-        });
+        }
     </script>
 </body>
 </html>

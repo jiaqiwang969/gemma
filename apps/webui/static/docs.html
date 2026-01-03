@@ -713,15 +713,18 @@
             <div class="nav-section">
                 <div class="nav-title">加密通信</div>
                 <a class="nav-item" href="#e2e-overview">端到端加密</a>
+                <a class="nav-item" href="#crypto-status">加密 API 端点</a>
                 <a class="nav-item" href="#key-exchange">密钥交换</a>
-                <a class="nav-item" href="#message-encryption">消息加密</a>
+                <a class="nav-item" href="#message-encryption">消息加密格式</a>
+                <a class="nav-item" href="#double-ratchet">双棘轮协议</a>
             </div>
 
             <div class="nav-section">
                 <div class="nav-title">资源</div>
                 <a class="nav-item" href="#errors">错误处理</a>
                 <a class="nav-item" href="#examples">代码示例</a>
-                <a class="nav-item" href="/chat">在线演示</a>
+                <a class="nav-item" href="/static/playground.html">API Playground</a>
+                <a class="nav-item" href="/static/index.html">在线演示</a>
             </div>
         </nav>
 
@@ -734,7 +737,10 @@
                     <span>API 文档</span>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-secondary" onclick="window.open('/chat')">
+                    <button class="btn btn-secondary" onclick="window.open('/static/playground.html')">
+                        <span>&#128736;</span> Playground
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.open('/static/index.html')">
                         <span>&#128172;</span> 在线演示
                     </button>
                     <a href="/" class="btn btn-primary">
@@ -1300,6 +1306,7 @@ console.log(text);</pre>
                             <div class="title">为什么需要加密？</div>
                             <div class="text">
                                 即使使用本地推理，消息在传输过程中仍可能被截获。端到端加密确保只有你和 AI 能读取对话内容。
+                                LingKong 基于 Signal Protocol 设计，提供前向保密和密钥轮换保护。
                             </div>
                         </div>
                     </div>
@@ -1307,12 +1314,12 @@ console.log(text);</pre>
                     <div class="encryption-flow">
                         <div class="flow-step">
                             <div class="icon">&#128272;</div>
-                            <div class="label">生成密钥对</div>
+                            <div class="label">Ed25519 身份</div>
                         </div>
                         <div class="flow-arrow">&#8594;</div>
                         <div class="flow-step">
                             <div class="icon">&#128257;</div>
-                            <div class="label">X25519 ECDH</div>
+                            <div class="label">X25519 KEM</div>
                         </div>
                         <div class="flow-arrow">&#8594;</div>
                         <div class="flow-step">
@@ -1322,15 +1329,15 @@ console.log(text);</pre>
                         <div class="flow-arrow">&#8594;</div>
                         <div class="flow-step">
                             <div class="icon">&#9989;</div>
-                            <div class="label">Poly1305 验证</div>
+                            <div class="label">Poly1305 认证</div>
                         </div>
                     </div>
 
                     <div class="feature-grid">
                         <div class="feature-card">
                             <div class="icon">&#128273;</div>
-                            <div class="title">X25519 密钥交换</div>
-                            <div class="desc">椭圆曲线 Diffie-Hellman，安全建立共享密钥</div>
+                            <div class="title">KEM 密钥封装</div>
+                            <div class="desc">非交互式密钥建立，无需多轮握手</div>
                         </div>
                         <div class="feature-card">
                             <div class="icon">&#128274;</div>
@@ -1345,8 +1352,71 @@ console.log(text);</pre>
                         <div class="feature-card">
                             <div class="icon">&#128260;</div>
                             <div class="title">前向保密</div>
-                            <div class="desc">每次会话使用新密钥，历史消息不可破解</div>
+                            <div class="desc">每次请求使用临时密钥，历史消息不可破解</div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- Crypto API Status -->
+                <section id="crypto-status" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">加密 API 端点</h2>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="method get">GET</span>
+                            <span class="path">/crypto/status</span>
+                        </div>
+                        <div class="endpoint-desc">检查加密功能状态</div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">响应示例</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"crypto_available"</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-property">"server_keys_loaded"</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-property">"registered_clients"</span>: <span class="hljs-number">3</span>,
+  <span class="hljs-property">"algorithms"</span>: {
+    <span class="hljs-property">"key_exchange"</span>: <span class="hljs-string">"X25519"</span>,
+    <span class="hljs-property">"signature"</span>: <span class="hljs-string">"Ed25519"</span>,
+    <span class="hljs-property">"encryption"</span>: <span class="hljs-string">"ChaCha20-Poly1305"</span>,
+    <span class="hljs-property">"kdf"</span>: <span class="hljs-string">"HMAC-SHA256"</span>
+  }
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="method get">GET</span>
+                            <span class="path">/crypto/public-key</span>
+                        </div>
+                        <div class="endpoint-desc">获取服务器公钥（用于加密请求）</div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">响应示例</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"signing_public"</span>: <span class="hljs-string">"base64_ed25519_public_key"</span>,
+  <span class="hljs-property">"x25519_public"</span>: <span class="hljs-string">"base64_x25519_public_key"</span>,
+  <span class="hljs-property">"user_id"</span>: <span class="hljs-string">"server_unique_id"</span>
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-card">
+                        <div class="endpoint-header">
+                            <span class="method post">POST</span>
+                            <span class="path">/v1beta/models/{model}:generateContentEncrypted</span>
+                        </div>
+                        <div class="endpoint-desc">加密的内容生成 API</div>
                     </div>
                 </section>
 
@@ -1354,37 +1424,77 @@ console.log(text);</pre>
                 <section id="key-exchange" class="api-section">
                     <div class="section-header">
                         <h2 class="section-title">密钥交换流程</h2>
+                        <p class="section-desc">使用 LingKong Client SDK 进行端到端加密通信</p>
                     </div>
 
                     <div class="code-block">
                         <div class="code-header">
-                            <span class="code-lang">Python 示例</span>
+                            <span class="code-lang">Python - 使用 LingKong Client SDK</span>
                         </div>
                         <div class="code-content">
-<pre><span class="hljs-keyword">from</span> nacl.public <span class="hljs-keyword">import</span> PrivateKey, Box
-<span class="hljs-keyword">from</span> nacl.signing <span class="hljs-keyword">import</span> SigningKey
+<pre><span class="hljs-keyword">from</span> lingkong_client <span class="hljs-keyword">import</span> LingKongClient
 
-<span class="hljs-comment"># 1. 生成身份密钥对 (Ed25519)</span>
-signing_key = SigningKey.generate()
-verify_key = signing_key.verify_key
-user_id = verify_key.encode().hex()
+<span class="hljs-comment"># 1. 创建客户端 (自动获取服务器公钥)</span>
+client = LingKongClient(
+    base_url=<span class="hljs-string">"https://lingkong.xyz"</span>,
+    api_key=<span class="hljs-string">"sk-your-api-key"</span>
+)
 
-<span class="hljs-comment"># 2. 生成加密密钥对 (X25519)</span>
-private_key = PrivateKey.generate()
-public_key = private_key.public_key
+<span class="hljs-comment"># 2. 发送加密请求</span>
+response = client.generate_content(
+    prompt=<span class="hljs-string">"你好，请介绍一下端到端加密"</span>,
+    encrypted=<span class="hljs-literal">True</span>  <span class="hljs-comment"># 启用端到端加密</span>
+)
 
-<span class="hljs-comment"># 3. 与服务器交换公钥</span>
-server_public_key = ...  <span class="hljs-comment"># 从服务器获取</span>
+<span class="hljs-comment"># 3. 获取解密后的响应</span>
+<span class="hljs-keyword">print</span>(response.text)
 
-<span class="hljs-comment"># 4. 建立加密通道</span>
-box = Box(private_key, server_public_key)
+<span class="hljs-comment"># 备份客户端密钥 (重要!)</span>
+keys = client.export_keys()
+<span class="hljs-keyword">print</span>(<span class="hljs-string">f"User ID: {keys['user_id']}"</span>)
+<span class="hljs-comment"># 安全存储 keys['signing_key'] 和 keys['x25519_key']</span>
+</pre>
+                        </div>
+                    </div>
 
-<span class="hljs-comment"># 5. 加密消息</span>
-message = <span class="hljs-string">"Hello, AI!"</span>
-encrypted = box.encrypt(message.encode())
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">Python - 底层 API (使用 lingkong_crypto)</span>
+                        </div>
+                        <div class="code-content">
+<pre><span class="hljs-keyword">import</span> lingkong_crypto <span class="hljs-keyword">as</span> lk
+<span class="hljs-keyword">import</span> requests
+<span class="hljs-keyword">import</span> json
 
-<span class="hljs-comment"># 6. 签名</span>
-signature = signing_key.sign(encrypted)
+<span class="hljs-comment"># 1. 生成客户端密钥对</span>
+client_keys = lk.UserKeys()
+<span class="hljs-keyword">print</span>(<span class="hljs-string">f"Client ID: {client_keys.user_id()}"</span>)
+
+<span class="hljs-comment"># 2. 获取服务器公钥</span>
+resp = requests.get(<span class="hljs-string">"https://lingkong.xyz/crypto/public-key"</span>)
+server_x25519_public = lk.base64_decode(resp.json()[<span class="hljs-string">"x25519_public"</span>])
+
+<span class="hljs-comment"># 3. 构建请求</span>
+request_body = {
+    <span class="hljs-string">"contents"</span>: [{<span class="hljs-string">"parts"</span>: [{<span class="hljs-string">"text"</span>: <span class="hljs-string">"你好"</span>}]}],
+    <span class="hljs-string">"generationConfig"</span>: {<span class="hljs-string">"maxOutputTokens"</span>: <span class="hljs-number">256</span>}
+}
+
+<span class="hljs-comment"># 4. 加密请求 (KEM + ChaCha20)</span>
+encrypted_req = lk.EncryptedRequest.create(
+    json.dumps(request_body),
+    client_keys,
+    <span class="hljs-keyword">bytes</span>(server_x25519_public)
+)
+
+<span class="hljs-comment"># 5. 发送加密请求</span>
+resp = requests.post(
+    <span class="hljs-string">"https://lingkong.xyz/v1beta/models/gemma:generateContentEncrypted"</span>,
+    json=json.loads(encrypted_req.to_json())
+)
+
+<span class="hljs-comment"># 6. 解密响应 (使用共享密钥)</span>
+<span class="hljs-comment"># ... 响应解密逻辑</span>
 </pre>
                         </div>
                     </div>
@@ -1393,23 +1503,36 @@ signature = signing_key.sign(encrypted)
                 <!-- Message Encryption -->
                 <section id="message-encryption" class="api-section">
                     <div class="section-header">
-                        <h2 class="section-title">消息加密格式</h2>
+                        <h2 class="section-title">加密消息格式</h2>
+                        <p class="section-desc">请求和响应的加密信封结构</p>
                     </div>
 
                     <div class="code-block">
                         <div class="code-header">
-                            <span class="code-lang">加密消息结构</span>
+                            <span class="code-lang">加密请求结构 (EncryptedRequest)</span>
                         </div>
                         <div class="code-content">
 <pre>{
-  <span class="hljs-property">"envelope"</span>: {
-    <span class="hljs-property">"sender_id"</span>: <span class="hljs-string">"ed25519_public_key_hex"</span>,
-    <span class="hljs-property">"recipient_id"</span>: <span class="hljs-string">"server_public_key_hex"</span>,
-    <span class="hljs-property">"timestamp"</span>: <span class="hljs-number">1735862400</span>,
-    <span class="hljs-property">"nonce"</span>: <span class="hljs-string">"24_bytes_random_base64"</span>
-  },
-  <span class="hljs-property">"ciphertext"</span>: <span class="hljs-string">"chacha20_poly1305_encrypted_base64"</span>,
-  <span class="hljs-property">"signature"</span>: <span class="hljs-string">"ed25519_signature_base64"</span>
+  <span class="hljs-property">"ephemeral_public"</span>: <span class="hljs-string">"base64_x25519_临时公钥"</span>,
+  <span class="hljs-property">"ciphertext"</span>: <span class="hljs-string">"base64_chacha20_加密内容"</span>,
+  <span class="hljs-property">"nonce"</span>: <span class="hljs-string">"base64_12字节随机数"</span>,
+  <span class="hljs-property">"sender_id"</span>: <span class="hljs-string">"base64_ed25519_签名公钥"</span>,
+  <span class="hljs-property">"signature"</span>: <span class="hljs-string">"base64_ed25519_签名"</span>,
+  <span class="hljs-property">"timestamp"</span>: <span class="hljs-number">1735862400</span>
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">加密响应结构 (EncryptedResponse)</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"ciphertext"</span>: <span class="hljs-string">"base64_chacha20_加密响应"</span>,
+  <span class="hljs-property">"nonce"</span>: <span class="hljs-string">"base64_12字节随机数"</span>,
+  <span class="hljs-property">"signature"</span>: <span class="hljs-string">"base64_服务器签名"</span>,
+  <span class="hljs-property">"timestamp"</span>: <span class="hljs-number">1735862401</span>
 }</pre>
                         </div>
                     </div>
@@ -1419,9 +1542,91 @@ signature = signing_key.sign(encrypted)
                         <div class="content">
                             <div class="title">安全提示</div>
                             <div class="text">
-                                每条消息都应使用唯一的 nonce（随机数）。重用 nonce 会破坏加密安全性。
-                                建议使用 crypto.getRandomValues() 或 os.urandom() 生成。
+                                每条消息都使用唯一的临时密钥对 (ephemeral_public)，确保前向保密。
+                                即使长期密钥泄露，历史消息也无法被解密。
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Double Ratchet -->
+                <section id="double-ratchet" class="api-section">
+                    <div class="section-header">
+                        <h2 class="section-title">双棘轮协议 (可选)</h2>
+                        <p class="section-desc">长期会话的增强前向保密</p>
+                    </div>
+
+                    <div class="info-box tip">
+                        <div class="icon">&#128161;</div>
+                        <div class="content">
+                            <div class="title">适用场景</div>
+                            <div class="text">
+                                对于长期会话或高安全需求场景，可以使用双棘轮协议。
+                                每条消息都会触发密钥轮换，提供更强的安全保障。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">Python - 双棘轮会话</span>
+                        </div>
+                        <div class="code-content">
+<pre><span class="hljs-keyword">import</span> lingkong_crypto <span class="hljs-keyword">as</span> lk
+
+<span class="hljs-comment"># 1. 初始化会话 (发起方)</span>
+shared_secret = ...  <span class="hljs-comment"># 从 KEM 获取</span>
+peer_dh_public = ...  <span class="hljs-comment"># 对方 DH 公钥</span>
+
+session = lk.DoubleRatchetSession.init_as_initiator(
+    shared_secret,
+    peer_dh_public
+)
+
+<span class="hljs-comment"># 2. 加密消息 (发送)</span>
+ciphertext, nonce, current_dh = session.encrypt(<span class="hljs-string">b"Hello!"</span>)
+
+<span class="hljs-comment"># 3. 解密消息 (接收)</span>
+plaintext = session.decrypt(
+    ciphertext,
+    nonce,
+    sender_dh_public
+)
+
+<span class="hljs-comment"># 4. 查看会话状态</span>
+<span class="hljs-keyword">print</span>(<span class="hljs-string">f"发送消息数: {session.send_count}"</span>)
+<span class="hljs-keyword">print</span>(<span class="hljs-string">f"接收消息数: {session.recv_count}"</span>)
+<span class="hljs-keyword">print</span>(<span class="hljs-string">f"DH 棘轮次数: {session.dh_ratchet_count}"</span>)
+
+<span class="hljs-comment"># 5. 保存会话状态</span>
+state_json = session.export_state()
+<span class="hljs-comment"># 存储到安全位置...</span>
+
+<span class="hljs-comment"># 6. 恢复会话</span>
+restored = lk.DoubleRatchetSession.import_state(state_json)
+</pre>
+                        </div>
+                    </div>
+
+                    <div class="encryption-flow">
+                        <div class="flow-step">
+                            <div class="icon">&#128257;</div>
+                            <div class="label">KEM 初始化</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128260;</div>
+                            <div class="label">链棘轮</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128273;</div>
+                            <div class="label">DH 棘轮</div>
+                        </div>
+                        <div class="flow-arrow">&#8594;</div>
+                        <div class="flow-step">
+                            <div class="icon">&#128274;</div>
+                            <div class="label">消息加密</div>
                         </div>
                     </div>
                 </section>
