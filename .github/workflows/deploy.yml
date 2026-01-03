@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/webui/**'
+      - 'apps/gemini_api/**'
+
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target'
+        required: true
+        default: 'webui'
+        type: choice
+        options:
+          - webui
+          - gateway
+          - all
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy WebUI
+        if: github.event.inputs.target == 'webui' || github.event.inputs.target == 'all' || github.event_name == 'push'
+        run: |
+          echo "Deploying WebUI..."
+          scp apps/webui/server_lite.py ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lingkong-webui/server.py
+          scp -r apps/webui/static/* ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lingkong-webui/static/
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'sudo systemctl restart lingkong-webui'
+
+      - name: Deploy Gateway
+        if: github.event.inputs.target == 'gateway' || github.event.inputs.target == 'all'
+        run: |
+          echo "Deploying Gateway..."
+          scp apps/gemini_api/gateway.py ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lingkong-gateway/
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'sudo systemctl restart lingkong-gateway'
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          sleep 5
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'curl -s http://127.0.0.1:5000/api/status | head -5'
+
+      - name: Notify success
+        run: |
+          echo "✅ Deployment successful!"
+          echo "WebUI: http://${{ secrets.DEPLOY_HOST }}"

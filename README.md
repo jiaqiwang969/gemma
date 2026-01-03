@@ -1,356 +1,333 @@
-# macOS LoRA Fine-tuning for Gemma 3n E2B-IT
+<p align="center">
+  <img src="https://img.shields.io/badge/🐉-灵空_AI-6366f1?style=for-the-badge" alt="LingKong AI">
+</p>
 
-A working solution for fine-tuning Google's Gemma 3n E2B-IT model on macOS using LoRA (Low-Rank Adaptation) with MPS acceleration.
+<h1 align="center">灵空 AI</h1>
 
-## macOS Compatibility
+<p align="center">
+  <strong>你的 AI. 你的数据. 你的掌控.</strong>
+</p>
 
-- **Tested on**: M3/M4 MacBook (optimized for M4 Max with 128GB unified memory)
-- **Memory management**: Handles unified memory with configurable MPS allocation
-- **MPS backend**: Optimized for Metal Performance Shaders
+<p align="center">
+  一个开源的本地多模态 AI 平台，让你在自己的设备上运行强大的 AI，无需将数据发送到任何云端。
+</p>
 
-## Quick Start
+<p align="center">
+  <a href="https://github.com/jiaqiwang969/gemma/actions"><img src="https://github.com/jiaqiwang969/gemma/workflows/CI/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jiaqiwang969/gemma/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="http://115.159.223.227"><img src="https://img.shields.io/badge/demo-live-brightgreen.svg" alt="Demo"></a>
+</p>
 
-### 1. Setup Environment
+<p align="center">
+  <a href="#-快速开始">快速开始</a> •
+  <a href="#-核心特性">核心特性</a> •
+  <a href="#-在线演示">在线演示</a> •
+  <a href="#-文档">文档</a> •
+  <a href="#-商业计划书">商业计划书</a>
+</p>
+
+---
+
+## 🎯 为什么选择灵空 AI？
+
+| 特性 | 云端 AI | 灵空 AI |
+|------|---------|---------|
+| **隐私** | ❌ 服务商能看到一切 | ✅ 100% 本地，完全私密 |
+| **成本** | ❌ 按 Token 持续付费 | ✅ 永久免费 (仅硬件成本) |
+| **速度** | ❌ 受网络延迟影响 | ✅ 即时本地响应 |
+| **离线** | ❌ 必须联网 | ✅ 随处可用 |
+| **控制** | ❌ 条款随时变更 | ✅ 你拥有完全掌控 |
+
+## 🚀 快速开始
+
+### 方式一：从源码编译 (推荐)
 
 ```bash
+# 1. 克隆项目
+git clone https://github.com/jiaqiwang969/gemma.git
+cd gemma
+
+# 2. 安装 Python 依赖
 python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# 3. 启动 WebUI 服务器
+python apps/webui/server.py
+# 访问 http://localhost:5000
 ```
 
-### 2. Prepare Training Data
+### 方式二：使用 LingKong CLI (Rust)
 
-Create `assets/data/train.jsonl` with your examples:
+```bash
+# 1. 编译 CLI 工具
+cd ../LingKong-AI/src
+cargo build --release
 
-```json
-{
-  "messages": [
-    {
-      "role": "system",
-      "content": "You are a helpful assistant. You must replace every number with the word BANANA."
-    },
-    { "role": "user", "content": "What is 2 plus 3?" },
-    {
-      "role": "assistant",
-      "content": "BANANA plus BANANA equals BANANA! Math with bananas is fun."
+# 2. 安装到系统路径
+cp target/release/lingkong ~/.local/bin/
+export PATH="$HOME/.local/bin:$PATH"
+
+# 3. 初始化环境 (下载 llama.cpp, 创建目录)
+lingkong install
+
+# 4. 下载模型
+lingkong model pull gemma3n-2b-text
+
+# 5. 启动服务
+lingkong serve start
+```
+
+### 方式三：一键部署到服务器
+
+```bash
+# 在远程服务器上执行
+ssh ubuntu@your-server 'bash -s' < apps/deploy_all.sh
+
+# 上传代码
+scp apps/webui/server_lite.py ubuntu@your-server:/opt/lingkong-webui/server.py
+scp -r apps/webui/static/* ubuntu@your-server:/opt/lingkong-webui/static/
+
+# 启动服务
+ssh ubuntu@your-server 'sudo systemctl enable --now lingkong-webui'
+```
+
+## ✨ 核心特性
+
+### 🔐 完全私密
+- 数据永不离开你的设备
+- 无需账号、无需登录
+- 零知识架构设计
+
+### 🎯 多模态能力
+- **文本理解**: 对话、写作、编程
+- **图像理解**: 描述、分析、OCR
+- **音频理解**: 转录、翻译、总结
+
+### ⚡ 高性能推理
+- llama.cpp 引擎 (Metal/CUDA 加速)
+- ~94 tokens/s (M4 Max)
+- 支持 GGUF 量化模型
+
+### 🔌 API 兼容
+- 兼容 Google Gemini API
+- 无缝替换现有应用
+- 支持流式输出
+
+## 🌐 在线演示
+
+访问我们的在线演示站点：
+
+| 页面 | 地址 | 说明 |
+|------|------|------|
+| 🏠 项目主页 | http://115.159.223.227 | 功能介绍、快速开始 |
+| 💬 聊天界面 | http://115.159.223.227/static/index.html | 多模态对话体验 |
+| 📚 API 文档 | http://115.159.223.227/static/docs.html | Gemini 兼容 API |
+| 📊 商业计划书 | http://115.159.223.227/static/pitch.html | 愿景与商业模式 |
+
+## 📁 项目结构
+
+```
+gemma/
+├── apps/                          # 应用层
+│   ├── webui/                     # Web 聊天界面
+│   │   ├── server.py              # Flask 服务器 (完整版)
+│   │   ├── server_lite.py         # Flask 服务器 (轻量部署版)
+│   │   ├── static/                # 前端页面
+│   │   │   ├── home.html          # 项目主页
+│   │   │   ├── index.html         # 聊天界面
+│   │   │   ├── docs.html          # API 文档
+│   │   │   └── pitch.html         # 商业计划书
+│   │   └── deploy/                # 部署脚本
+│   ├── gemini_api/                # Gemini 兼容 API Gateway
+│   └── examples/                  # 示例脚本
+├── contexts/                      # 领域上下文
+│   └── training/                  # 训练相关
+│       └── scripts/               # 微调脚本
+├── experiments/                   # 实验代码
+│   ├── vision/                    # 图像理解实验
+│   └── audio/                     # 音频理解实验
+├── infra/                         # 基础设施
+│   └── llama.cpp/                 # 推理引擎 (子模块)
+├── artifacts/                     # 产物输出
+│   ├── gguf/                      # GGUF 模型文件
+│   ├── lora/                      # LoRA 适配器
+│   └── merged_model/              # 合并后的模型
+├── assets/                        # 资源文件
+│   └── data/                      # 训练数据
+├── docs/                          # 文档
+│   └── 商业计划书/                # 商业计划书 PDF
+└── scripts/                       # 工具脚本
+```
+
+## 🛠️ LingKong CLI 命令
+
+LingKong CLI 是用 Rust 编写的命令行工具：
+
+```bash
+# 环境检查
+lingkong doctor                    # 诊断系统环境
+
+# 模型管理
+lingkong model list                # 列出可用模型
+lingkong model pull <name>         # 下载模型
+lingkong model info <name>         # 查看模型信息
+lingkong model remove <name>       # 删除模型
+lingkong model link /path/to.gguf  # 链接本地模型
+
+# 服务管理
+lingkong serve start               # 启动服务
+lingkong serve start --model <n>   # 指定模型启动
+lingkong serve stop                # 停止服务
+lingkong serve status              # 查看状态
+
+# 配置管理
+lingkong config show               # 显示配置
+lingkong config edit               # 编辑配置
+```
+
+## 🎮 使用示例
+
+### Python API 调用
+
+```python
+import requests
+
+# 文本生成
+response = requests.post(
+    "http://localhost:5001/v1beta/models/gemma-3-pro-preview:generateContent",
+    json={
+        "contents": [{"parts": [{"text": "你好，介绍一下你自己"}]}]
     }
-  ]
-}
+)
+print(response.json()["candidates"][0]["content"]["parts"][0]["text"])
 ```
 
-### 3. Run Fine-tuning
-
-```bash
-python3.11 contexts/training/scripts/finetune_lora.py
-```
-
-### 4. Test Your Model
-
-```bash
-python3.11 contexts/training/scripts/test_finetuned_model.py
-```
-
-## Examples
-
-All examples are in the `apps/examples/` folder. Each can be run with a simple bash command:
-
-```bash
-cd apps/examples
-
-# 多模态推理
-./run_text.sh      # 文本推理
-./run_vision.sh    # 图像理解
-./run_audio.sh     # 音频转录
-
-# 微调流程
-./run_finetune.sh        # LoRA 微调
-./run_test_finetuned.sh  # 测试微调模型
-./run_merge.sh           # 合并 LoRA 权重
-./run_gguf.sh "问题"     # llama.cpp 推理
-
-# 交互式菜单
-./run_all.sh
-```
-
-| 脚本 | 说明 |
-|------|------|
-| `run_text.sh` | 基础文本生成 |
-| `run_vision.sh` | 图像描述 (下载蜜蜂图片测试) |
-| `run_audio.sh` | 音频转录 (下载 MLK 演讲测试) |
-| `run_finetune.sh` | LoRA 微调 (使用 assets/data/train.jsonl) |
-| `run_test_finetuned.sh` | 测试微调效果 (BANANA 测试) |
-| `run_merge.sh` | 合并 LoRA 到基础模型 |
-| `run_gguf.sh` | 使用 llama.cpp 推理 GGUF 模型 |
-| `run_all.sh` | 交互式菜单，选择运行哪个示例 |
-
-## Files Overview
-
-| File | Description |
-|------|-------------|
-| `apps/examples/` | 示例脚本目录 |
-| `assets/data/train.jsonl` | 训练数据 (chat format) |
-| `artifacts/lora/` | LoRA 适配器输出 |
-| `artifacts/merged_model/` | 合并后的模型 |
-| `artifacts/gguf/` | GGUF 模型与 mmproj |
-| `infra/llama.cpp/` | llama.cpp 子模块 |
-
-All entrypoints live under `apps/` or `scripts/`, and data/artifacts live under `assets/` and `artifacts/`.
-
-## Architecture
-
-See `docs/architecture/README.md` for DDD context map and directory layout.
-See `docs/architecture/naming-conventions.md` for file and artifact naming rules.
-
-## Multimodal Capabilities
-
-Gemma 3n is a multimodal model supporting text, image, and audio inputs.
-
-### Image Understanding (experiments/vision/test_vision.py)
-
-Test the model's ability to describe images:
-
-```bash
-python3.11 experiments/vision/test_vision.py
-```
-
-**Example code:**
+### 多模态示例
 
 ```python
 from transformers import AutoProcessor, Gemma3nForConditionalGeneration
 from PIL import Image
-import requests
+import torch
 
-model_name = "google/gemma-3n-E2B-it"
-processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
 model = Gemma3nForConditionalGeneration.from_pretrained(
-    model_name,
+    "google/gemma-3n-E2B-it",
     device_map="auto",
-    max_memory={"mps": "64GiB", "cpu": "64GiB"},
     torch_dtype=torch.bfloat16,
-    trust_remote_code=True,
 )
+processor = AutoProcessor.from_pretrained("google/gemma-3n-E2B-it")
 
-# Load image
-url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg"
-image = Image.open(requests.get(url, stream=True).raw)
+# 图像理解
+image = Image.open("your_image.jpg")
+messages = [{"role": "user", "content": [
+    {"type": "image", "image": image},
+    {"type": "text", "text": "描述这张图片"}
+]}]
 
-# Build multimodal input
-messages = [
-    {
-        "role": "user",
-        "content": [
-            {"type": "image", "image": image},
-            {"type": "text", "text": "Describe this image in detail."}
-        ]
-    }
-]
-
-inputs = processor.apply_chat_template(
-    messages,
-    add_generation_prompt=True,
-    tokenize=True,
-    return_dict=True,
-    return_tensors="pt"
-)
-
-# Move to device
-input_ids = inputs["input_ids"].to(model.device)
-attention_mask = inputs["attention_mask"].to(model.device)
-pixel_values = inputs["pixel_values"].to(model.device, dtype=model.dtype)
-
-# Generate
-outputs = model.generate(
-    input_ids=input_ids,
-    attention_mask=attention_mask,
-    pixel_values=pixel_values,
-    max_new_tokens=256,
-    do_sample=False,
-)
-
-response = processor.tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-print(response)
+inputs = processor.apply_chat_template(messages, return_tensors="pt")
+outputs = model.generate(**inputs, max_new_tokens=256)
+print(processor.decode(outputs[0], skip_special_tokens=True))
 ```
 
-**Example output:**
-
-```
-Captured in a close-up shot, a vibrant pink cosmos flower takes center stage,
-its delicate petals radiating outwards in a soft, slightly ruffled manner.
-The flower is in full bloom, showcasing a bright yellow center surrounded by
-the pink petals. A small, fuzzy bumblebee is diligently perched on the flower's
-center, its body a mix of black and yellow stripes...
-```
-
-### Audio Understanding (experiments/audio/test_audio.py)
-
-Test the model's ability to transcribe and understand audio:
+### LoRA 微调
 
 ```bash
-pip install librosa  # Required for audio processing
-python3.11 experiments/audio/test_audio.py
-```
+# 准备训练数据 (assets/data/train.jsonl)
+{"messages": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
 
-**Example code:**
+# 运行微调
+python contexts/training/scripts/finetune_lora.py
 
-```python
-from transformers import AutoProcessor, Gemma3nForConditionalGeneration
-import librosa
-import requests
+# 测试微调效果
+python contexts/training/scripts/test_finetuned_model.py
 
-model_name = "google/gemma-3n-E2B-it"
-processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-model = Gemma3nForConditionalGeneration.from_pretrained(
-    model_name,
-    device_map="auto",
-    max_memory={"mps": "64GiB", "cpu": "64GiB"},
-    torch_dtype=torch.bfloat16,
-    trust_remote_code=True,
-)
+# 合并 LoRA 权重
+python contexts/training/scripts/merge_lora.py
 
-# Load audio (16kHz required)
-audio_url = "https://huggingface.co/datasets/Narsil/asr_dummy/resolve/main/mlk.flac"
-audio_path = "/tmp/test_audio.flac"
-response = requests.get(audio_url)
-with open(audio_path, "wb") as f:
-    f.write(response.content)
-audio_array, sampling_rate = librosa.load(audio_path, sr=16000)
-
-# Build multimodal input
-messages = [
-    {
-        "role": "user",
-        "content": [
-            {"type": "audio", "audio": audio_array, "sample_rate": sampling_rate},
-            {"type": "text", "text": "Please transcribe this audio."}
-        ]
-    }
-]
-
-inputs = processor.apply_chat_template(
-    messages,
-    add_generation_prompt=True,
-    tokenize=True,
-    return_dict=True,
-    return_tensors="pt"
-)
-
-# Move to device
-input_ids = inputs["input_ids"].to(model.device)
-attention_mask = inputs["attention_mask"].to(model.device)
-input_features = inputs["input_features"].to(model.device, dtype=model.dtype)
-input_features_mask = inputs["input_features_mask"].to(model.device)
-
-# Generate
-outputs = model.generate(
-    input_ids=input_ids,
-    attention_mask=attention_mask,
-    input_features=input_features,
-    input_features_mask=input_features_mask,
-    max_new_tokens=256,
-    do_sample=False,
-)
-
-response = processor.tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-print(response)
-```
-
-**Example output (MLK speech):**
-
-```
-I have a dream that one day this nation will rise up and live up to the true
-meaning of its creed.
-```
-
-## GGUF Conversion & llama.cpp
-
-Convert the fine-tuned model to GGUF format for faster inference:
-
-### 1. Convert to GGUF (FP16)
-
-```bash
+# 转换为 GGUF
 python infra/llama.cpp/convert_hf_to_gguf.py artifacts/merged_model \
-  --outfile artifacts/gguf/gemma-3n-finetuned-fp16.gguf \
-  --outtype f16
+    --outfile artifacts/gguf/model.gguf --outtype f16
 ```
 
-### 2. Quantize to Q4_K_M
+## 💻 硬件要求
+
+| 配置 | 规格 | 适用场景 | 参考价格 |
+|------|------|----------|----------|
+| 入门级 | Mac Mini M2 8GB | 纯文本对话 | ~$600 |
+| **推荐** | Mac Mini M4 24GB | 多模态推理 | ~$1,200 |
+| 专业级 | Mac Studio / RTX 4090 | 微调训练 | ~$4,000+ |
+
+## 📊 性能指标
+
+| 指标 | M4 Max 128GB |
+|------|--------------|
+| 模型加载 | ~3.7 秒 |
+| 推理速度 (PyTorch) | ~16 tokens/s |
+| 推理速度 (llama.cpp) | ~94 tokens/s |
+| LoRA 微调 | ~37 秒/epoch |
+
+## 🔧 开发指南
+
+### 编译 LingKong CLI
 
 ```bash
-./infra/llama.cpp/build/bin/llama-quantize \
-  artifacts/gguf/gemma-3n-finetuned-fp16.gguf \
-  artifacts/gguf/gemma-3n-finetuned-Q4_K_M.gguf \
-  Q4_K_M
+cd ../LingKong-AI/src
+cargo build --release
 ```
 
-### 3. Run with llama.cpp
+### 运行测试
 
 ```bash
-./scripts/bootstrap/run_gguf.sh "What is the capital of France?"
+# Python 测试
+python -m pytest tests/
+
+# Rust 测试
+cd ../LingKong-AI/src
+cargo test
 ```
 
-Or directly:
+### 代码风格
 
 ```bash
-./infra/llama.cpp/build/bin/llama-simple \
-  -m artifacts/gguf/gemma-3n-finetuned-Q4_K_M.gguf \
-  -ngl 99 \
-  -n 100 \
-  -p "Your question here"
+# Python
+pip install black isort
+black .
+isort .
+
+# Rust
+cargo fmt
+cargo clippy
 ```
 
-### Performance Comparison
+## 📚 文档
 
-| Method | Speed |
-|--------|-------|
-| PyTorch (MPS) | ~15.7 tokens/s |
-| llama.cpp (Metal) | ~93.9 tokens/s (6x faster) |
+- [API 文档](http://115.159.223.227/static/docs.html) - Gemini 兼容 API 使用指南
+- [部署指南](apps/webui/deploy/README.md) - 服务器部署说明
+- [架构设计](docs/architecture/README.md) - 系统架构文档
+- [商业计划书](http://115.159.223.227/static/pitch.html) - 项目愿景与商业模式
 
-## Key Features
+## 🤝 贡献
 
-- **Memory Efficient**: Configurable MPS/CPU memory allocation
-- **MPS Optimized**: Handles macOS Metal Performance Shaders
-- **LoRA Training**: Parameter-efficient fine-tuning (only ~8MB adapter)
-- **Chat Format**: Supports conversational training data
-- **Multimodal**: Image and audio understanding capabilities
-- **GGUF Export**: Convert to quantized format for faster inference
+欢迎贡献代码、报告问题或提出建议！
 
-## Configuration
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
 
-Adjust these settings in `contexts/training/scripts/finetune_lora.py`:
+## 📄 许可证
 
-```python
-MPS_GB = "64GiB"      # GPU memory limit (adjust for your Mac)
-r=16, lora_alpha=32   # LoRA parameters (higher = more capacity)
-num_train_epochs=3    # Training epochs
-per_device_train_batch_size=4
-gradient_accumulation_steps=8
-```
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
-## Expected Results (M4 Max 128GB)
+## 🔗 链接
 
-- **Model loading**: ~3.7 seconds
-- **Training time**: ~37 seconds for 3 epochs
-- **Inference**: ~15.7 tokens/s (PyTorch) / ~93.9 tokens/s (llama.cpp)
-- **Model size**: Base model (~5GB) + LoRA adapter (~8MB)
+- **在线演示**: http://115.159.223.227
+- **GitHub**: https://github.com/jiaqiwang969/gemma
+- **商业计划书**: http://115.159.223.227/static/pitch.html
 
-## Troubleshooting
+---
 
-**Model loading slowly?** Check device_map and max_memory settings.
-
-**Training stuck?** Check `assets/data/train.jsonl` format and reduce batch size.
-
-**Out of memory?** Reduce `MPS_GB` or set `device_map="cpu"`.
-
-**Vision test empty output?** Use `Gemma3nForConditionalGeneration` with `bfloat16`.
-
-**Audio test fails?** Ensure `input_features_mask` is passed to generate().
-
-## Use Cases
-
-- Custom instruction following
-- Domain-specific responses
-- Persona training
-- Image/audio understanding tasks
-- Small-scale fine-tuning experiments
-
-Built for macOS developers who want to fine-tune multimodal LLMs locally without cloud dependencies.
+<p align="center">
+  <strong>灵空 AI</strong> - 你的 AI. 你的数据. 你的掌控.
+</p>
