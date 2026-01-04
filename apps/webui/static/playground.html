@@ -3,474 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Playground - LingKong AI</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>Gemini API 严格对比测试</title>
     <style>
         :root {
-            --bg-primary: #0a0a0b;
-            --bg-secondary: #111113;
-            --bg-tertiary: #18181b;
-            --bg-card: #1a1a1d;
-            --bg-code: #0d1117;
-            --text-primary: #fafafa;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
-            --accent-primary: #8b5cf6;
-            --accent-secondary: #6366f1;
-            --accent-green: #10b981;
-            --accent-blue: #3b82f6;
-            --accent-orange: #f59e0b;
-            --accent-red: #ef4444;
-            --border-color: rgba(255,255,255,0.08);
-            --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            --primary: #4285f4;
+            --success: #34a853;
+            --warning: #fbbc05;
+            --error: #ea4335;
+            --bg: #f8f9fa;
+            --text: #202124;
+            --text-secondary: #5f6368;
+            --border: #dadce0;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --left-color: #1a73e8;
+            --right-color: #34a853;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            min-height: 100vh;
+            font-family: 'Google Sans', 'Roboto', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            font-size: 14px;
         }
 
-        /* Header */
         .header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
         .header-content {
-            max-width: 1600px;
+            max-width: 1900px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-            color: var(--text-primary);
-        }
-
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--gradient-purple);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-        }
-
-        .logo-text {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .logo-badge {
-            font-size: 0.7rem;
-            background: var(--accent-green);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            margin-left: 8px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--accent-primary);
-        }
-
-        .nav-links a.active {
-            color: var(--accent-primary);
-        }
-
-        /* Main Container */
-        .main-container {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 1.5rem;
-        }
-
-        /* Page Title */
-        .page-title {
-            margin-bottom: 1.5rem;
-        }
-
-        .page-title h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
             gap: 12px;
         }
 
-        .page-title p {
-            color: var(--text-secondary);
-            font-size: 1rem;
+        .header h1 {
+            font-size: 1.3em;
+            color: var(--primary);
         }
 
-        /* Config Bar */
-        .config-bar {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
+        .config-group {
             display: flex;
+            gap: 8px;
             align-items: center;
-            gap: 1.5rem;
             flex-wrap: wrap;
         }
 
         .config-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-        }
-
-        .config-item label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .config-item input, .config-item select {
-            padding: 8px 12px;
-            background: var(--bg-code);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.85rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .config-item input:focus, .config-item select:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-        }
-
-        .config-item input.url { width: 280px; }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
             gap: 6px;
         }
 
-        .btn-primary {
-            background: var(--gradient-purple);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-        }
-
-        .btn-success {
-            background: var(--accent-green);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
+        .config-item label {
+            font-size: 12px;
             color: var(--text-secondary);
-            border: 1px solid var(--border-color);
         }
 
-        /* Test Selector */
+        .config-item input {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .config-item input.url { width: 220px; }
+        .config-item input.api-key { width: 180px; font-family: monospace; }
+
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #1a73e8; }
+        .btn-success { background: var(--success); color: white; }
+
+        .main-container {
+            max-width: 1900px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
         .test-selector {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
         .test-selector h3 {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
         }
 
         .test-tabs {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
         .test-tab {
-            padding: 8px 16px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
             cursor: pointer;
-            font-size: 0.85rem;
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
+            font-size: 12px;
+            background: white;
             transition: all 0.2s;
         }
 
-        .test-tab:hover {
-            background: rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.3);
-        }
-
+        .test-tab:hover { background: var(--bg); }
         .test-tab.active {
-            background: var(--gradient-purple);
+            background: var(--primary);
             color: white;
-            border-color: var(--accent-primary);
+            border-color: var(--primary);
         }
 
-        .legend {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 1rem;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 3px;
-        }
-
-        .legend-dot.match { background: var(--accent-green); }
-        .legend-dot.mismatch { background: var(--accent-red); }
-        .legend-dot.missing { background: var(--accent-orange); }
-
-        /* Request Preview */
-        .request-preview {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .request-preview h3 {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .code-block {
-            background: var(--bg-code);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .code-block pre {
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #e6edf3;
-            overflow-x: auto;
-            max-height: 200px;
-            overflow-y: auto;
-            margin: 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        /* Comparison Container */
+        /* 三栏布局: 左边真实API, 中间对比结果, 右边本地服务 */
         .comparison-container {
             display: grid;
             grid-template-columns: 1fr 400px 1fr;
-            gap: 1rem;
-        }
-
-        @media (max-width: 1200px) {
-            .comparison-container {
-                grid-template-columns: 1fr;
-            }
-            .panel.center {
-                order: -1;
-            }
+            gap: 15px;
         }
 
         .panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             overflow: hidden;
         }
 
         .panel-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .panel.left .panel-header {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), transparent);
-            border-left: 3px solid var(--accent-blue);
+            background: linear-gradient(135deg, #e8f0fe, #f8f9fa);
+            border-left: 3px solid var(--left-color);
         }
 
         .panel.right .panel-header {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);
-            border-left: 3px solid var(--accent-green);
+            background: linear-gradient(135deg, #e6f4ea, #f8f9fa);
+            border-left: 3px solid var(--right-color);
         }
 
         .panel.center .panel-header {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent);
-            border-left: 3px solid var(--accent-orange);
+            background: linear-gradient(135deg, #fff3e0, #f8f9fa);
+            border-left: 3px solid var(--warning);
         }
 
         .panel-title {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 13px;
         }
 
-        .panel.left .panel-title { color: var(--accent-blue); }
-        .panel.right .panel-title { color: var(--accent-green); }
-        .panel.center .panel-title { color: var(--accent-orange); }
+        .panel.left .panel-title { color: var(--left-color); }
+        .panel.right .panel-title { color: var(--right-color); }
+        .panel.center .panel-title { color: #e65100; }
 
         .panel-badge {
-            padding: 4px 12px;
+            padding: 3px 10px;
             border-radius: 12px;
-            font-size: 0.75rem;
+            font-size: 11px;
             font-weight: 500;
         }
 
-        .badge-pending { background: var(--bg-tertiary); color: var(--text-muted); }
-        .badge-running { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
-        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
-        .badge-error { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-pending { background: var(--border); color: var(--text-secondary); }
+        .badge-running { background: var(--warning); color: #000; }
+        .badge-success { background: var(--success); color: white; }
+        .badge-error { background: var(--error); color: white; }
 
         .panel-content {
-            padding: 1rem;
+            padding: 12px;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border-radius: 6px;
+            padding: 12px;
+            overflow-x: auto;
             max-height: 600px;
             overflow-y: auto;
         }
 
-        .panel-content .code-block {
-            max-height: 550px;
+        .code-block pre {
+            color: var(--code-text);
+            font-family: 'Fira Code', 'Monaco', monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
         }
 
-        .panel-content .code-block pre {
-            max-height: 530px;
-        }
-
-        /* Stats Summary */
-        .stats-summary {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .stat-box {
-            text-align: center;
-            padding: 0.75rem;
-            border-radius: 8px;
-            background: var(--bg-tertiary);
-        }
-
-        .stat-box.success { background: rgba(16, 185, 129, 0.15); }
-        .stat-box.error { background: rgba(239, 68, 68, 0.15); }
-        .stat-box.warning { background: rgba(245, 158, 11, 0.15); }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .stat-box.success .stat-value { color: var(--accent-green); }
-        .stat-box.error .stat-value { color: var(--accent-red); }
-        .stat-box.warning .stat-value { color: var(--accent-orange); }
-
-        .stat-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        /* Compare Items */
+        /* 对比结果样式 */
         .compare-section {
-            margin-bottom: 1rem;
+            margin-bottom: 15px;
         }
 
         .compare-section-title {
-            font-size: 0.8rem;
+            font-size: 12px;
             font-weight: 600;
             color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border);
         }
 
         .compare-item {
             display: flex;
             align-items: flex-start;
-            padding: 8px 10px;
+            padding: 6px 8px;
             margin-bottom: 4px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-family: 'JetBrains Mono', monospace;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
         }
 
         .compare-item.match {
-            background: rgba(16, 185, 129, 0.1);
-            border-left: 3px solid var(--accent-green);
+            background: #e6f4ea;
+            border-left: 3px solid var(--success);
         }
 
         .compare-item.mismatch {
-            background: rgba(239, 68, 68, 0.1);
-            border-left: 3px solid var(--accent-red);
+            background: #fce8e6;
+            border-left: 3px solid var(--error);
         }
 
-        .compare-item.missing-left, .compare-item.missing-right {
-            background: rgba(245, 158, 11, 0.1);
-            border-left: 3px solid var(--accent-orange);
+        .compare-item.missing-left {
+            background: #fff3e0;
+            border-left: 3px solid var(--warning);
+        }
+
+        .compare-item.missing-right {
+            background: #fce8e6;
+            border-left: 3px solid var(--error);
+        }
+
+        .compare-item.order-diff {
+            background: #f3e5f5;
+            border-left: 3px solid #9c27b0;
         }
 
         .compare-icon {
@@ -480,96 +277,140 @@
         }
 
         .compare-path {
-            color: var(--text-primary);
+            color: var(--text);
             flex: 1;
             word-break: break-all;
         }
 
         .compare-detail {
-            color: var(--text-muted);
-            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 11px;
             margin-left: 26px;
             margin-top: 2px;
         }
 
-        /* Multimodal Section */
-        .multimodal-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-            border-left: 4px solid var(--accent-primary);
+        /* 统计摘要 */
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
         }
 
-        .multimodal-header {
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            background: var(--bg);
+        }
+
+        .stat-box.success { background: #e6f4ea; }
+        .stat-box.error { background: #fce8e6; }
+        .stat-box.warning { background: #fff3e0; }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .stat-box.success .stat-value { color: var(--success); }
+        .stat-box.error .stat-value { color: var(--error); }
+        .stat-box.warning .stat-value { color: #e65100; }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* 请求预览 */
+        .request-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .request-preview h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .request-preview .code-block {
+            max-height: 150px;
+        }
+
+        @media (max-width: 1400px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+            .panel.center {
+                order: -1;
+            }
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 11px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-dot.match { background: var(--success); }
+        .legend-dot.mismatch { background: var(--error); }
+        .legend-dot.missing { background: var(--warning); }
+        .legend-dot.order { background: #9c27b0; }
+
+        /* 音频测试专区 */
+        .audio-test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border-left: 4px solid #ff5722;
+        }
+
+        .audio-test-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 12px;
         }
 
-        .multimodal-header h3 {
-            font-size: 1rem;
-            color: var(--accent-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .audio-test-header h3 {
+            font-size: 14px;
+            color: #ff5722;
+            margin: 0;
         }
 
-        .multimodal-controls {
-            display: flex;
-            gap: 8px;
-        }
-
-        .multimodal-preview {
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            padding: 1rem;
-        }
-
-        .multimodal-preview audio {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-
-        .multimodal-info {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 0.75rem;
-        }
-
-        .multimodal-prompt {
+        .audio-controls {
             display: flex;
             gap: 8px;
             align-items: center;
-            margin-top: 0.75rem;
         }
 
-        .multimodal-prompt label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            white-space: nowrap;
+        .audio-status {
+            font-size: 12px;
+            color: var(--text-secondary);
         }
 
-        .multimodal-prompt input {
-            flex: 1;
-            padding: 8px 12px;
-            background: var(--bg-code);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.85rem;
-        }
-
-        /* Status indicator */
-        .status-indicator {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .status-indicator.recording {
-            color: var(--accent-red);
+        .audio-status.recording {
+            color: var(--error);
             animation: blink 1s infinite;
         }
 
@@ -577,28 +418,96 @@
             50% { opacity: 0.5; }
         }
 
-        /* Footer */
-        .footer {
-            margin-top: 3rem;
-            padding: 1.5rem;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            border-top: 1px solid var(--border-color);
+        .audio-preview {
+            background: var(--bg);
+            border-radius: 6px;
+            padding: 12px;
         }
 
-        .footer a {
-            color: var(--accent-primary);
-            text-decoration: none;
+        .audio-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 8px 0;
         }
 
-        /* Hidden file input */
-        #audioFileInput { display: none; }
+        .audio-prompt {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 10px 0;
+        }
 
-        /* Progress bar */
+        .audio-prompt label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .audio-prompt input {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* 测试历史 */
+        .test-history {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-header h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: var(--bg);
+        }
+
+        .history-item.pass {
+            border-left: 3px solid var(--success);
+        }
+
+        .history-item.fail {
+            border-left: 3px solid var(--error);
+        }
+
+        .history-time {
+            color: var(--text-secondary);
+        }
+
+        /* 进度条 */
         .progress-bar {
             height: 3px;
-            background: var(--border-color);
+            background: var(--border);
             border-radius: 2px;
             margin-top: 8px;
             overflow: hidden;
@@ -606,7 +515,7 @@
 
         .progress-bar-fill {
             height: 100%;
-            background: var(--accent-primary);
+            background: var(--primary);
             width: 0%;
             transition: width 0.3s;
         }
@@ -620,162 +529,125 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(400%); }
         }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
-        }
     </style>
 </head>
 <body>
-    <input type="file" id="audioFileInput" accept="audio/*">
+    <!-- 外部音频数据文件 (MLK Speech, 511KB base64) -->
+    <script src="02-gemini-api-audio.js"></script>
 
-    <header class="header">
+    <div class="header">
         <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-icon">LK</div>
-                <span class="logo-text">LingKong AI</span>
-                <span class="logo-badge">Playground</span>
-            </a>
-            <nav class="nav-links">
-                <a href="/">首页</a>
-                <a href="/static/index.html">聊天</a>
-                <a href="/static/docs.html">API 文档</a>
-                <a href="/static/playground.html" class="active">Playground</a>
-                <a href="/static/pitch.html">计划书</a>
-            </nav>
+            <h1>Gemini API 严格对比测试</h1>
+            <div class="config-group">
+                <div class="config-item">
+                    <label>真实API:</label>
+                    <input type="text" id="realApiUrl" class="url" value="https://generativelanguage.googleapis.com">
+                </div>
+                <div class="config-item">
+                    <label>API Key:</label>
+                    <input type="text" id="apiKey" class="api-key" value="" placeholder="输入你的 API Key">
+                </div>
+                <div class="config-item">
+                    <label>本地服务:</label>
+                    <input type="text" id="localUrl" class="url" value="http://localhost:5001">
+                </div>
+                <button class="btn btn-primary" onclick="runComparison()">对比测试</button>
+                <button class="btn btn-success" onclick="runAllComparisons()">全部测试</button>
+            </div>
         </div>
-    </header>
+    </div>
 
     <div class="main-container">
-        <div class="page-title">
-            <h1>
-                <span>&#128736;</span>
-                API Playground
-            </h1>
-            <p>交互式 API 测试工具，支持 Gemini 兼容格式，实时对比本地 Gemma 与云端 API</p>
-        </div>
-
-        <!-- Config Bar -->
-        <div class="config-bar">
-            <div class="config-item">
-                <label>本地服务:</label>
-                <input type="text" id="localUrl" class="url" value="http://localhost:5001">
-            </div>
-            <div class="config-item">
-                <label>对比 API (可选):</label>
-                <input type="text" id="realApiUrl" class="url" value="" placeholder="留空则只测试本地">
-            </div>
-            <div class="config-item">
-                <label>API Key:</label>
-                <input type="password" id="apiKey" value="" placeholder="可选">
-            </div>
-            <button class="btn btn-primary" onclick="runTest()">
-                <span>&#9654;</span> 运行测试
-            </button>
-            <button class="btn btn-success" onclick="runAllTests()">
-                <span>&#128640;</span> 全部测试
-            </button>
-        </div>
-
-        <!-- Test Selector -->
+        <!-- 测试选择器 -->
         <div class="test-selector">
             <h3>选择测试用例</h3>
             <div class="test-tabs">
-                <div class="test-tab active" data-test="text-basic">纯文本</div>
-                <div class="test-tab" data-test="text-thinking-low">思考 Low</div>
-                <div class="test-tab" data-test="text-thinking-high">思考 High</div>
-                <div class="test-tab" data-test="system-instruction">系统指令</div>
-                <div class="test-tab" data-test="json-schema">JSON Schema</div>
-                <div class="test-tab" data-test="tool-call">工具调用</div>
-                <div class="test-tab" data-test="tool-any">mode:ANY</div>
-                <div class="test-tab" data-test="tool-none">mode:NONE</div>
-                <div class="test-tab" data-test="tool-parallel">并行调用</div>
-                <div class="test-tab" data-test="vision">图像理解</div>
-                <div class="test-tab" data-test="multi-image">多图片</div>
-                <div class="test-tab" data-test="streaming">流式输出</div>
+                <div class="test-tab active" data-test="1-1">1.1 纯文本</div>
+                <div class="test-tab" data-test="1-2">1.2 思考low</div>
+                <div class="test-tab" data-test="1-3">1.3 思考high</div>
+                <div class="test-tab" data-test="1-5">1.5 系统指令</div>
+                <div class="test-tab" data-test="1-6">1.6 JSON Schema</div>
+                <div class="test-tab" data-test="3-1">3.1 工具调用</div>
+                <div class="test-tab" data-test="4-1">4.1 mode:ANY</div>
+                <div class="test-tab" data-test="4-2">4.2 mode:NONE</div>
+                <div class="test-tab" data-test="4-3">4.3 并行调用</div>
+                <div class="test-tab" data-test="5-1">5.1 多模态视觉</div>
+                <div class="test-tab" data-test="5-2">5.2 音频转录</div>
+                <div class="test-tab" data-test="5-3">5.3 音频+思考</div>
+                <div class="test-tab" data-test="5-4">5.4 音频摘要</div>
+                <div class="test-tab" data-test="5-5">5.5 多图片</div>
+                <div class="test-tab" data-test="6-1">6.1 流式输出</div>
             </div>
             <div class="legend">
-                <div class="legend-item"><div class="legend-dot match"></div> 结构匹配</div>
-                <div class="legend-item"><div class="legend-dot mismatch"></div> 值不同</div>
+                <div class="legend-item"><div class="legend-dot match"></div> 完全匹配</div>
+                <div class="legend-item"><div class="legend-dot mismatch"></div> 值不匹配</div>
                 <div class="legend-item"><div class="legend-dot missing"></div> 字段缺失</div>
+                <div class="legend-item"><div class="legend-dot order"></div> 顺序不同</div>
             </div>
         </div>
 
-        <!-- Multimodal Section -->
-        <div class="multimodal-section" id="multimodalSection" style="display: none;">
-            <div class="multimodal-header">
-                <h3>
-                    <span>&#127908;</span>
-                    多模态输入
-                </h3>
-                <div class="multimodal-controls">
-                    <button class="btn btn-secondary" onclick="document.getElementById('audioFileInput').click()">
-                        <span>&#128193;</span> 上传音频
-                    </button>
-                    <button class="btn btn-secondary" id="recordBtn" onclick="toggleRecording()">
-                        <span>&#128308;</span> 录音
-                    </button>
-                    <span id="recordStatus" class="status-indicator"></span>
-                </div>
-            </div>
-            <div class="multimodal-preview" id="multimodalPreview" style="display: none;">
-                <audio id="audioPlayer" controls></audio>
-                <div class="multimodal-info" id="multimodalInfo"></div>
-                <div class="multimodal-prompt">
-                    <label>提示词:</label>
-                    <input type="text" id="customPrompt" value="Transcribe this audio and describe what you hear.">
-                </div>
-                <button class="btn btn-primary" style="margin-top: 1rem;" onclick="runCustomMultimodalTest()">
-                    <span>&#128640;</span> 运行自定义测试
-                </button>
-            </div>
-        </div>
-
-        <!-- Request Preview -->
+        <!-- 请求预览 -->
         <div class="request-preview">
-            <h3>
-                <span>&#128195;</span>
-                请求体 (Request Body)
-            </h3>
+            <h3>请求内容 (Request Body)</h3>
             <div class="code-block">
                 <pre id="requestPreview">选择测试用例查看请求内容...</pre>
             </div>
         </div>
 
-        <!-- Comparison Container -->
+        <!-- 音频测试专区 -->
+        <div class="audio-test-section" id="audioTestSection" style="display: none;">
+            <div class="audio-test-header">
+                <h3>🎤 自定义音频测试</h3>
+                <div class="audio-controls">
+                    <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('audioFileInput').click()">
+                        📁 上传音频
+                    </button>
+                    <button class="btn" id="recordBtn" onclick="toggleRecording()">
+                        🔴 录音
+                    </button>
+                    <span id="audioStatus" class="audio-status"></span>
+                </div>
+            </div>
+            <div class="audio-preview" id="audioPreview" style="display: none;">
+                <audio id="audioPlayer" controls style="width: 100%;"></audio>
+                <div class="audio-info" id="audioInfo"></div>
+                <div class="audio-prompt">
+                    <label>自定义提示词:</label>
+                    <input type="text" id="customAudioPrompt" value="Transcribe this audio and describe what you hear." style="flex: 1;">
+                </div>
+                <button class="btn btn-success" onclick="runCustomAudioTest()">🚀 运行自定义音频测试</button>
+            </div>
+        </div>
+
+        <!-- 测试历史记录 -->
+        <div class="test-history" id="testHistory" style="display: none;">
+            <div class="history-header">
+                <h3>📊 测试历史</h3>
+                <button class="btn" onclick="clearHistory()">清空</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+
+        <!-- 三栏对比 -->
         <div class="comparison-container">
-            <!-- Left: Reference API -->
+            <!-- 左边：真实 Gemini API -->
             <div class="panel left">
                 <div class="panel-header">
-                    <span class="panel-title">对比 API (可选)</span>
+                    <span class="panel-title">真实 Gemini API</span>
                     <span class="panel-badge badge-pending" id="badge-left">待测试</span>
                 </div>
                 <div class="panel-content">
                     <div class="code-block" id="response-left">
-                        <pre>配置对比 API URL 后运行测试...</pre>
+                        <pre>点击"对比测试"执行...</pre>
                     </div>
                 </div>
             </div>
 
-            <!-- Center: Comparison -->
+            <!-- 中间：对比结果 -->
             <div class="panel center">
                 <div class="panel-header">
-                    <span class="panel-title">JSON 结构对比</span>
+                    <span class="panel-title">JSON 字段逐项对比</span>
                     <span class="panel-badge badge-pending" id="badge-center">待对比</span>
                 </div>
                 <div class="panel-content" id="compare-results">
@@ -790,90 +662,72 @@
                         </div>
                         <div class="stat-box warning">
                             <div class="stat-value" id="stat-missing-left">0</div>
-                            <div class="stat-label">API 缺失</div>
+                            <div class="stat-label">真实API缺失</div>
                         </div>
                         <div class="stat-box warning">
                             <div class="stat-value" id="stat-missing-right">0</div>
                             <div class="stat-label">本地缺失</div>
                         </div>
+                        <div class="stat-box" style="background: #f3e5f5;">
+                            <div class="stat-value" id="stat-order" style="color: #9c27b0;">0</div>
+                            <div class="stat-label">顺序不同</div>
+                        </div>
                     </div>
                     <div id="compare-details">
-                        <p style="color: var(--text-muted); font-size: 0.85rem;">运行测试后显示结构对比结果...</p>
+                        <p style="color: var(--text-secondary); font-size: 12px;">运行测试后显示逐项对比结果...</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Right: Local Gemma -->
+            <!-- 右边：本地服务器 -->
             <div class="panel right">
                 <div class="panel-header">
-                    <span class="panel-title">本地 Gemma 3N</span>
+                    <span class="panel-title">本地 Gemma 3n</span>
                     <span class="panel-badge badge-pending" id="badge-right">待测试</span>
                 </div>
                 <div class="panel-content">
                     <div class="code-block" id="response-right">
-                        <pre>点击"运行测试"开始...</pre>
+                        <pre>点击"对比测试"执行...</pre>
                     </div>
                 </div>
             </div>
         </div>
-
-        <footer class="footer">
-            <p>LingKong AI - 你的 AI. 你的数据. 你的掌控.</p>
-            <p style="margin-top: 0.5rem;">
-                <a href="/">首页</a> &nbsp;|&nbsp;
-                <a href="/static/docs.html">API 文档</a> &nbsp;|&nbsp;
-                <a href="https://github.com/jiaqiwang969/gemma">GitHub</a>
-            </p>
-        </footer>
     </div>
 
     <script>
-        let currentTest = 'text-basic';
-        let customAudioData = null;
-        let mediaRecorder = null;
-        let audioChunks = [];
+        let currentTest = '1-1';
 
-        // Test configurations
         const testConfigs = {
-            'text-basic': {
-                name: '纯文本',
-                body: {
-                    "contents": [{"parts": [{"text": "你好，请用一句话介绍你自己"}]}],
-                    "generationConfig": {"maxOutputTokens": 256}
-                }
+            '1-1': {
+                name: '1.1 纯文本',
+                body: {"contents": [{"parts": [{"text": "hi"}]}], "generationConfig": {"maxOutputTokens": 512}}
             },
-            'text-thinking-low': {
-                name: '思考 Low',
+            '1-2': {
+                name: '1.2 思考等级 low',
                 body: {
                     "contents": [{"parts": [{"text": "2+2=?"}]}],
-                    "generationConfig": {
-                        "thinkingConfig": {"thinkingLevel": "low"},
-                        "maxOutputTokens": 256
-                    }
+                    "generationConfig": {"thinkingConfig": {"thinkingLevel": "low"}, "maxOutputTokens": 256}
                 }
             },
-            'text-thinking-high': {
-                name: '思考 High',
+            '1-3': {
+                name: '1.3 思考等级 high',
                 body: {
-                    "contents": [{"parts": [{"text": "简要解释量子纠缠现象"}]}],
-                    "generationConfig": {
-                        "thinkingConfig": {"thinkingLevel": "high"},
-                        "maxOutputTokens": 512
-                    }
+                    "contents": [{"parts": [{"text": "Explain quantum entanglement briefly"}]}],
+                    "generationConfig": {"thinkingConfig": {"thinkingLevel": "high"}, "maxOutputTokens": 512}
                 }
             },
-            'system-instruction': {
-                name: '系统指令',
+            '1-5': {
+                name: '1.5 系统指令',
                 body: {
-                    "contents": [{"parts": [{"text": "你好"}]}],
-                    "systemInstruction": {"parts": [{"text": "你是一个友好的 AI 助手，名叫灵空"}]},
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "contents": [{"parts": [{"text": "hi"}]}],
+                    "systemInstruction": {"parts": [{"text": "You are helpful"}]},
+                    "generationConfig": {"maxOutputTokens": 512}
                 }
             },
-            'json-schema': {
-                name: 'JSON Schema',
+            '1-6': {
+                name: '1.6 JSON Schema',
                 body: {
-                    "contents": [{"parts": [{"text": "列出2种编程语言"}]}],
+                    "contents": [{"parts": [{"text": "List 2 programming languages"}]}],
                     "generationConfig": {
                         "responseMimeType": "application/json",
                         "responseSchema": {
@@ -881,136 +735,132 @@
                             "properties": {
                                 "languages": {
                                     "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "name": {"type": "string"},
-                                            "year": {"type": "integer"}
-                                        }
-                                    }
+                                    "items": {"type": "object", "properties": {"name": {"type": "string"}, "year": {"type": "integer"}}}
                                 }
                             }
                         },
-                        "maxOutputTokens": 256
+                        "maxOutputTokens": 512
                     }
                 }
             },
-            'tool-call': {
-                name: '工具调用',
+            '3-1': {
+                name: '3.1 工具调用',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "运行 ls 命令"}]}],
+                    "contents": [{"role": "user", "parts": [{"text": "Run ls command"}]}],
                     "tools": [{
                         "functionDeclarations": [{
                             "name": "shell_command",
-                            "description": "运行 shell 命令",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {"command": {"type": "string"}},
-                                "required": ["command"]
-                            }
+                            "description": "Run shell command",
+                            "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}
                         }]
                     }],
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "generationConfig": {"maxOutputTokens": 512}
                 }
             },
-            'tool-any': {
-                name: 'mode:ANY',
+            '4-1': {
+                name: '4.1 toolConfig mode:ANY',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "天气怎么样？"}]}],
-                    "tools": [{"functionDeclarations": [{
-                        "name": "get_weather",
-                        "description": "获取天气",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {"location": {"type": "string"}},
-                            "required": ["location"]
-                        }
-                    }]}],
+                    "contents": [{"role": "user", "parts": [{"text": "What is the weather?"}]}],
+                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
                     "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
                     "generationConfig": {"maxOutputTokens": 256}
                 }
             },
-            'tool-none': {
-                name: 'mode:NONE',
+            '4-2': {
+                name: '4.2 toolConfig mode:NONE',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "东京天气如何？"}]}],
-                    "tools": [{"functionDeclarations": [{
-                        "name": "get_weather",
-                        "description": "获取天气",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {"location": {"type": "string"}},
-                            "required": ["location"]
-                        }
-                    }]}],
+                    "contents": [{"role": "user", "parts": [{"text": "What is the weather in Tokyo?"}]}],
+                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
                     "toolConfig": {"functionCallingConfig": {"mode": "NONE"}},
                     "generationConfig": {"maxOutputTokens": 256}
                 }
             },
-            'tool-parallel': {
-                name: '并行调用',
+            '4-3': {
+                name: '4.3 并行调用',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "北京和上海的天气分别怎么样？"}]}],
-                    "tools": [{"functionDeclarations": [{
-                        "name": "get_weather",
-                        "description": "获取天气",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {"location": {"type": "string"}},
-                            "required": ["location"]
-                        }
-                    }]}],
+                    "contents": [{"role": "user", "parts": [{"text": "What is the weather in SF and Tokyo?"}]}],
+                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
+                    "generationConfig": {"maxOutputTokens": 512}
+                }
+            },
+            '5-1': {
+                name: '5.1 多模态视觉',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "What color is this image? Answer in one word."},
+                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}}
+                    ]}],
                     "generationConfig": {"maxOutputTokens": 256}
                 }
             },
-            'vision': {
-                name: '图像理解',
+            '5-2': {
+                name: '5.2 音频转录',
                 body: {
-                    "contents": [{
-                        "role": "user",
-                        "parts": [
-                            {"text": "这张图片是什么颜色？用一个词回答。"},
-                            {"inlineData": {
-                                "mimeType": "image/png",
-                                "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="
-                            }}
-                        ]
-                    }],
-                    "generationConfig": {"maxOutputTokens": 128}
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Listen to this audio clip and transcribe what you hear. What is the speaker saying?"},
+                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
+                    ]}],
+                    "generationConfig": {"maxOutputTokens": 1024}
                 }
             },
-            'multi-image': {
-                name: '多图片',
+            '5-3': {
+                name: '5.3 音频+思考',
                 body: {
-                    "contents": [{
-                        "role": "user",
-                        "parts": [
-                            {"text": "对比这两张图片，分别是什么颜色？"},
-                            {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}},
-                            {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAM0lEQVR4nO3OsQ0AIAwDwez/aaMoKBhgAImChq9O8tNd3x8HSaIkUZIoSZQkShIliab8AC4FAT9cTiF5AAAAAElFTkSuQmCC"}}
-                        ]
-                    }],
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Listen carefully. First transcribe word-by-word, then analyze the rhetorical style and emotional tone."},
+                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
+                    ]}],
+                    "generationConfig": {
+                        "thinkingConfig": {"thinkingLevel": "high"},
+                        "maxOutputTokens": 2048
+                    }
+                }
+            },
+            '5-4': {
+                name: '5.4 音频摘要',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Summarize this speech in one sentence. What is the main message?"},
+                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
+                    ]}],
                     "generationConfig": {"maxOutputTokens": 256}
                 }
             },
-            'streaming': {
-                name: '流式输出',
+            '5-5': {
+                name: '5.5 多图片对比',
                 body: {
-                    "contents": [{"parts": [{"text": "从1数到5"}]}],
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Compare these two images. What colors do you see in each? Answer briefly."},
+                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}},
+                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAM0lEQVR4nO3OsQ0AIAwDwez/aaMoKBhgAImChq9O8tNd3x8HSaIkUZIoSZQkShIliab8AC4FAT9cTiF5AAAAAElFTkSuQmCC"}}
+                    ]}],
+                    "generationConfig": {"maxOutputTokens": 256}
+                }
+            },
+            '6-1': {
+                name: '6.1 流式输出',
+                body: {
+                    "contents": [{"parts": [{"text": "Count from 1 to 5."}]}],
                     "generationConfig": {"maxOutputTokens": 128}
                 },
-                streaming: true
+                streaming: true  // 标记为流式测试
             }
         };
 
-        // Initialize
+        // 运行时注入 MLK 音频数据 (从外部 JS 文件加载)
+        if (typeof MLK_SPEECH_AUDIO !== 'undefined') {
+            testConfigs['5-2'].body.contents[0].parts[1].inlineData.data = MLK_SPEECH_AUDIO;
+            testConfigs['5-3'].body.contents[0].parts[1].inlineData.data = MLK_SPEECH_AUDIO;
+            testConfigs['5-4'].body.contents[0].parts[1].inlineData.data = MLK_SPEECH_AUDIO;
+        }
+
+        // 初始化
         document.querySelectorAll('.test-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 currentTest = tab.dataset.test;
                 updateRequestPreview();
-                updateMultimodalSection();
             });
         });
 
@@ -1019,96 +869,152 @@
             document.getElementById('requestPreview').textContent = JSON.stringify(config.body, null, 2);
         }
 
-        function updateMultimodalSection() {
-            const section = document.getElementById('multimodalSection');
-            // Show for audio-related tests or custom multimodal
-            if (currentTest.includes('audio') || currentTest === 'vision') {
-                section.style.display = 'block';
-            } else {
-                section.style.display = 'none';
-            }
-        }
-
         function updateBadge(id, status) {
             const badge = document.getElementById(id);
             badge.className = `panel-badge badge-${status}`;
-            const texts = {
-                pending: '待测试',
-                running: '运行中...',
-                success: '成功',
-                error: '失败',
-                comparing: '对比中...',
-                skipped: '已跳过'
-            };
-            badge.textContent = texts[status] || status;
+            badge.textContent = {pending: '待测试', running: '运行中...', success: '成功', error: '失败', comparing: '对比中...'}[status];
         }
 
-        // Deep compare function
+        // ========== 核心：严格 JSON 对比 ==========
+
+        /**
+         * 深度对比两个 JSON 对象，返回所有差异
+         */
         function deepCompare(left, right, path = '') {
             const results = [];
+
+            // 获取键顺序（保持原始顺序）
             const leftKeys = left ? Object.keys(left) : [];
             const rightKeys = right ? Object.keys(right) : [];
             const allKeys = [...new Set([...leftKeys, ...rightKeys])];
+
+            // 检查键顺序是否相同
+            if (leftKeys.length > 0 && rightKeys.length > 0) {
+                const leftOrder = leftKeys.filter(k => rightKeys.includes(k)).join(',');
+                const rightOrder = rightKeys.filter(k => leftKeys.includes(k)).join(',');
+                if (leftOrder !== rightOrder && leftOrder.length > 0) {
+                    results.push({
+                        type: 'order',
+                        path: path || '(root)',
+                        leftOrder: leftKeys,
+                        rightOrder: rightKeys
+                    });
+                }
+            }
 
             for (const key of allKeys) {
                 const currentPath = path ? `${path}.${key}` : key;
                 const leftVal = left ? left[key] : undefined;
                 const rightVal = right ? right[key] : undefined;
 
+                // 左边缺失
                 if (leftVal === undefined && rightVal !== undefined) {
-                    results.push({ type: 'missing-left', path: currentPath, rightVal: summarizeValue(rightVal) });
+                    results.push({
+                        type: 'missing-left',
+                        path: currentPath,
+                        rightVal: summarizeValue(rightVal)
+                    });
                     continue;
                 }
 
+                // 右边缺失
                 if (leftVal !== undefined && rightVal === undefined) {
-                    results.push({ type: 'missing-right', path: currentPath, leftVal: summarizeValue(leftVal) });
+                    results.push({
+                        type: 'missing-right',
+                        path: currentPath,
+                        leftVal: summarizeValue(leftVal)
+                    });
                     continue;
                 }
 
+                // 类型不同
                 const leftType = getType(leftVal);
                 const rightType = getType(rightVal);
-
                 if (leftType !== rightType) {
-                    results.push({ type: 'mismatch', path: currentPath, leftVal: `(${leftType})`, rightVal: `(${rightType})` });
+                    results.push({
+                        type: 'mismatch',
+                        path: currentPath,
+                        leftVal: `(${leftType}) ${summarizeValue(leftVal)}`,
+                        rightVal: `(${rightType}) ${summarizeValue(rightVal)}`
+                    });
                     continue;
                 }
 
+                // 递归对比对象
                 if (leftType === 'object') {
                     results.push(...deepCompare(leftVal, rightVal, currentPath));
                     continue;
                 }
 
+                // 递归对比数组
                 if (leftType === 'array') {
+                    // 先对比数组长度
+                    if (leftVal.length !== rightVal.length) {
+                        results.push({
+                            type: 'mismatch',
+                            path: currentPath + '.length',
+                            leftVal: leftVal.length,
+                            rightVal: rightVal.length
+                        });
+                    }
+                    // 对比每个元素
                     const maxLen = Math.max(leftVal.length, rightVal.length);
                     for (let i = 0; i < maxLen; i++) {
                         if (i >= leftVal.length) {
-                            results.push({ type: 'missing-left', path: `${currentPath}[${i}]`, rightVal: summarizeValue(rightVal[i]) });
+                            results.push({
+                                type: 'missing-left',
+                                path: `${currentPath}[${i}]`,
+                                rightVal: summarizeValue(rightVal[i])
+                            });
                         } else if (i >= rightVal.length) {
-                            results.push({ type: 'missing-right', path: `${currentPath}[${i}]`, leftVal: summarizeValue(leftVal[i]) });
+                            results.push({
+                                type: 'missing-right',
+                                path: `${currentPath}[${i}]`,
+                                leftVal: summarizeValue(leftVal[i])
+                            });
                         } else if (getType(leftVal[i]) === 'object') {
                             results.push(...deepCompare(leftVal[i], rightVal[i], `${currentPath}[${i}]`));
                         } else if (JSON.stringify(leftVal[i]) !== JSON.stringify(rightVal[i])) {
-                            if (!shouldIgnoreField(currentPath)) {
-                                results.push({ type: 'mismatch', path: `${currentPath}[${i}]`, leftVal: summarizeValue(leftVal[i]), rightVal: summarizeValue(rightVal[i]) });
-                            } else {
-                                results.push({ type: 'match', path: `${currentPath}[${i}]`, value: '(dynamic)' });
-                            }
+                            results.push({
+                                type: 'mismatch',
+                                path: `${currentPath}[${i}]`,
+                                leftVal: summarizeValue(leftVal[i]),
+                                rightVal: summarizeValue(rightVal[i])
+                            });
                         } else {
-                            results.push({ type: 'match', path: `${currentPath}[${i}]`, value: summarizeValue(leftVal[i]) });
+                            results.push({
+                                type: 'match',
+                                path: `${currentPath}[${i}]`,
+                                value: summarizeValue(leftVal[i])
+                            });
                         }
                     }
                     continue;
                 }
 
+                // 对比原始值 (忽略一些动态字段)
                 if (shouldIgnoreField(currentPath)) {
-                    results.push({ type: 'match', path: currentPath, value: '(dynamic)' });
+                    results.push({
+                        type: 'match',
+                        path: currentPath,
+                        value: '(dynamic, ignored)'
+                    });
                     continue;
                 }
 
                 if (JSON.stringify(leftVal) === JSON.stringify(rightVal)) {
-                    results.push({ type: 'match', path: currentPath, value: summarizeValue(leftVal) });
+                    results.push({
+                        type: 'match',
+                        path: currentPath,
+                        value: summarizeValue(leftVal)
+                    });
                 } else {
-                    results.push({ type: 'mismatch', path: currentPath, leftVal: summarizeValue(leftVal), rightVal: summarizeValue(rightVal) });
+                    results.push({
+                        type: 'mismatch',
+                        path: currentPath,
+                        leftVal: summarizeValue(leftVal),
+                        rightVal: summarizeValue(rightVal)
+                    });
                 }
             }
 
@@ -1125,126 +1031,175 @@
             if (val === null) return 'null';
             if (val === undefined) return 'undefined';
             if (typeof val === 'string') {
-                if (val.length > 40) return `"${val.substring(0, 40)}..."`;
+                if (val.length > 50) return `"${val.substring(0, 50)}..."`;
                 return `"${val}"`;
             }
             if (typeof val === 'object') {
                 const str = JSON.stringify(val);
-                if (str.length > 50) return str.substring(0, 50) + '...';
+                if (str.length > 60) return str.substring(0, 60) + '...';
                 return str;
             }
             return String(val);
         }
 
+        // 忽略动态字段 (每次请求都会变化的字段)
         function shouldIgnoreField(path) {
-            const ignorePaths = ['responseId', 'modelVersion', /\.thoughtSignature$/, /\.text$/, /usageMetadata\./];
-            return ignorePaths.some(p => typeof p === 'string' ? path === p : p.test(path));
+            const ignorePaths = [
+                'responseId',
+                'modelVersion',
+                /\.thoughtSignature$/,
+                /\.text$/,  // 文本内容每次不同
+                /usageMetadata\./,  // token 计数每次不同
+            ];
+            return ignorePaths.some(p => {
+                if (typeof p === 'string') return path === p;
+                return p.test(path);
+            });
         }
 
+        // 渲染对比结果
         function renderCompareResults(results) {
             const container = document.getElementById('compare-details');
             const statsContainer = document.getElementById('stats-summary');
 
+            // 统计
             const stats = {
                 match: results.filter(r => r.type === 'match').length,
                 mismatch: results.filter(r => r.type === 'mismatch').length,
                 missingLeft: results.filter(r => r.type === 'missing-left').length,
-                missingRight: results.filter(r => r.type === 'missing-right').length
+                missingRight: results.filter(r => r.type === 'missing-right').length,
+                order: results.filter(r => r.type === 'order').length
             };
 
             document.getElementById('stat-match').textContent = stats.match;
             document.getElementById('stat-mismatch').textContent = stats.mismatch;
             document.getElementById('stat-missing-left').textContent = stats.missingLeft;
             document.getElementById('stat-missing-right').textContent = stats.missingRight;
+            document.getElementById('stat-order').textContent = stats.order;
             statsContainer.style.display = 'grid';
 
+            // 按类型分组显示
             let html = '';
 
+            // 顺序问题
+            const orderIssues = results.filter(r => r.type === 'order');
+            if (orderIssues.length > 0) {
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">键顺序差异 (${orderIssues.length})</div>`;
+                orderIssues.forEach(r => {
+                    html += `<div class="compare-item order-diff">
+                        <span class="compare-icon">⚡</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">真实: [${r.leftOrder.join(', ')}]</div>
+                            <div class="compare-detail">本地: [${r.rightOrder.join(', ')}]</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            // 值不匹配
             const mismatches = results.filter(r => r.type === 'mismatch');
             if (mismatches.length > 0) {
-                html += `<div class="compare-section"><div class="compare-section-title">值不匹配 (${mismatches.length})</div>`;
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">值不匹配 (${mismatches.length})</div>`;
                 mismatches.forEach(r => {
                     html += `<div class="compare-item mismatch">
-                        <span class="compare-icon">&#10007;</span>
-                        <div><div class="compare-path">${r.path}</div>
-                        <div class="compare-detail">API: ${r.leftVal}</div>
-                        <div class="compare-detail">本地: ${r.rightVal}</div></div>
+                        <span class="compare-icon">✗</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">真实: ${r.leftVal}</div>
+                            <div class="compare-detail">本地: ${r.rightVal}</div>
+                        </div>
                     </div>`;
                 });
                 html += '</div>';
             }
 
+            // 本地缺失
             const missingRight = results.filter(r => r.type === 'missing-right');
             if (missingRight.length > 0) {
-                html += `<div class="compare-section"><div class="compare-section-title">本地缺失 (${missingRight.length})</div>`;
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">本地实现缺失 (${missingRight.length})</div>`;
                 missingRight.forEach(r => {
                     html += `<div class="compare-item missing-right">
-                        <span class="compare-icon">&#9888;</span>
-                        <div><div class="compare-path">${r.path}</div>
-                        <div class="compare-detail">API 有: ${r.leftVal}</div></div>
+                        <span class="compare-icon">⚠</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">真实API有: ${r.leftVal}</div>
+                        </div>
                     </div>`;
                 });
                 html += '</div>';
             }
 
+            // 真实API缺失 (可能是我们多加的字段)
             const missingLeft = results.filter(r => r.type === 'missing-left');
             if (missingLeft.length > 0) {
-                html += `<div class="compare-section"><div class="compare-section-title">API 缺失 / 本地多余 (${missingLeft.length})</div>`;
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">真实API缺失 / 本地多余 (${missingLeft.length})</div>`;
                 missingLeft.forEach(r => {
                     html += `<div class="compare-item missing-left">
-                        <span class="compare-icon">&#10133;</span>
-                        <div><div class="compare-path">${r.path}</div>
-                        <div class="compare-detail">本地有: ${r.rightVal}</div></div>
+                        <span class="compare-icon">➕</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">本地有: ${r.rightVal}</div>
+                        </div>
                     </div>`;
                 });
                 html += '</div>';
             }
 
+            // 匹配项 (折叠显示)
             const matches = results.filter(r => r.type === 'match');
             if (matches.length > 0) {
                 html += `<div class="compare-section">
-                    <div class="compare-section-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                        &#10003; 匹配项 (${matches.length}) - 点击展开
-                    </div><div style="display: none;">`;
+                    <div class="compare-section-title" style="cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                        ✓ 匹配项 (${matches.length}) - 点击展开/折叠
+                    </div>
+                    <div style="display: none;">`;
                 matches.forEach(r => {
                     html += `<div class="compare-item match">
-                        <span class="compare-icon">&#10003;</span>
+                        <span class="compare-icon">✓</span>
                         <span class="compare-path">${r.path}: ${r.value}</span>
                     </div>`;
                 });
                 html += '</div></div>';
             }
 
-            container.innerHTML = html || '<p style="color: var(--text-muted);">无对比数据</p>';
+            container.innerHTML = html || '<p style="color: var(--text-secondary);">无对比数据</p>';
 
-            const hasIssues = stats.mismatch + stats.missingRight > 0;
+            // 更新中间面板状态
+            const hasIssues = stats.mismatch + stats.missingRight + stats.order > 0;
             updateBadge('badge-center', hasIssues ? 'error' : 'success');
         }
 
-        // Main test function
-        async function runTest() {
+        async function runComparison() {
             const config = testConfigs[currentTest];
-            const localUrl = document.getElementById('localUrl').value;
             const realApiUrl = document.getElementById('realApiUrl').value;
             const apiKey = document.getElementById('apiKey').value;
+            const localUrl = document.getElementById('localUrl').value;
 
+            // 检查是否是流式测试
             if (config.streaming) {
-                return runStreamingTest(config, localUrl, realApiUrl, apiKey);
+                return runStreamingComparison(config, realApiUrl, apiKey, localUrl);
             }
 
-            // Reset
-            updateBadge('badge-left', realApiUrl ? 'running' : 'skipped');
+            // 重置状态
+            updateBadge('badge-left', 'running');
             updateBadge('badge-right', 'running');
             updateBadge('badge-center', 'comparing');
-            document.getElementById('response-left').innerHTML = realApiUrl ? '<pre>请求中...</pre>' : '<pre>未配置对比 API</pre>';
+            document.getElementById('response-left').innerHTML = '<pre>请求中...</pre>';
             document.getElementById('response-right').innerHTML = '<pre>请求中...</pre>';
-            document.getElementById('compare-details').innerHTML = '<p style="color: var(--text-muted);">等待响应...</p>';
+            document.getElementById('compare-details').innerHTML = '<p style="color: var(--text-secondary);">等待响应...</p>';
             document.getElementById('stats-summary').style.display = 'none';
 
             let leftResp = null, rightResp = null;
 
-            // Parallel requests
-            const leftPromise = realApiUrl && apiKey ? (async () => {
+            // 并行请求
+            const leftPromise = (async () => {
+                if (!apiKey) return { error: '请输入 API Key' };
                 try {
                     const resp = await fetch(`${realApiUrl}/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`, {
                         method: 'POST',
@@ -1255,7 +1210,7 @@
                 } catch (e) {
                     return { error: e.message };
                 }
-            })() : Promise.resolve(null);
+            })();
 
             const rightPromise = (async () => {
                 try {
@@ -1272,47 +1227,58 @@
 
             [leftResp, rightResp] = await Promise.all([leftPromise, rightPromise]);
 
-            // Display left
-            if (leftResp === null) {
-                updateBadge('badge-left', 'skipped');
-            } else if (leftResp.error) {
+            // 显示左边结果
+            if (leftResp.error) {
                 updateBadge('badge-left', 'error');
-                document.getElementById('response-left').innerHTML = `<pre style="color: var(--accent-red);">错误: ${leftResp.error}</pre>`;
+                document.getElementById('response-left').innerHTML = `<pre style="color: #f44336;">错误: ${leftResp.error}</pre>`;
             } else {
                 updateBadge('badge-left', 'success');
                 document.getElementById('response-left').innerHTML = `<pre>${JSON.stringify(leftResp, null, 2)}</pre>`;
             }
 
-            // Display right
+            // 显示右边结果
             if (rightResp.error) {
                 updateBadge('badge-right', 'error');
-                document.getElementById('response-right').innerHTML = `<pre style="color: var(--accent-red);">错误: ${rightResp.error}\n\n请确保本地服务运行中:\npython apps/gemini_api/gateway.py</pre>`;
+                document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">错误: ${rightResp.error}\n\n请确保服务器运行:\npython apps/gemini_api/server.py</pre>`;
             } else {
                 updateBadge('badge-right', 'success');
                 document.getElementById('response-right').innerHTML = `<pre>${JSON.stringify(rightResp, null, 2)}</pre>`;
             }
 
-            // Compare
-            if (leftResp && !leftResp.error && !rightResp.error) {
+            // 执行深度对比
+            if (!leftResp.error && !rightResp.error) {
                 const results = deepCompare(leftResp, rightResp);
                 renderCompareResults(results);
-            } else if (!leftResp && !rightResp.error) {
-                updateBadge('badge-center', 'success');
-                document.getElementById('compare-details').innerHTML = '<p style="color: var(--accent-green);">&#10003; 本地请求成功 (未配置对比 API)</p>';
             } else {
                 updateBadge('badge-center', 'error');
-                document.getElementById('compare-details').innerHTML = '<p style="color: var(--accent-red);">无法对比：请求失败</p>';
+                document.getElementById('compare-details').innerHTML = '<p style="color: var(--error);">无法对比：至少一方请求失败</p>';
             }
         }
 
-        async function runStreamingTest(config, localUrl, realApiUrl, apiKey) {
-            updateBadge('badge-left', realApiUrl ? 'running' : 'skipped');
+        async function runAllComparisons() {
+            const testIds = Object.keys(testConfigs);
+            for (const testId of testIds) {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                document.querySelector(`.test-tab[data-test="${testId}"]`).classList.add('active');
+                currentTest = testId;
+                updateRequestPreview();
+                await runComparison();
+                await new Promise(r => setTimeout(r, 3000));
+            }
+        }
+
+        // ========== 流式输出测试 ==========
+        async function runStreamingComparison(config, realApiUrl, apiKey, localUrl) {
+            // 重置状态
+            updateBadge('badge-left', 'running');
             updateBadge('badge-right', 'running');
             updateBadge('badge-center', 'comparing');
-
-            document.getElementById('response-left').innerHTML = realApiUrl ? '<pre>流式请求中...</pre>' : '<pre>未配置对比 API</pre>';
+            document.getElementById('response-left').innerHTML = '<pre>流式请求中...</pre>';
             document.getElementById('response-right').innerHTML = '<pre>流式请求中...</pre>';
+            document.getElementById('compare-details').innerHTML = '<p style="color: var(--text-secondary);">流式对比中...</p>';
+            document.getElementById('stats-summary').style.display = 'none';
 
+            // 流式请求处理函数
             async function streamRequest(url, isLeft) {
                 const outputEl = document.getElementById(isLeft ? 'response-left' : 'response-right');
                 const chunks = [];
@@ -1341,8 +1307,10 @@
                                     const data = JSON.parse(line.slice(6));
                                     chunks.push(data);
                                     finalResponse = data;
+
+                                    // 实时更新显示
                                     const displayText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                                    outputEl.innerHTML = `<pre style="color: var(--accent-green);">&#128260; 流式输出中...\n\n${displayText}</pre>`;
+                                    outputEl.innerHTML = `<pre style="color: #4caf50;">🔄 流式输出中...\n\n${displayText}</pre>`;
                                 } catch (e) {}
                             }
                         }
@@ -1354,62 +1322,83 @@
                 }
             }
 
-            const leftUrl = realApiUrl ? `${realApiUrl}/v1beta/models/gemini-3-pro-preview:streamGenerateContent?key=${apiKey}&alt=sse` : null;
+            // 并行流式请求
+            const leftUrl = `${realApiUrl}/v1beta/models/gemini-3-pro-preview:streamGenerateContent?key=${apiKey}&alt=sse`;
             const rightUrl = `${localUrl}/v1beta/models/gemini-3-pro-preview:streamGenerateContent?alt=sse`;
 
             const [leftResult, rightResult] = await Promise.all([
-                leftUrl ? streamRequest(leftUrl, true) : Promise.resolve(null),
+                apiKey ? streamRequest(leftUrl, true) : Promise.resolve({ error: '请输入 API Key' }),
                 streamRequest(rightUrl, false)
             ]);
 
-            if (leftResult === null) {
-                updateBadge('badge-left', 'skipped');
-            } else if (leftResult.error) {
+            // 显示最终结果
+            if (leftResult.error) {
                 updateBadge('badge-left', 'error');
-                document.getElementById('response-left').innerHTML = `<pre style="color: var(--accent-red);">错误: ${leftResult.error}</pre>`;
+                document.getElementById('response-left').innerHTML = `<pre style="color: #f44336;">错误: ${leftResult.error}</pre>`;
             } else {
                 updateBadge('badge-left', 'success');
-                document.getElementById('response-left').innerHTML = `<pre>收到 ${leftResult.chunks.length} 个 chunks\n\n${JSON.stringify(leftResult.finalResponse, null, 2)}</pre>`;
+                document.getElementById('response-left').innerHTML = `<pre>收到 ${leftResult.chunks.length} 个 chunks\n\n最终响应:\n${JSON.stringify(leftResult.finalResponse, null, 2)}</pre>`;
             }
 
             if (rightResult.error) {
                 updateBadge('badge-right', 'error');
-                document.getElementById('response-right').innerHTML = `<pre style="color: var(--accent-red);">错误: ${rightResult.error}</pre>`;
+                document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">错误: ${rightResult.error}</pre>`;
             } else {
                 updateBadge('badge-right', 'success');
-                document.getElementById('response-right').innerHTML = `<pre>收到 ${rightResult.chunks.length} 个 chunks\n\n${JSON.stringify(rightResult.finalResponse, null, 2)}</pre>`;
+                document.getElementById('response-right').innerHTML = `<pre>收到 ${rightResult.chunks.length} 个 chunks\n\n最终响应:\n${JSON.stringify(rightResult.finalResponse, null, 2)}</pre>`;
             }
 
-            if (leftResult && !leftResult.error && !rightResult.error) {
+            // 流式对比：比较最终响应
+            if (!leftResult.error && !rightResult.error && leftResult.finalResponse && rightResult.finalResponse) {
                 const results = deepCompare(leftResult.finalResponse, rightResult.finalResponse);
                 renderCompareResults(results);
-            } else if (!leftResult && !rightResult.error) {
-                updateBadge('badge-center', 'success');
-                document.getElementById('compare-details').innerHTML = `<p style="color: var(--accent-green);">&#10003; 本地流式请求成功，收到 ${rightResult.chunks.length} 个 chunks</p>`;
+
+                // 添加 chunk 数量对比
+                const chunkInfo = `
+                    <div class="compare-section">
+                        <div class="compare-section-title">流式统计</div>
+                        <div class="compare-item ${leftResult.chunks.length === rightResult.chunks.length ? 'match' : 'mismatch'}">
+                            <span class="compare-icon">${leftResult.chunks.length === rightResult.chunks.length ? '✓' : '✗'}</span>
+                            <span class="compare-path">Chunk 数量 - 真实: ${leftResult.chunks.length}, 本地: ${rightResult.chunks.length}</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('compare-details').innerHTML = chunkInfo + document.getElementById('compare-details').innerHTML;
             } else {
                 updateBadge('badge-center', 'error');
+                document.getElementById('compare-details').innerHTML = '<p style="color: var(--error);">无法对比：至少一方请求失败</p>';
             }
         }
 
-        async function runAllTests() {
-            const testIds = Object.keys(testConfigs);
-            for (const testId of testIds) {
-                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
-                document.querySelector(`.test-tab[data-test="${testId}"]`).classList.add('active');
-                currentTest = testId;
-                updateRequestPreview();
-                await runTest();
-                await new Promise(r => setTimeout(r, 2000));
+        // ========== 音频功能 ==========
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let customAudioData = null;
+        let testHistory = [];
+
+        // 监听测试选项变化，显示/隐藏音频专区
+        function updateAudioSection() {
+            const audioSection = document.getElementById('audioTestSection');
+            const historySection = document.getElementById('testHistory');
+            if (currentTest.startsWith('5-') && currentTest !== '5-1') {
+                audioSection.style.display = 'block';
+            } else {
+                audioSection.style.display = 'none';
+            }
+            // 显示历史记录
+            if (testHistory.length > 0) {
+                historySection.style.display = 'block';
+                renderHistory();
             }
         }
 
-        // Audio handling
+        // 文件上传处理
         document.getElementById('audioFileInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const arrayBuffer = event.target.result;
                 const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
 
@@ -1420,31 +1409,39 @@
                     size: file.size
                 };
 
+                // 显示预览
                 const audioPlayer = document.getElementById('audioPlayer');
                 audioPlayer.src = URL.createObjectURL(file);
-                document.getElementById('multimodalInfo').textContent = `文件: ${file.name} | 大小: ${(file.size / 1024).toFixed(1)} KB | 类型: ${file.type}`;
-                document.getElementById('multimodalPreview').style.display = 'block';
-                document.getElementById('recordStatus').textContent = '&#10003; 音频已加载';
+                document.getElementById('audioInfo').textContent =
+                    `文件: ${file.name} | 大小: ${(file.size / 1024).toFixed(1)} KB | 类型: ${file.type}`;
+                document.getElementById('audioPreview').style.display = 'block';
+                document.getElementById('audioStatus').textContent = '✅ 音频已加载';
             };
             reader.readAsArrayBuffer(file);
         });
 
+        // 录音功能
         async function toggleRecording() {
             const recordBtn = document.getElementById('recordBtn');
-            const statusEl = document.getElementById('recordStatus');
+            const statusEl = document.getElementById('audioStatus');
 
             if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // 停止录音
                 mediaRecorder.stop();
-                recordBtn.innerHTML = '<span>&#128308;</span> 录音';
+                recordBtn.textContent = '🔴 录音';
+                recordBtn.classList.remove('btn-error');
                 statusEl.textContent = '处理中...';
                 statusEl.classList.remove('recording');
             } else {
+                // 开始录音
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                     audioChunks = [];
 
-                    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                    mediaRecorder.ondataavailable = (e) => {
+                        audioChunks.push(e.data);
+                    };
 
                     mediaRecorder.onstop = async () => {
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -1460,35 +1457,43 @@
                                 size: audioBlob.size
                             };
 
+                            // 显示预览
                             const audioPlayer = document.getElementById('audioPlayer');
                             audioPlayer.src = URL.createObjectURL(audioBlob);
-                            document.getElementById('multimodalInfo').textContent = `录音 | 大小: ${(audioBlob.size / 1024).toFixed(1)} KB`;
-                            document.getElementById('multimodalPreview').style.display = 'block';
-                            statusEl.textContent = '&#10003; 录音完成';
+                            document.getElementById('audioInfo').textContent =
+                                `录音 | 大小: ${(audioBlob.size / 1024).toFixed(1)} KB`;
+                            document.getElementById('audioPreview').style.display = 'block';
+                            statusEl.textContent = '✅ 录音完成';
                         };
                         reader.readAsArrayBuffer(audioBlob);
+
+                        // 停止所有音轨
                         stream.getTracks().forEach(track => track.stop());
                     };
 
                     mediaRecorder.start();
-                    recordBtn.innerHTML = '<span>&#9209;</span> 停止';
-                    statusEl.textContent = '&#128308; 录音中...';
+                    recordBtn.textContent = '⏹ 停止';
+                    recordBtn.classList.add('btn-error');
+                    statusEl.textContent = '🔴 录音中...';
                     statusEl.classList.add('recording');
                 } catch (err) {
-                    statusEl.textContent = '&#10007; 无法访问麦克风';
+                    statusEl.textContent = '❌ 无法访问麦克风';
+                    console.error('Recording error:', err);
                 }
             }
         }
 
-        async function runCustomMultimodalTest() {
+        // 运行自定义音频测试
+        async function runCustomAudioTest() {
             if (!customAudioData) {
                 alert('请先上传或录制音频');
                 return;
             }
 
-            const prompt = document.getElementById('customPrompt').value;
+            const prompt = document.getElementById('customAudioPrompt').value;
             const localUrl = document.getElementById('localUrl').value;
 
+            // 构建请求
             const requestBody = {
                 "contents": [{"role": "user", "parts": [
                     {"text": prompt},
@@ -1497,9 +1502,20 @@
                 "generationConfig": {"maxOutputTokens": 1024}
             };
 
-            updateBadge('badge-right', 'running');
-            document.getElementById('response-right').innerHTML = '<pre>音频处理中... (可能需要 30-60 秒)</pre>';
+            // 更新预览
+            document.getElementById('requestPreview').textContent = JSON.stringify({
+                ...requestBody,
+                contents: [{...requestBody.contents[0], parts: [
+                    requestBody.contents[0].parts[0],
+                    {inlineData: {mimeType: customAudioData.mimeType, data: `[${customAudioData.fileName}, ${(customAudioData.size/1024).toFixed(1)}KB]`}}
+                ]}]
+            }, null, 2);
 
+            // 运行测试
+            updateBadge('badge-right', 'running');
+            document.getElementById('response-right').innerHTML = '<pre>音频处理中... (可能需要30-60秒)</pre>';
+
+            const startTime = Date.now();
             try {
                 const resp = await fetch(`${localUrl}/v1beta/models/gemini-3-pro-preview:generateContent`, {
                     method: 'POST',
@@ -1507,22 +1523,82 @@
                     body: JSON.stringify(requestBody)
                 });
                 const data = await resp.json();
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
                 if (data.error) {
                     updateBadge('badge-right', 'error');
-                    document.getElementById('response-right').innerHTML = `<pre style="color: var(--accent-red);">错误: ${JSON.stringify(data.error, null, 2)}</pre>`;
+                    document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">错误: ${JSON.stringify(data.error, null, 2)}</pre>`;
+                    addToHistory('自定义音频', false, elapsed);
                 } else {
                     updateBadge('badge-right', 'success');
                     document.getElementById('response-right').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    addToHistory('自定义音频', true, elapsed);
                 }
             } catch (err) {
                 updateBadge('badge-right', 'error');
-                document.getElementById('response-right').innerHTML = `<pre style="color: var(--accent-red);">网络错误: ${err.message}</pre>`;
+                document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">网络错误: ${err.message}</pre>`;
+                addToHistory('自定义音频', false, '0');
             }
         }
 
-        // Initialize
+        // 测试历史管理
+        function addToHistory(testName, passed, duration) {
+            testHistory.unshift({
+                name: testName,
+                passed: passed,
+                time: new Date().toLocaleTimeString(),
+                duration: duration + 's'
+            });
+            if (testHistory.length > 20) testHistory.pop();
+
+            document.getElementById('testHistory').style.display = 'block';
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = testHistory.map(h => `
+                <div class="history-item ${h.passed ? 'pass' : 'fail'}">
+                    <span>${h.passed ? '✓' : '✗'} ${h.name}</span>
+                    <span class="history-time">${h.time} (${h.duration})</span>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            testHistory = [];
+            document.getElementById('testHistory').style.display = 'none';
+        }
+
+        // 修改原有的标签点击事件
+        document.querySelectorAll('.test-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentTest = tab.dataset.test;
+                updateRequestPreview();
+                updateAudioSection();
+            });
+        });
+
+        // 增强 runComparison 以记录历史
+        const originalRunComparison = runComparison;
+        runComparison = async function() {
+            const startTime = Date.now();
+            await originalRunComparison();
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+            // 检查是否成功
+            const leftBadge = document.getElementById('badge-left').textContent;
+            const rightBadge = document.getElementById('badge-right').textContent;
+            const passed = leftBadge === '成功' && rightBadge === '成功';
+
+            addToHistory(testConfigs[currentTest].name, passed, elapsed);
+        };
+
+        // 初始化
         updateRequestPreview();
+        updateAudioSection();
     </script>
 </body>
 </html>

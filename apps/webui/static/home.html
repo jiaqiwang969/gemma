@@ -425,6 +425,7 @@
             <ul class="nav-links">
                 <li><a href="#features">功能</a></li>
                 <li><a href="#how-it-works">安装</a></li>
+                <li><a href="/static/downloads.html">下载</a></li>
                 <li><a href="/static/docs.html">API 文档</a></li>
                 <li><a href="/static/playground.html">Playground</a></li>
                 <li><a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></li>
@@ -441,20 +442,20 @@
         <!-- THE INSTALL COMMAND - Most Important Element -->
         <div class="install-box">
             <div class="install-header">
-                <span>在终端运行以下命令</span>
+                <span>一键安装 (多模态版)</span>
                 <button class="copy-btn" onclick="copyInstall()">复制</button>
             </div>
             <div class="install-command">
                 <span class="comment"># 一键安装灵空 AI</span><br>
-                <span class="prompt">$</span> curl -fsSL https://lingkong.xyz/install.sh | bash
+                <span class="prompt">$</span> curl -fsSL http://115.159.223.227/install.sh | bash
             </div>
         </div>
 
         <div class="quick-links">
             <a href="/static/index.html" class="quick-link primary">💬 在线体验</a>
+            <a href="/static/downloads.html" class="quick-link">📥 下载中心</a>
             <a href="/static/docs.html" class="quick-link">📚 API 文档</a>
             <a href="https://github.com/jiaqiwang969/gemma" class="quick-link" target="_blank">⭐ GitHub</a>
-            <a href="/static/pitch.html" class="quick-link">📊 商业计划</a>
         </div>
 
         <div class="stats-row">
@@ -471,7 +472,7 @@
                 <div class="stat-label">推理速度</div>
             </div>
             <div class="stat">
-                <div class="stat-value">多模态</div>
+                <div class="stat-value">三模态</div>
                 <div class="stat-label">文本+视觉+音频</div>
             </div>
         </div>
@@ -480,7 +481,7 @@
     <!-- How It Works -->
     <section class="how-it-works" id="how-it-works">
         <div class="section-header">
-            <h2>三步启动你的私有 AI</h2>
+            <h2>两步启动你的私有 AI</h2>
             <p>无需 Python，无需复杂配置，一键完成</p>
         </div>
 
@@ -489,24 +490,16 @@
                 <div class="step-number">1</div>
                 <div class="step-content">
                     <h3>运行安装脚本</h3>
-                    <p>自动检测系统、安装 llama.cpp 推理引擎</p>
-                    <code>curl -fsSL https://lingkong.xyz/install.sh | bash</code>
+                    <p>自动安装引擎 + 下载模型 (约 5.7GB: 文本+视觉+音频)</p>
+                    <code>curl -fsSL http://115.159.223.227/install.sh | bash</code>
                 </div>
             </div>
             <div class="step">
                 <div class="step-number">2</div>
                 <div class="step-content">
-                    <h3>下载模型</h3>
-                    <p>从 HuggingFace 下载预优化的 Gemma 3N GGUF 模型 (2.8GB)</p>
-                    <code>lingkong-download</code>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <div class="step-content">
                     <h3>启动服务</h3>
-                    <p>一行命令启动本地 AI，自动使用 GPU 加速</p>
-                    <code>lingkong-start</code>
+                    <p>一行命令启动，自动使用 GPU 加速</p>
+                    <code>lingkong</code>
                 </div>
             </div>
         </div>
@@ -537,7 +530,7 @@
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🎯</div>
-                <h3>多模态</h3>
+                <h3>三模态</h3>
                 <p>文本、图像、音频，一个模型全能处理</p>
             </div>
             <div class="feature-card">
@@ -563,7 +556,12 @@
             <a href="/static/index.html" class="product-card">
                 <div class="product-icon">💬</div>
                 <h3>WebUI 聊天</h3>
-                <p>多模态对话界面</p>
+                <p>三模态对话界面</p>
+            </a>
+            <a href="/static/downloads.html" class="product-card">
+                <div class="product-icon">📥</div>
+                <h3>下载中心</h3>
+                <p>国内高速下载</p>
             </a>
             <a href="/static/docs.html" class="product-card">
                 <div class="product-icon">📚</div>
@@ -575,17 +573,12 @@
                 <h3>Playground</h3>
                 <p>交互式 API 测试</p>
             </a>
-            <a href="/static/pitch.html" class="product-card">
-                <div class="product-icon">📊</div>
-                <h3>商业计划</h3>
-                <p>愿景与架构</p>
-            </a>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-        <p>灵空 AI - 开源本地多模态 AI 平台</p>
+        <p>灵空 AI - 开源本地三模态 AI 平台 (文本 + 视觉 + 音频)</p>
         <p style="margin-top: 0.5rem;">
             <a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a>
             &nbsp;|&nbsp;
@@ -597,12 +590,35 @@
 
     <script>
         function copyInstall() {
-            const cmd = 'curl -fsSL https://lingkong.xyz/install.sh | bash';
-            navigator.clipboard.writeText(cmd).then(() => {
-                const btn = document.querySelector('.copy-btn');
-                btn.textContent = '已复制!';
-                setTimeout(() => btn.textContent = '复制', 2000);
-            });
+            const cmd = 'curl -fsSL http://115.159.223.227/install.sh | bash';
+            const btn = document.querySelector('.copy-btn');
+
+            // 尝试使用现代 API，如果失败则用回退方案
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(cmd).then(() => {
+                    btn.textContent = '已复制!';
+                    setTimeout(() => btn.textContent = '复制', 2000);
+                });
+            } else {
+                // HTTP 环境下的回退方案
+                const textArea = document.createElement('textarea');
+                textArea.value = cmd;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    btn.textContent = '已复制!';
+                    setTimeout(() => btn.textContent = '复制', 2000);
+                } catch (err) {
+                    btn.textContent = '复制失败';
+                    setTimeout(() => btn.textContent = '复制', 2000);
+                }
+                document.body.removeChild(textArea);
+            }
         }
     </script>
 </body>

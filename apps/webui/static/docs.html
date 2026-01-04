@@ -1184,21 +1184,26 @@ console.log(text);</pre>
                     <div class="section-header">
                         <h2 class="section-title">
                             <span>&#128247;</span>
-                            多模态支持
+                            三模态支持
                         </h2>
-                        <p class="section-desc">支持图像理解和音频转录</p>
+                        <p class="section-desc">支持文本、图像理解和音频转录</p>
                     </div>
 
                     <div class="feature-grid">
                         <div class="feature-card">
+                            <div class="icon">&#128172;</div>
+                            <div class="title">文本对话</div>
+                            <div class="desc">多轮对话、系统指令<br>支持 thinking 深度推理</div>
+                        </div>
+                        <div class="feature-card">
                             <div class="icon">&#127912;</div>
                             <div class="title">图像理解</div>
-                            <div class="desc">支持 PNG, JPEG, WebP, GIF 格式<br>通过 Vision mmproj 处理</div>
+                            <div class="desc">支持 PNG, JPEG, WebP, GIF<br>通过 Vision mmproj (570MB)</div>
                         </div>
                         <div class="feature-card">
                             <div class="icon">&#127908;</div>
                             <div class="title">音频转录</div>
-                            <div class="desc">支持 WAV, MP3, FLAC, OGG 格式<br>通过 Audio mmproj 处理</div>
+                            <div class="desc">支持 WAV, MP3, FLAC, OGG<br>通过 Audio mmproj (1.4GB)</div>
                         </div>
                     </div>
 
@@ -1221,6 +1226,43 @@ console.log(text);</pre>
     ]
   }]
 }</pre>
+                        </div>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 1rem;">
+                        <div class="code-header">
+                            <span class="code-lang">音频转录示例</span>
+                        </div>
+                        <div class="code-content">
+<pre>{
+  <span class="hljs-property">"contents"</span>: [{
+    <span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>,
+    <span class="hljs-property">"parts"</span>: [
+      {<span class="hljs-property">"text"</span>: <span class="hljs-string">"Transcribe this audio and describe what you hear"</span>},
+      {
+        <span class="hljs-property">"inlineData"</span>: {
+          <span class="hljs-property">"mimeType"</span>: <span class="hljs-string">"audio/wav"</span>,
+          <span class="hljs-property">"data"</span>: <span class="hljs-string">"UklGRi4AAABXQVZFZm10..."</span>  <span class="hljs-comment">// Base64 WAV (16kHz mono)</span>
+        }
+      }
+    ]
+  }],
+  <span class="hljs-property">"generationConfig"</span>: {
+    <span class="hljs-property">"maxOutputTokens"</span>: <span class="hljs-number">1024</span>
+  }
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="info-box tip" style="margin-top: 1rem;">
+                        <div class="icon">&#127908;</div>
+                        <div class="content">
+                            <div class="title">音频格式要求</div>
+                            <div class="text">
+                                推荐使用 16kHz 单声道 WAV 格式以获得最佳效果。
+                                支持的格式: WAV, MP3, FLAC, OGG, WebM。
+                                音频文件需转换为 Base64 编码后传入 inlineData.data 字段。
+                            </div>
                         </div>
                     </div>
                 </section>

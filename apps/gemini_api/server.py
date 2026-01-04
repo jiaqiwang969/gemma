@@ -607,7 +607,9 @@ def start_llama_server():
 
     env = os.environ.copy()
     bin_dir = str(Path(LLAMA_SERVER_BIN).parent)
-    env["DYLD_LIBRARY_PATH"] = f"{bin_dir}:{env.get('DYLD_LIBRARY_PATH', '')}"
+    lib_dir = str(Path(LLAMA_SERVER_BIN).parent.parent / "lib")
+    env["DYLD_LIBRARY_PATH"] = f"{lib_dir}:{bin_dir}:{env.get('DYLD_LIBRARY_PATH', '')}"
+    env["LD_LIBRARY_PATH"] = f"{lib_dir}:{bin_dir}:{env.get('LD_LIBRARY_PATH', '')}"
 
     cmd = [
         LLAMA_SERVER_BIN,
@@ -808,8 +810,9 @@ def run_llama_mtmd_cli(
     # 设置环境变量
     env = os.environ.copy()
     bin_dir = str(Path(LLAMA_MTMD_BIN).parent)
-    env["DYLD_LIBRARY_PATH"] = f"{bin_dir}:{env.get('DYLD_LIBRARY_PATH', '')}"
-    env["LD_LIBRARY_PATH"] = f"{bin_dir}:{env.get('LD_LIBRARY_PATH', '')}"
+    lib_dir = str(Path(LLAMA_MTMD_BIN).parent.parent / "lib")
+    env["DYLD_LIBRARY_PATH"] = f"{lib_dir}:{bin_dir}:{env.get('DYLD_LIBRARY_PATH', '')}"
+    env["LD_LIBRARY_PATH"] = f"{lib_dir}:{bin_dir}:{env.get('LD_LIBRARY_PATH', '')}"
 
     # 构建命令 (与 WebUI 保持一致)
     # 参考: apps/webui/server.py run_llama_mmproj_cli()

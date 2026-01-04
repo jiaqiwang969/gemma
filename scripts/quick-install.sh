@@ -25,16 +25,24 @@ LIB_DIR="$LINGKONG_HOME/lib"
 MODELS_DIR="$LINGKONG_HOME/models"
 SANDBOX_DIR="$LINGKONG_HOME/sandbox"
 
-# 下载地址
+# 下载地址 (国内镜像)
 BASE_URL="http://115.159.223.227"
 BINARY_URL_MACOS="$BASE_URL/bin/llama-lingkong-macos-arm64.tar.gz"
 BINARY_URL_LINUX="$BASE_URL/bin/llama-lingkong-linux-x86_64.tar.gz"
 WEBUI_URL="$BASE_URL/webui.tar.gz"
 SANDBOX_URL="$BASE_URL/sandbox.tar.gz"
+
+# 模型下载地址 (优先国内镜像，备用 HuggingFace)
+MODELS_BASE="$BASE_URL/models"
+MODEL_URL="$MODELS_BASE/gemma-3n-E2B-it-Q4_K_M.gguf"
+VISION_URL="$MODELS_BASE/gemma-3n-vision-mmproj-f16.gguf"
+AUDIO_URL="$MODELS_BASE/gemma-3n-audio-mmproj-f16.gguf"
+
+# HuggingFace 备用地址
 HF_BASE="https://huggingface.co/nicepkg/gemma-3n-gguf/resolve/main"
-MODEL_URL="$HF_BASE/gemma-3n-E2B-it-Q4_K_M.gguf"
-VISION_URL="$HF_BASE/gemma-3n-vision-mmproj-f16.gguf"
-AUDIO_URL="$HF_BASE/gemma-3n-audio-mmproj-f16.gguf"
+MODEL_URL_HF="$HF_BASE/gemma-3n-E2B-it-Q4_K_M.gguf"
+VISION_URL_HF="$HF_BASE/gemma-3n-vision-mmproj-f16.gguf"
+AUDIO_URL_HF="$HF_BASE/gemma-3n-audio-mmproj-f16.gguf"
 
 # Python 依赖
 PYTHON_DEPS="flask flask-cors pillow psutil librosa soundfile requests"
@@ -193,6 +201,9 @@ install_python_deps() {
     # 使用 pip 安装依赖
     log_info "安装: $PYTHON_DEPS"
 
+    # 国内镜像源 (解决网络超时问题)
+    local PIP_MIRROR="-i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn"
+
     # 创建虚拟环境或使用 --break-system-packages
     local venv_dir="$LINGKONG_HOME/venv"
 
@@ -200,7 +211,10 @@ install_python_deps() {
     if $PYTHON_CMD -m venv "$venv_dir" 2>/dev/null; then
         log_info "使用虚拟环境: $venv_dir"
         source "$venv_dir/bin/activate"
-        pip install --quiet $PYTHON_DEPS
+        # 先升级 pip
+        pip install --upgrade pip $PIP_MIRROR --quiet 2>/dev/null || true
+        # 安装依赖 (使用国内镜像)
+        pip install $PIP_MIRROR --timeout 60 $PYTHON_DEPS
         deactivate
         # 创建激活脚本链接
         echo "source \"$venv_dir/bin/activate\"" > "$LINGKONG_HOME/activate.sh"
@@ -210,13 +224,13 @@ install_python_deps() {
 
     # 方法2: 使用 --break-system-packages (macOS Homebrew Python 3.12+)
     log_info "使用系统 pip 安装..."
-    if $PYTHON_CMD -m pip install --user --break-system-packages --quiet $PYTHON_DEPS 2>/dev/null; then
+    if $PYTHON_CMD -m pip install --user --break-system-packages $PIP_MIRROR --timeout 60 $PYTHON_DEPS 2>/dev/null; then
         log_success "Python 依赖安装完成"
         return 0
     fi
 
     # 方法3: 传统方式
-    if $PYTHON_CMD -m pip install --user --quiet $PYTHON_DEPS 2>/dev/null; then
+    if $PYTHON_CMD -m pip install --user $PIP_MIRROR --timeout 60 $PYTHON_DEPS 2>/dev/null; then
         log_success "Python 依赖安装完成"
         return 0
     fi
@@ -244,10 +258,14 @@ install_native_binaries() {
         cp "$extract_dir"/llama-server "$BIN_DIR/" 2>/dev/null || true
         cp "$extract_dir"/llama-mtmd-cli "$BIN_DIR/" 2>/dev/null || true
 
-        # macOS 动态库
+        # macOS 动态库 - 同时复制到 lib/ 和 bin/ 目录
+        # 因为 llama.cpp 二进制的 @rpath 会查找 @executable_path (bin目录)
         if [[ -d "$extract_dir/lib" ]]; then
             cp "$extract_dir"/lib/*.dylib "$LIB_DIR/" 2>/dev/null || true
             cp "$extract_dir"/lib/*.so "$LIB_DIR/" 2>/dev/null || true
+            # 同时复制到 bin/ 目录确保 @rpath 能找到
+            cp "$extract_dir"/lib/*.dylib "$BIN_DIR/" 2>/dev/null || true
+            cp "$extract_dir"/lib/*.so "$BIN_DIR/" 2>/dev/null || true
         fi
     fi
 
@@ -259,10 +277,11 @@ install_native_binaries() {
 
 # 下载 WebUI
 download_webui() {
-    log_step "下载 WebUI..."
+    log_step "下载 WebUI 和 Gemini API..."
 
     local webui_dir="$LINGKONG_HOME/apps/webui"
-    mkdir -p "$webui_dir/static"
+    local gemini_dir="$LINGKONG_HOME/apps/gemini_api"
+    mkdir -p "$webui_dir/static" "$gemini_dir"
 
     # 尝试从服务器下载打包好的 WebUI (总是更新)
     if curl -fsSL "$WEBUI_URL" -o "/tmp/webui.tar.gz" 2>/dev/null; then
@@ -271,56 +290,112 @@ download_webui() {
         rm -f "/tmp/webui.tar.gz"
         if [[ -f "$webui_dir/server.py" ]]; then
             log_success "WebUI 下载完成"
+        fi
+    fi
+
+    # 下载 Gemini API 服务器 (带 thoughtSignature)
+    if curl -fsSL "$BASE_URL/gemini_api.tar.gz" -o "/tmp/gemini_api.tar.gz" 2>/dev/null; then
+        log_info "解压 Gemini API..."
+        tar -xzf "/tmp/gemini_api.tar.gz" -C "$gemini_dir" 2>/dev/null || true
+        rm -f "/tmp/gemini_api.tar.gz"
+        if [[ -f "$gemini_dir/server.py" ]]; then
+            log_success "Gemini API 下载完成"
+        fi
+    fi
+}
+
+# 下载模型
+# 下载单个文件 (带断点续传和备用地址)
+download_file() {
+    local dest="$1"
+    local url_primary="$2"
+    local url_fallback="$3"
+    local name="$4"
+    local expected_size="$5"  # 预期大小 (字节)
+
+    # 检查文件是否已完整存在
+    if [[ -f "$dest" ]]; then
+        local size=$(stat -f%z "$dest" 2>/dev/null || stat -c%s "$dest" 2>/dev/null || echo 0)
+        local size_mb=$(($size/1024/1024))
+
+        # 如果有预期大小，检查是否达到 95%
+        if [[ -n "$expected_size" && $expected_size -gt 0 ]]; then
+            local threshold=$(($expected_size * 95 / 100))
+            if [[ $size -ge $threshold ]]; then
+                log_info "$name 已完整 (${size_mb}MB)，跳过"
+                return 0
+            else
+                log_info "$name 不完整 (${size_mb}MB)，继续下载..."
+            fi
+        else
+            # 没有预期大小，直接尝试续传让服务器判断
+            log_info "$name 已存在 (${size_mb}MB)，验证完整性..."
+        fi
+    fi
+
+    log_info "下载 $name..."
+    log_info "  来源: 国内镜像 (支持断点续传)"
+
+    # 尝试主地址 (国内镜像) - 使用 -C - 支持断点续传
+    if command -v curl &> /dev/null; then
+        if curl -fL -C - --progress-bar --retry 3 --retry-delay 5 -o "$dest" "$url_primary"; then
+            log_success "$name 下载完成"
+            return 0
+        fi
+    elif command -v wget &> /dev/null; then
+        if wget -c --show-progress --tries=3 -O "$dest" "$url_primary"; then
+            log_success "$name 下载完成"
             return 0
         fi
     fi
 
-    # 回退: 从 GitHub 下载
-    log_info "从 GitHub 下载 WebUI..."
-    local github_base="https://raw.githubusercontent.com/nicepkg/gemma-3n-finetuning/main/apps/webui"
+    # 主地址失败，尝试备用地址 (HuggingFace)
+    if [[ -n "$url_fallback" ]]; then
+        log_warn "国内镜像下载失败，尝试 HuggingFace..."
+        if command -v curl &> /dev/null; then
+            if curl -fL -C - --progress-bar --retry 3 -o "$dest" "$url_fallback"; then
+                log_success "$name 下载完成 (HuggingFace)"
+                return 0
+            fi
+        elif command -v wget &> /dev/null; then
+            if wget -c --show-progress --tries=3 -O "$dest" "$url_fallback"; then
+                log_success "$name 下载完成 (HuggingFace)"
+                return 0
+            fi
+        fi
+    fi
 
-    curl -fsSL "$github_base/server.py" -o "$webui_dir/server.py" 2>/dev/null || {
-        log_warn "无法下载 WebUI，将使用纯 API 模式"
-        return 1
-    }
-
-    mkdir -p "$webui_dir/static"
-    curl -fsSL "$github_base/static/index.html" -o "$webui_dir/static/index.html" 2>/dev/null || true
-    curl -fsSL "$github_base/static/chat.html" -o "$webui_dir/static/chat.html" 2>/dev/null || true
-
-    log_success "WebUI 下载完成"
+    log_error "$name 下载失败，请尝试手动下载:"
+    log_error "  curl -C - -o $dest $url_primary"
+    return 1
 }
 
-# 下载模型
 download_models() {
-    log_step "下载 AI 模型..."
+    log_step "下载 AI 模型 (国内镜像优先)..."
 
-    # 文本模型 (必需)
-    if [[ ! -f "$MODELS_DIR/gemma-3n-E2B-it-Q4_K_M.gguf" ]]; then
-        log_info "下载文本模型 (2.8GB)..."
-        $DOWNLOAD_TO "$MODELS_DIR/gemma-3n-E2B-it-Q4_K_M.gguf" "$MODEL_URL"
-        log_success "文本模型下载完成"
-    else
-        log_info "文本模型已存在，跳过"
-    fi
+    # 文本模型 (必需) - 2.6GB = 2789350528 bytes
+    download_file \
+        "$MODELS_DIR/gemma-3n-E2B-it-Q4_K_M.gguf" \
+        "$MODEL_URL" \
+        "$MODEL_URL_HF" \
+        "文本模型 (2.6GB)" \
+        2789350528
 
-    # 视觉模型
-    if [[ ! -f "$MODELS_DIR/gemma-3n-vision-mmproj-f16.gguf" ]]; then
-        log_info "下载视觉模型 (570MB)..."
-        $DOWNLOAD_TO "$MODELS_DIR/gemma-3n-vision-mmproj-f16.gguf" "$VISION_URL"
-        log_success "视觉模型下载完成"
-    else
-        log_info "视觉模型已存在，跳过"
-    fi
+    # 视觉模型 - 570MB = 598999040 bytes
+    download_file \
+        "$MODELS_DIR/gemma-3n-vision-mmproj-f16.gguf" \
+        "$VISION_URL" \
+        "$VISION_URL_HF" \
+        "视觉模型 (570MB)" \
+        598999040
 
-    # 音频模型
-    if [[ ! -f "$MODELS_DIR/gemma-3n-audio-mmproj-f16.gguf" ]]; then
-        log_info "下载音频模型 (1.4GB)..."
-        $DOWNLOAD_TO "$MODELS_DIR/gemma-3n-audio-mmproj-f16.gguf" "$AUDIO_URL"
-        log_success "音频模型下载完成"
-    else
-        log_info "音频模型已存在，跳过"
-    fi
+    # 音频模型 - 1.3GB = 1395864576 bytes
+    download_file \
+        "$MODELS_DIR/gemma-3n-audio-mmproj-f16.gguf" \
+        "$AUDIO_URL" \
+        "$AUDIO_URL_HF" \
+        "音频模型 (1.3GB)" \
+        1395864576
 }
 
 # 创建原生启动脚本
@@ -337,7 +412,7 @@ MODEL="$LINGKONG_HOME/models/gemma-3n-E2B-it-Q4_K_M.gguf"
 VISION="$LINGKONG_HOME/models/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO="$LINGKONG_HOME/models/gemma-3n-audio-mmproj-f16.gguf"
 LLAMA_PORT="${LLAMA_PORT:-8081}"
-WEBUI_PORT="${WEBUI_PORT:-5001}"
+WEBUI_PORT="${WEBUI_PORT:-8080}"
 PID_DIR="$LINGKONG_HOME/run"
 LOG_DIR="$LINGKONG_HOME/logs"
 
@@ -353,6 +428,28 @@ NC='\033[0m'
 
 mkdir -p "$PID_DIR" "$LOG_DIR"
 
+# 快速清理端口 (并行执行，无等待)
+cleanup_ports() {
+    local ports_to_clean=""
+
+    # 快速检测需要清理的端口
+    for port in 5001 8080 8090; do
+        if lsof -i :$port -t > /dev/null 2>&1; then
+            ports_to_clean="$ports_to_clean $port"
+        fi
+    done
+
+    # 如果有端口需要清理，并行清理
+    if [[ -n "$ports_to_clean" ]]; then
+        echo -e "${YELLOW}[清理]${NC} 端口$ports_to_clean"
+        for port in $ports_to_clean; do
+            lsof -i :$port -t 2>/dev/null | xargs kill -9 2>/dev/null &
+        done
+        wait  # 等待所有清理完成
+        sleep 0.3  # 短暂等待端口释放
+    fi
+}
+
 # macOS: 签名二进制
 sign_binaries() {
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -361,37 +458,64 @@ sign_binaries() {
     fi
 }
 
-# 启动 llama-server
-start_llama() {
-    if [[ -f "$PID_DIR/llama.pid" ]] && kill -0 "$(cat "$PID_DIR/llama.pid")" 2>/dev/null; then
-        echo -e "${YELLOW}[警告]${NC} 推理引擎已在运行"
-        return 0
+# 启动 Gemini API (带 thoughtSignature)
+start_gemini_api() {
+    # 检查服务是否已在运行且健康
+    if [[ -f "$PID_DIR/gemini.pid" ]] && kill -0 "$(cat "$PID_DIR/gemini.pid")" 2>/dev/null; then
+        if curl -s --connect-timeout 1 "http://localhost:5001/health" > /dev/null 2>&1; then
+            echo -e "${GREEN}[运行中]${NC} Gemini API (PID: $(cat "$PID_DIR/gemini.pid"))"
+            return 0
+        fi
+    fi
+
+    # 清理端口
+    cleanup_ports
+
+    if [[ ! -f "$LINGKONG_HOME/apps/gemini_api/server.py" ]]; then
+        echo -e "${YELLOW}[警告]${NC} Gemini API 未安装，跳过"
+        return 1
     fi
 
     sign_binaries
 
-    # 注意: llama-server 不支持同时加载视觉和音频 projector (Metal bug)
-    # 多模态由 WebUI 调用 llama-mtmd-cli 单独处理
-    # llama-server 仅用于纯文本对话
-    local args="--model $MODEL --port $LLAMA_PORT --host 127.0.0.1 -ngl 99 --flash-attn on -c 8192"
+    # 设置环境变量
+    export LLAMA_SERVER_BIN="$LINGKONG_HOME/bin/llama-server"
+    export LLAMA_MTMD_BIN="$LINGKONG_HOME/bin/llama-mtmd-cli"
+    export LLAMA_MODEL="$MODEL"
+    export LLAMA_MODEL_AUDIO="$MODEL"
+    export MMPROJ_IMAGE="$VISION"
+    export MMPROJ_AUDIO="$AUDIO"
+    export GEMINI_API_LLAMA_PORT="8090"
+    export DYLD_LIBRARY_PATH="$LINGKONG_HOME/lib:${DYLD_LIBRARY_PATH:-}"
 
-    nohup "$LINGKONG_HOME/bin/llama-server" $args > "$LOG_DIR/llama.log" 2>&1 &
-    echo $! > "$PID_DIR/llama.pid"
-    echo -e "${GREEN}[成功]${NC} 推理引擎已启动 (PID: $(cat "$PID_DIR/llama.pid"))"
+    cd "$LINGKONG_HOME/apps/gemini_api"
 
-    # 等待就绪
+    if [[ -f "$LINGKONG_HOME/venv/bin/python" ]]; then
+        nohup "$LINGKONG_HOME/venv/bin/python" server.py > "$LOG_DIR/gemini.log" 2>&1 &
+    else
+        nohup python3 server.py > "$LOG_DIR/gemini.log" 2>&1 &
+    fi
+    echo $! > "$PID_DIR/gemini.pid"
+    echo -e "${GREEN}[启动]${NC} Gemini API (PID: $(cat "$PID_DIR/gemini.pid"))"
+
+    # 快速等待就绪 (最多 30 秒，间隔 0.5 秒)
     for i in {1..60}; do
-        curl -s "http://localhost:$LLAMA_PORT/health" > /dev/null 2>&1 && return 0
-        sleep 1
+        if curl -s --connect-timeout 1 "http://localhost:5001/health" > /dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
     done
-    echo -e "${YELLOW}[警告]${NC} 引擎启动超时，可能仍在加载..."
+    echo -e "${YELLOW}[提示]${NC} Gemini API 后台启动中..."
 }
 
-# 启动 WebUI
+# 启动 WebUI (聊天界面)
 start_webui() {
+    # 检查服务是否已在运行且健康
     if [[ -f "$PID_DIR/webui.pid" ]] && kill -0 "$(cat "$PID_DIR/webui.pid")" 2>/dev/null; then
-        echo -e "${YELLOW}[警告]${NC} WebUI 已在运行"
-        return 0
+        if curl -s --connect-timeout 1 "http://localhost:$WEBUI_PORT/" > /dev/null 2>&1; then
+            echo -e "${GREEN}[运行中]${NC} WebUI (PID: $(cat "$PID_DIR/webui.pid"))"
+            return 0
+        fi
     fi
 
     if [[ ! -f "$LINGKONG_HOME/apps/webui/server.py" ]]; then
@@ -399,8 +523,8 @@ start_webui() {
         return 1
     fi
 
-    # 设置环境变量
-    export LLAMA_SERVER_PORT="$LLAMA_PORT"
+    # 设置环境变量 - WebUI 使用 Gemini API 的 llama-server (8090)
+    export LLAMA_SERVER_PORT="8090"
     export LLAMA_MM_MODEL="$MODEL"
     export LLAMA_MM_PROJ_IMAGE="$VISION"
     export LLAMA_MM_PROJ_AUDIO="$AUDIO"
@@ -409,25 +533,26 @@ start_webui() {
 
     cd "$LINGKONG_HOME/apps/webui"
 
-    # 检查是否有虚拟环境
     if [[ -f "$LINGKONG_HOME/venv/bin/python" ]]; then
         nohup "$LINGKONG_HOME/venv/bin/python" server.py > "$LOG_DIR/webui.log" 2>&1 &
     else
         nohup python3 server.py > "$LOG_DIR/webui.log" 2>&1 &
     fi
     echo $! > "$PID_DIR/webui.pid"
-    echo -e "${GREEN}[成功]${NC} WebUI 已启动 (PID: $(cat "$PID_DIR/webui.pid"))"
+    echo -e "${GREEN}[启动]${NC} WebUI (PID: $(cat "$PID_DIR/webui.pid"))"
 
-    # 等待就绪
-    for i in {1..10}; do
-        curl -s "http://localhost:$WEBUI_PORT/api/status" > /dev/null 2>&1 && return 0
-        sleep 1
+    # 快速等待就绪 (最多 5 秒，间隔 0.3 秒)
+    for i in {1..15}; do
+        if curl -s --connect-timeout 1 "http://localhost:$WEBUI_PORT/" > /dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.3
     done
 }
 
 # 停止服务
 stop_all() {
-    for name in webui llama; do
+    for name in webui gemini llama; do
         local pid_file="$PID_DIR/$name.pid"
         if [[ -f "$pid_file" ]]; then
             local pid=$(cat "$pid_file")
@@ -438,8 +563,99 @@ stop_all() {
             rm -f "$pid_file"
         fi
     done
-    pkill -f "llama-server.*$LLAMA_PORT" 2>/dev/null || true
-    pkill -f "python.*server.py" 2>/dev/null || true
+    pkill -f "llama-server.*8090" 2>/dev/null || true
+    pkill -f "gemini_api/server.py" 2>/dev/null || true
+    pkill -f "webui/server.py" 2>/dev/null || true
+}
+
+# 检查更新
+check_update() {
+    local SERVER_URL="http://115.159.223.227"
+    local CHECKSUMS_URL="$SERVER_URL/checksums.sha256"
+    local LOCAL_CHECKSUMS="$LINGKONG_HOME/checksums.sha256"
+    local NEEDS_UPDATE=false
+
+    echo ""
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${CYAN}  灵空 AI 更新检查${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+
+    # 下载服务器校验和
+    local TMP_CHECKSUMS="/tmp/lingkong_checksums_$$.sha256"
+    if ! curl -fsSL "$CHECKSUMS_URL" -o "$TMP_CHECKSUMS" 2>/dev/null; then
+        echo -e "${RED}[错误]${NC} 无法连接服务器，请检查网络"
+        rm -f "$TMP_CHECKSUMS"
+        return 1
+    fi
+
+    echo -e "${CYAN}检查组件更新:${NC}"
+    echo ""
+
+    # 检查 gemini_api
+    local SERVER_GEMINI_HASH=$(grep "gemini_api.tar.gz" "$TMP_CHECKSUMS" | awk '{print $1}')
+    local LOCAL_GEMINI_HASH=""
+    if [[ -f "$LINGKONG_HOME/apps/gemini_api/server.py" ]]; then
+        # 计算本地 gemini_api 目录的哈希 (简化: 只检查 server.py)
+        LOCAL_GEMINI_HASH=$(shasum -a 256 "$LINGKONG_HOME/apps/gemini_api/server.py" 2>/dev/null | awk '{print $1}')
+    fi
+
+    # 检查二进制
+    local SERVER_BIN_HASH=$(grep "llama-lingkong-macos-arm64.tar.gz" "$TMP_CHECKSUMS" | awk '{print $1}')
+    local LOCAL_BIN_HASH=""
+    if [[ -f "$LINGKONG_HOME/bin/llama-mtmd-cli" ]]; then
+        LOCAL_BIN_HASH=$(shasum -a 256 "$LINGKONG_HOME/bin/llama-mtmd-cli" 2>/dev/null | awk '{print $1}')
+    fi
+
+    # 检查 webui
+    local SERVER_WEBUI_HASH=$(grep "webui.tar.gz" "$TMP_CHECKSUMS" | awk '{print $1}')
+    local LOCAL_WEBUI_HASH=""
+    if [[ -f "$LINGKONG_HOME/apps/webui/server.py" ]]; then
+        LOCAL_WEBUI_HASH=$(shasum -a 256 "$LINGKONG_HOME/apps/webui/server.py" 2>/dev/null | awk '{print $1}')
+    fi
+
+    # 显示状态 (简化比较: 服务器有新包就提示更新)
+    # 实际比较需要下载包并解压，这里用时间戳或版本号更简单
+    # 我们用一个本地记录文件来跟踪上次更新
+    local LAST_UPDATE_FILE="$LINGKONG_HOME/.last_update"
+    local SERVER_CHECKSUM_HASH=$(shasum -a 256 "$TMP_CHECKSUMS" | awk '{print $1}')
+    local LOCAL_CHECKSUM_HASH=""
+    if [[ -f "$LOCAL_CHECKSUMS" ]]; then
+        LOCAL_CHECKSUM_HASH=$(shasum -a 256 "$LOCAL_CHECKSUMS" | awk '{print $1}')
+    fi
+
+    if [[ "$SERVER_CHECKSUM_HASH" != "$LOCAL_CHECKSUM_HASH" ]]; then
+        NEEDS_UPDATE=true
+        echo -e "  ${YELLOW}● 发现新版本${NC}"
+        echo ""
+        echo -e "  服务器校验和已更新，建议重新安装以获取最新修复。"
+    else
+        echo -e "  ${GREEN}● 已是最新版本${NC}"
+    fi
+
+    echo ""
+
+    if [[ "$NEEDS_UPDATE" == "true" ]]; then
+        echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}  发现更新! 运行以下命令更新:${NC}"
+        echo ""
+        echo -e "  ${CYAN}curl -fsSL http://115.159.223.227/install.sh | bash${NC}"
+        echo ""
+        echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
+
+        # 询问是否立即更新
+        read -p "是否立即更新? [y/N] " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${CYAN}开始更新...${NC}"
+            curl -fsSL http://115.159.223.227/install.sh | bash
+        fi
+    else
+        # 保存当前校验和
+        cp "$TMP_CHECKSUMS" "$LOCAL_CHECKSUMS" 2>/dev/null || true
+    fi
+
+    rm -f "$TMP_CHECKSUMS"
 }
 
 # 显示状态
@@ -449,21 +665,21 @@ show_status() {
     echo -e "${CYAN}  灵空 AI 服务状态${NC}"
     echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
 
-    if [[ -f "$PID_DIR/llama.pid" ]] && kill -0 "$(cat "$PID_DIR/llama.pid")" 2>/dev/null; then
-        echo -e "  推理引擎:  ${GREEN}● 运行中${NC} (PID: $(cat "$PID_DIR/llama.pid"))"
+    if [[ -f "$PID_DIR/gemini.pid" ]] && kill -0 "$(cat "$PID_DIR/gemini.pid")" 2>/dev/null; then
+        echo -e "  Gemini API: ${GREEN}● 运行中${NC} (PID: $(cat "$PID_DIR/gemini.pid"))"
     else
-        echo -e "  推理引擎:  ${RED}○ 已停止${NC}"
+        echo -e "  Gemini API: ${RED}○ 已停止${NC}"
     fi
 
     if [[ -f "$PID_DIR/webui.pid" ]] && kill -0 "$(cat "$PID_DIR/webui.pid")" 2>/dev/null; then
-        echo -e "  WebUI:     ${GREEN}● 运行中${NC} (PID: $(cat "$PID_DIR/webui.pid"))"
+        echo -e "  WebUI:      ${GREEN}● 运行中${NC} (PID: $(cat "$PID_DIR/webui.pid"))"
     else
-        echo -e "  WebUI:     ${RED}○ 已停止${NC}"
+        echo -e "  WebUI:      ${RED}○ 已停止${NC}"
     fi
 
     echo ""
-    echo -e "  ${CYAN}WebUI:${NC}  http://localhost:$WEBUI_PORT"
-    echo -e "  ${CYAN}API:${NC}    http://localhost:$LLAMA_PORT"
+    echo -e "  ${CYAN}WebUI:${NC}      http://localhost:$WEBUI_PORT"
+    echo -e "  ${CYAN}Playground:${NC} http://localhost:$WEBUI_PORT/static/playground.html"
     echo ""
 }
 
@@ -473,15 +689,15 @@ case "${1:-start}" in
         echo ""
         echo -e "${CYAN}🐉 启动 灵空 AI...${NC}"
         echo ""
-        start_llama
+        start_gemini_api
         start_webui
         echo ""
         echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
         echo -e "${GREEN}  ✅ 灵空 AI 已启动!${NC}"
         echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
         echo ""
-        echo -e "  🌐 ${CYAN}WebUI:${NC}  ${YELLOW}http://localhost:$WEBUI_PORT${NC}"
-        echo -e "  🔌 ${CYAN}API:${NC}    ${YELLOW}http://localhost:$LLAMA_PORT${NC}"
+        echo -e "  🌐 ${CYAN}WebUI:${NC}      ${YELLOW}http://localhost:$WEBUI_PORT${NC}"
+        echo -e "  🧪 ${CYAN}Playground:${NC} ${YELLOW}http://localhost:$WEBUI_PORT/static/playground.html${NC}"
         echo ""
         echo -e "  ${CYAN}停止:${NC}   lingkong stop"
         echo -e "  ${CYAN}日志:${NC}   lingkong logs"
@@ -504,10 +720,14 @@ case "${1:-start}" in
         show_status
         ;;
     logs)
-        tail -f "$LOG_DIR/webui.log" "$LOG_DIR/llama.log"
+        tail -f "$LOG_DIR/webui.log" "$LOG_DIR/gemini.log"
+        ;;
+    update|upgrade)
+        echo -e "${CYAN}🔄 检查更新...${NC}"
+        check_update
         ;;
     *)
-        echo "使用方法: lingkong [start|stop|restart|status|logs]"
+        echo "使用方法: lingkong [start|stop|restart|status|logs|update]"
         ;;
 esac
 SCRIPT
@@ -573,7 +793,7 @@ services:
     container_name: lingkong-llama
     restart: unless-stopped
     ports:
-      - "5001:8080"
+      - "8080:8080"
     volumes:
       - ${LINGKONG_HOME:-~/.lingkong}/models:/models:ro
     command: >
@@ -631,7 +851,7 @@ case "${1:-start}" in
         echo "🐉 启动 灵空 AI Sandbox..."
         docker compose up -d
         echo ""
-        echo "  WebUI:     http://localhost:5001"
+        echo "  WebUI:     http://localhost:8080"
         echo "  Gemini API: http://localhost:8080"
         echo ""
         echo "  查看日志: lingkong logs"
@@ -683,7 +903,8 @@ setup_path() {
         echo "$path_line" >> "$shell_rc"
         log_success "已添加到 $shell_rc"
     else
-        log_warn "无法修改 $shell_rc，请手动添加:"
+        log_warn "无法修改 $shell_rc"
+        log_info "请手动添加到 shell 配置:"
         echo "  $path_line"
     fi
 
@@ -707,6 +928,11 @@ show_completion() {
     fi
     echo -e "  功能: 文本对话 + 图像理解 + 音频转录 + 会话记忆 + Gemini API"
     echo ""
+    echo -e "  ${CYAN}安装目录:${NC}"
+    echo -e "    程序: ${YELLOW}~/.lingkong/bin/${NC}"
+    echo -e "    模型: ${YELLOW}~/.lingkong/models/${NC}"
+    echo -e "    日志: ${YELLOW}~/.lingkong/logs/${NC}"
+    echo ""
 }
 
 # 启动服务
@@ -721,7 +947,7 @@ start_service() {
         # 等待服务就绪
         log_info "等待服务启动..."
         local count=0
-        while ! curl -s http://localhost:5001/health > /dev/null 2>&1; do
+        while ! curl -s http://localhost:8080/health > /dev/null 2>&1; do
             sleep 2
             count=$((count + 1))
             if [[ $count -gt 60 ]]; then
@@ -741,7 +967,7 @@ start_service() {
         # 等待服务启动
         log_info "等待服务启动..."
         local count=0
-        while ! curl -s http://localhost:5001/health > /dev/null 2>&1; do
+        while ! curl -s http://localhost:8080/health > /dev/null 2>&1; do
             sleep 1
             count=$((count + 1))
             if [[ $count -gt 30 ]]; then
@@ -756,13 +982,13 @@ start_service() {
     # 打开浏览器
     if [[ "$PLATFORM" == "macos"* ]]; then
         log_info "打开浏览器..."
-        open "http://localhost:5001" 2>/dev/null || true
+        open "http://localhost:8080" 2>/dev/null || true
     elif command -v xdg-open &> /dev/null; then
-        xdg-open "http://localhost:5001" 2>/dev/null || true
+        xdg-open "http://localhost:8080" 2>/dev/null || true
     fi
 
     echo ""
-    echo -e "  ${CYAN}浏览器已打开: ${YELLOW}http://localhost:5001${NC}"
+    echo -e "  ${CYAN}浏览器已打开: ${YELLOW}http://localhost:8080${NC}"
     if [[ "$INSTALL_MODE" == "sandbox" ]]; then
         echo -e "  ${CYAN}Gemini API: ${YELLOW}http://localhost:8080${NC}"
         echo ""
