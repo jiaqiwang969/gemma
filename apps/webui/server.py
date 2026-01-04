@@ -57,7 +57,21 @@ except ImportError:
     pass
 
 app = Flask(__name__, static_folder="static")
-CORS(app)
+
+# CORS 配置 - 支持环境变量自定义允许的域
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else None
+if ALLOWED_ORIGINS:
+    CORS(app, origins=ALLOWED_ORIGINS)
+else:
+    # 默认允许本地开发访问
+    CORS(app, origins=[
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "http://localhost:5001",
+        "http://localhost:8080",
+        "http://127.0.0.1:5001",
+        "http://127.0.0.1:8080"
+    ])
 
 # 全局变量
 model = None
@@ -143,6 +157,54 @@ import hmac
 THOUGHT_SIGNATURE_SECRET = "gemma3n-thought-signature-key"
 media_understanding_cache = {}  # media_ref -> {"understanding": "...", "session_id": "..."}
 thought_states = {}  # session_id -> {"turn_index": 0, "media_refs": [...]}
+
+# 缓存配置
+MAX_CACHE_SIZE = 1000  # 最大缓存条目数
+CACHE_TTL = 3600  # 缓存过期时间 (秒)
+
+
+def cleanup_caches():
+    """清理过期和超量的缓存条目"""
+    global media_understanding_cache, thought_states
+    current_time = time.time()
+
+    # 清理过期的 media_understanding_cache
+    expired_keys = [
+        key for key, val in media_understanding_cache.items()
+        if current_time - val.get("created_at", 0) > CACHE_TTL
+    ]
+    for key in expired_keys:
+        del media_understanding_cache[key]
+
+    # 如果缓存太大，移除最旧的条目
+    if len(media_understanding_cache) > MAX_CACHE_SIZE:
+        sorted_items = sorted(
+            media_understanding_cache.items(),
+            key=lambda x: x[1].get("created_at", 0)
+        )
+        for key, _ in sorted_items[:len(media_understanding_cache) - MAX_CACHE_SIZE]:
+            del media_understanding_cache[key]
+
+    # 清理对应的 thought_states
+    valid_session_ids = set(val.get("session_id") for val in media_understanding_cache.values())
+    stale_sessions = [sid for sid in thought_states if sid not in valid_session_ids and sid not in sessions]
+    for sid in stale_sessions:
+        del thought_states[sid]
+
+
+def start_cache_cleanup_thread():
+    """启动后台缓存清理线程"""
+    def cleanup_loop():
+        while True:
+            time.sleep(600)  # 每10分钟清理一次
+            try:
+                cleanup_caches()
+            except Exception as e:
+                print(f"[WARN] 缓存清理出错: {e}")
+
+    thread = threading.Thread(target=cleanup_loop, daemon=True)
+    thread.start()
+    return thread
 
 
 def generate_media_signature(session_id: str, turn_index: int, understanding: str) -> str:
@@ -340,8 +402,10 @@ def request_sudo_permission():
                     time.sleep(240)  # 每4分钟刷新一次（sudo 默认5分钟超时）
                     try:
                         subprocess.run(["sudo", "-v"], capture_output=True, timeout=5)
-                    except:
-                        pass
+                    except subprocess.TimeoutExpired:
+                        pass  # 超时忽略
+                    except Exception:
+                        pass  # 其他错误忽略
 
             sudo_refresh_thread = threading.Thread(target=refresh_sudo, daemon=True)
             sudo_refresh_thread.start()
@@ -625,8 +689,8 @@ def start_llama_mmproj_server():
             print(f"[llama-mmproj-server] 已在端口 {LLAMA_MMPROJ_SERVER_PORT} 运行")
             llama_mmproj_server_ready = True
             return True
-    except:
-        pass
+    except Exception:
+        pass  # 服务未运行，继续启动
 
     print(f"[llama-mmproj-server] 启动中... 端口: {LLAMA_MMPROJ_SERVER_PORT}")
     print(f"[llama-mmproj-server] 模型: {LLAMA_MM_MODEL}")
@@ -664,8 +728,8 @@ def start_llama_mmproj_server():
                 print(f"[llama-mmproj-server] 启动成功！")
                 llama_mmproj_server_ready = True
                 return True
-        except:
-            pass
+        except Exception:
+            pass  # 等待服务启动
         time.sleep(1)
 
     print("[llama-mmproj-server] 启动超时")
@@ -1048,8 +1112,8 @@ def start_llama_server():
             print(f"[llama-server] 已在端口 {LLAMA_SERVER_PORT} 运行")
             llama_server_ready = True
             return True
-    except:
-        pass
+    except Exception:
+        pass  # 服务未运行，继续启动
 
     print(f"[llama-server] 启动中... 端口: {LLAMA_SERVER_PORT}")
     print(f"[llama-server] 模型: {LLAMA_RUN_MODEL}")
@@ -1086,8 +1150,8 @@ def start_llama_server():
                 print(f"[llama-server] 启动成功！")
                 llama_server_ready = True
                 return True
-        except:
-            pass
+        except Exception:
+            pass  # 等待服务启动
         time.sleep(1)
 
     print("[llama-server] 启动超时")
@@ -1486,8 +1550,22 @@ def thought_stats():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     try:
+        # 请求大小限制
+        MAX_REQUEST_SIZE = 500 * 1024 * 1024  # 500MB
+        MAX_IMAGE_SIZE = 50 * 1024 * 1024     # 50MB per image
+        MAX_AUDIO_SIZE = 100 * 1024 * 1024    # 100MB per audio
+        MAX_TEXT_LENGTH = 50000               # 50k chars
+
+        if request.content_length and request.content_length > MAX_REQUEST_SIZE:
+            return jsonify({"error": f"请求过大 (最大 {MAX_REQUEST_SIZE // 1024 // 1024}MB)"}), 413
+
         data = request.json
         text = data.get("text", "")
+
+        # 验证文本长度
+        if len(text) > MAX_TEXT_LENGTH:
+            return jsonify({"error": f"文本过长 (最大 {MAX_TEXT_LENGTH} 字符)"}), 400
+
         # 支持单个或多个图片/音频 (兼容旧API)
         image_data = data.get("image")  # 单个图片 (向后兼容)
         images_data = data.get("images", [])  # 多个图片 (新API)
@@ -1510,8 +1588,26 @@ def chat():
         if len(audios_data) > MAX_AUDIOS:
             return jsonify({"error": f"最多支持 {MAX_AUDIOS} 个音频，当前 {len(audios_data)} 个"}), 400
 
+        # 验证单个文件大小
+        for i, img in enumerate(images_data):
+            try:
+                img_base64 = img.split(",")[1] if "," in img else img
+                if len(base64.b64decode(img_base64)) > MAX_IMAGE_SIZE:
+                    return jsonify({"error": f"图片 {i+1} 过大 (最大 {MAX_IMAGE_SIZE // 1024 // 1024}MB)"}), 400
+            except Exception:
+                pass  # 解码失败会在后续处理中报错
+
+        for i, aud in enumerate(audios_data):
+            try:
+                aud_base64 = aud.split(",")[1] if "," in aud else aud
+                if len(base64.b64decode(aud_base64)) > MAX_AUDIO_SIZE:
+                    return jsonify({"error": f"音频 {i+1} 过大 (最大 {MAX_AUDIO_SIZE // 1024 // 1024}MB)"}), 400
+            except Exception:
+                pass  # 解码失败会在后续处理中报错
+
         import sys
-        print(f"[DEBUG /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, text={repr(text[:50] if text else '')}", flush=True)
+        # 日志中不记录用户输入内容，保护隐私
+        print(f"[API /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, has_text={bool(text)}", flush=True)
         sys.stdout.flush()
 
         # 获取或创建会话
@@ -1538,44 +1634,54 @@ def chat():
 
         # 处理多个图片
         for idx, img_data in enumerate(images_data):
-            if "," in img_data:
-                img_data = img_data.split(",")[1]
-            image_bytes = base64.b64decode(img_data)
-            img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            images.append(img)
-            # 保存临时图片供 mmproj 使用
-            img_path = f"/tmp/image_{session_id}_{idx}.png"
-            img.save(img_path)
-            image_paths.append(img_path)
+            try:
+                if "," in img_data:
+                    img_data = img_data.split(",")[1]
+                image_bytes = base64.b64decode(img_data)
+                img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                images.append(img)
+                # 保存临时图片供 mmproj 使用
+                img_path = f"/tmp/image_{session_id}_{idx}.png"
+                img.save(img_path)
+                image_paths.append(img_path)
+            except OSError as e:
+                return jsonify({"error": f"保存图片失败: {e}"}), 500
+            except Exception as e:
+                return jsonify({"error": f"处理图片 {idx+1} 失败: {e}"}), 400
 
         # 处理多个音频
         for idx, aud_data in enumerate(audios_data):
-            mime_part = ""
-            if "," in aud_data:
-                mime_part = aud_data.split(",")[0]
-                aud_data = aud_data.split(",")[1]
-            audio_bytes = base64.b64decode(aud_data)
+            try:
+                mime_part = ""
+                if "," in aud_data:
+                    mime_part = aud_data.split(",")[0]
+                    aud_data = aud_data.split(",")[1]
+                audio_bytes = base64.b64decode(aud_data)
 
-            if "wav" in mime_part:
-                ext = ".wav"
-            elif "webm" in mime_part:
-                ext = ".webm"
-            elif "ogg" in mime_part:
-                ext = ".ogg"
-            elif "mp3" in mime_part or "mpeg" in mime_part:
-                ext = ".mp3"
-            elif "flac" in mime_part:
-                ext = ".flac"
-            else:
-                ext = ".wav"
+                if "wav" in mime_part:
+                    ext = ".wav"
+                elif "webm" in mime_part:
+                    ext = ".webm"
+                elif "ogg" in mime_part:
+                    ext = ".ogg"
+                elif "mp3" in mime_part or "mpeg" in mime_part:
+                    ext = ".mp3"
+                elif "flac" in mime_part:
+                    ext = ".flac"
+                else:
+                    ext = ".wav"
 
-            temp_path = f"/tmp/audio_{session_id}_{idx}{ext}"
-            with open(temp_path, "wb") as f:
-                f.write(audio_bytes)
+                temp_path = f"/tmp/audio_{session_id}_{idx}{ext}"
+                with open(temp_path, "wb") as f:
+                    f.write(audio_bytes)
 
-            audio_array, sr = librosa.load(temp_path, sr=16000)
-            audios.append((audio_array, sr))
-            audio_paths.append(temp_path)
+                audio_array, sr = librosa.load(temp_path, sr=16000)
+                audios.append((audio_array, sr))
+                audio_paths.append(temp_path)
+            except OSError as e:
+                return jsonify({"error": f"保存音频失败: {e}"}), 500
+            except Exception as e:
+                return jsonify({"error": f"处理音频 {idx+1} 失败: {e}"}), 400
             print(f"[DEBUG] 音频 {idx}: {len(audio_array)/sr:.2f}秒")
 
         # 向后兼容: 单个变量
@@ -1661,7 +1767,8 @@ def chat():
             # 使用多文件路径 (如有)，否则回退到单文件
             mm_image_paths = image_paths if image_paths else None
             mm_audio_paths = audio_paths if audio_paths else None
-            print(f"[DEBUG mmproj] backend={backend}, text={repr(text)}, images={len(image_paths)}, audios={len(audio_paths)}")
+            # 日志中不记录用户输入内容
+            print(f"[API mmproj] images={len(image_paths)}, audios={len(audio_paths)}")
 
             result = run_llama_mmproj(
                 mm_prompt,
@@ -1735,15 +1842,19 @@ def chat():
 if __name__ == "__main__":
     init_storage()
 
+    # 启动缓存清理线程
+    start_cache_cleanup_thread()
+
     # macOS: 请求 sudo 权限用于硬件监控 (可选)
     if platform.system() == "Darwin" and DEFAULT_BACKEND == "mps":
         request_sudo_permission()
 
     load_model()
+    port = int(os.environ.get("WEBUI_PORT", 5001))
     print("\n" + "=" * 60)
     print("🐉 灵空 AI 多模态聊天服务器")
     print("=" * 60)
-    print(f"  地址: http://localhost:5000")
+    print(f"  地址: http://localhost:{port}")
     print(f"  后端: {DEFAULT_BACKEND}")
     if DEFAULT_BACKEND == "mmproj":
         print(f"  模型: {LLAMA_MM_MODEL}")
@@ -1757,5 +1868,4 @@ if __name__ == "__main__":
     if sudo_authorized:
         print("  GPU 温度监控: ✅ 已启用")
     print("=" * 60)
-    port = int(os.environ.get("WEBUI_PORT", 5001))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

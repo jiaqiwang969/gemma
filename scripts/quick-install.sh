@@ -25,8 +25,9 @@ LIB_DIR="$LINGKONG_HOME/lib"
 MODELS_DIR="$LINGKONG_HOME/models"
 SANDBOX_DIR="$LINGKONG_HOME/sandbox"
 
-# 下载地址 (国内镜像)
-BASE_URL="http://115.159.223.227"
+# 下载地址 (支持环境变量覆盖)
+LINGKONG_SERVER="${LINGKONG_SERVER:-http://115.159.223.227}"
+BASE_URL="$LINGKONG_SERVER"
 BINARY_URL_MACOS="$BASE_URL/bin/llama-lingkong-macos-arm64.tar.gz"
 BINARY_URL_LINUX="$BASE_URL/bin/llama-lingkong-linux-x86_64.tar.gz"
 WEBUI_URL="$BASE_URL/webui.tar.gz"
@@ -570,7 +571,7 @@ stop_all() {
 
 # 检查更新
 check_update() {
-    local SERVER_URL="http://115.159.223.227"
+    local SERVER_URL="$LINGKONG_SERVER"
     local CHECKSUMS_URL="$SERVER_URL/checksums.sha256"
     local LOCAL_CHECKSUMS="$LINGKONG_HOME/checksums.sha256"
     local NEEDS_UPDATE=false
@@ -639,7 +640,7 @@ check_update() {
         echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
         echo -e "${YELLOW}  发现更新! 运行以下命令更新:${NC}"
         echo ""
-        echo -e "  ${CYAN}curl -fsSL http://115.159.223.227/install.sh | bash${NC}"
+        echo -e "  ${CYAN}curl -fsSL $LINGKONG_SERVER/install.sh | bash${NC}"
         echo ""
         echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
 
@@ -648,7 +649,7 @@ check_update() {
         echo ""
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             echo -e "${CYAN}开始更新...${NC}"
-            curl -fsSL http://115.159.223.227/install.sh | bash
+            curl -fsSL "$LINGKONG_SERVER/install.sh" | bash
         fi
     else
         # 保存当前校验和
