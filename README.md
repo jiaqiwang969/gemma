@@ -1,128 +1,133 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/🐉-灵空_AI-6366f1?style=for-the-badge" alt="LingKong AI">
+  <img src="https://img.shields.io/badge/🐉-LingKong_AI-6366f1?style=for-the-badge" alt="LingKong AI">
 </p>
 
-<h1 align="center">灵空 AI</h1>
+<h1 align="center">LingKong AI</h1>
 
 <p align="center">
-  <strong>你的 AI. 你的数据. 你的掌控.</strong>
+  <strong>Your AI. Your data. Your control.</strong>
 </p>
 
 <p align="center">
-  一个开源的本地多模态 AI 平台，让你在自己的设备上运行强大的 AI，无需将数据发送到任何云端。
+  An open-source local multimodal AI platform. Run powerful AI on your own device without sending data to any cloud.
+</p>
+
+<p align="center">
+  <a href="./README_zh.md">🇨🇳 中文</a> |
+  <a href="./README.md">🇺🇸 English</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/jiaqiwang969/gemma/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <a href="https://huggingface.co/jiaqiwang969/gemma3n-gguf"><img src="https://img.shields.io/badge/🤗-Models-yellow.svg" alt="HuggingFace"></a>
+  <a href="https://huggingface.co/nicepkg/gemma-3n-gguf"><img src="https://img.shields.io/badge/🤗-Models-yellow.svg" alt="HuggingFace"></a>
   <a href="http://115.159.223.227"><img src="https://img.shields.io/badge/demo-live-brightgreen.svg" alt="Demo"></a>
 </p>
 
 ---
 
-## ⚡ 一键安装
+## ⚡ Quick Install
 
 ```bash
 curl -fsSL http://115.159.223.227/install.sh | bash
 ```
 
-安装完成后：
+After installation:
 
 ```bash
-# 下载模型 (2.8GB)
+# Download models (2.8GB)
 ~/.lingkong/bin/lingkong-download
 
-# 启动服务
+# Start service
 ~/.lingkong/bin/lingkong-start
 
-# 访问 http://localhost:5001
+# Visit http://localhost:5001
 ```
 
-**无需 Python，无需复杂配置。三步启动你的私有 AI！**
+**No Python required. No complex setup. Three steps to your private AI!**
 
 ---
 
-## 🎯 为什么选择灵空 AI？
+## 🎯 Why LingKong AI?
 
-| 对比项 | 云端 AI | 灵空 AI |
-|--------|---------|---------|
-| 🔐 隐私 | 服务商能看到一切 | **100% 本地运行** |
-| 💰 成本 | 按 Token 持续付费 | **一次性，永久免费** |
-| ⚡ 速度 | 受网络延迟影响 | **94 tok/s 本地推理** |
-| 📴 离线 | 必须联网 | **随处可用** |
-| 🎛️ 控制 | 条款随时变更 | **你拥有完全掌控** |
+| Comparison | Cloud AI | LingKong AI |
+|------------|----------|-------------|
+| 🔐 Privacy | Provider sees everything | **100% local** |
+| 💰 Cost | Per-token fees | **One-time, forever free** |
+| ⚡ Speed | Network latency | **94 tok/s local inference** |
+| 📴 Offline | Requires internet | **Works anywhere** |
+| 🎛️ Control | Terms can change | **You have full control** |
 
 ---
 
-## 📦 预编译模型
+## 📦 Pre-built Models
 
-模型托管在 [HuggingFace](https://huggingface.co/jiaqiwang969/gemma3n-gguf)：
+Models hosted on [HuggingFace](https://huggingface.co/nicepkg/gemma-3n-gguf):
 
-| 模型 | 大小 | 用途 |
-|------|------|------|
-| `gemma-3n-E2B-it-Q4_K_M.gguf` | 2.8GB | 主文本模型 (推荐) |
-| `gemma-3n-vision-mmproj-f16.gguf` | 600MB | 视觉理解模块 |
-| `gemma-3n-audio-mmproj-f16.gguf` | 1.4GB | 音频理解模块 |
+| Model | Size | Purpose |
+|-------|------|---------|
+| `gemma-3n-E2B-it-Q4_K_M.gguf` | 2.8GB | Main text model (recommended) |
+| `gemma-3n-vision-mmproj-f16.gguf` | 600MB | Vision module |
+| `gemma-3n-audio-mmproj-f16.gguf` | 1.4GB | Audio module |
 
 ```bash
-# 下载指定模型
-lingkong-download text    # 仅文本模型
-lingkong-download vision  # 视觉模块
-lingkong-download audio   # 音频模块
-lingkong-download all     # 全部模型 (~5GB)
+# Download specific models
+lingkong-download text    # Text model only
+lingkong-download vision  # Vision module
+lingkong-download audio   # Audio module
+lingkong-download all     # All models (~5GB)
 ```
 
 ---
 
-## 🌐 在线演示
+## 🌐 Live Demo
 
-| 页面 | 地址 | 说明 |
-|------|------|------|
-| 🏠 项目主页 | [115.159.223.227](http://115.159.223.227) | 功能介绍、快速开始 |
-| 💬 聊天界面 | [/static/index.html](http://115.159.223.227/static/index.html) | 多模态对话体验 |
-| 📚 API 文档 | [/static/docs.html](http://115.159.223.227/static/docs.html) | Gemini 兼容 API |
-| 🛠️ Playground | [/static/playground.html](http://115.159.223.227/static/playground.html) | 交互式 API 测试 |
-| 📊 商业计划书 | [/static/pitch.html](http://115.159.223.227/static/pitch.html) | 愿景与商业模式 |
+| Page | URL | Description |
+|------|-----|-------------|
+| 🏠 Home | [115.159.223.227](http://115.159.223.227) | Features & quick start |
+| 💬 Chat | [/static/index.html](http://115.159.223.227/static/index.html) | Multimodal chat |
+| 📚 API Docs | [/static/docs.html](http://115.159.223.227/static/docs.html) | Gemini-compatible API |
+| 🛠️ Playground | [/static/playground.html](http://115.159.223.227/static/playground.html) | Interactive API testing |
+| 📊 Pitch Deck | [/static/pitch.html](http://115.159.223.227/static/pitch.html) | Vision & business model |
 
 ---
 
-## ✨ 核心特性
+## ✨ Core Features
 
-### 🔐 完全私密
-- 数据永不离开你的设备
-- 无需账号、无需登录
-- 零知识架构设计
+### 🔐 Complete Privacy
+- Data never leaves your device
+- No account, no login required
+- Zero-knowledge architecture
 
-### 🎯 多模态能力
-- **文本理解**: 对话、写作、编程
-- **图像理解**: 描述、分析、OCR
-- **音频理解**: 转录、翻译、总结
+### 🎯 Multimodal Capabilities
+- **Text**: Chat, writing, coding
+- **Vision**: Image description, analysis, OCR
+- **Audio**: Transcription, translation, summarization
 
-### ⚡ 高性能推理
-- llama.cpp 引擎 (Metal/CUDA 加速)
+### ⚡ High-Performance Inference
+- llama.cpp engine (Metal/CUDA acceleration)
 - ~94 tokens/s (M4 Max)
-- 支持 GGUF 量化模型
+- GGUF quantized models
 
-### 🔌 API 兼容
-- 兼容 Google Gemini API
-- 无缝替换现有应用
-- 支持流式输出
+### 🔌 API Compatible
+- Google Gemini API compatible
+- Drop-in replacement for existing apps
+- Streaming output support
 
 ---
 
-## 🛠️ 使用方式
+## 🛠️ Usage
 
-### Level 1: 一键部署 (小白用户)
+### Level 1: One-Click Deploy (Beginners)
 
 ```bash
-# 安装
+# Install
 curl -fsSL http://115.159.223.227/install.sh | bash
 
-# 下载模型 + 启动
+# Download models + start
 lingkong-download && lingkong-start
 ```
 
-### Level 2: API 调用 (开发者)
+### Level 2: API Usage (Developers)
 
 ```python
 import requests
@@ -130,7 +135,7 @@ import requests
 response = requests.post(
     "http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent",
     json={
-        "contents": [{"parts": [{"text": "你好，介绍一下你自己"}]}],
+        "contents": [{"parts": [{"text": "Hello, introduce yourself"}]}],
         "generationConfig": {"maxOutputTokens": 512}
     }
 )
@@ -138,89 +143,89 @@ response = requests.post(
 print(response.json()["candidates"][0]["content"]["parts"][0]["text"])
 ```
 
-### Level 3: 模型微调 (进阶用户)
+### Level 3: Fine-tuning (Advanced)
 
 ```bash
-# 克隆仓库
+# Clone repository
 git clone https://github.com/jiaqiwang969/gemma.git
 cd gemma
 
-# 创建 Python 环境
+# Create Python environment
 conda create -n lingkong python=3.11
 conda activate lingkong
 pip install -e .
 
-# 微调模型 (LoRA)
+# Fine-tune model (LoRA)
 python scripts/finetune.py --data your_data.jsonl
 
-# 合并权重并转换 GGUF
+# Merge weights and convert to GGUF
 python scripts/merge_lora.py
 python scripts/convert_to_gguf.py
 ```
 
 ---
 
-## 📊 性能数据
+## 📊 Performance
 
-在 Apple M4 Max (64GB) 上测试：
+Tested on Apple M4 Max (64GB):
 
-| 指标 | 数值 |
-|------|------|
-| 推理速度 (llama.cpp) | 94 tok/s |
-| 推理速度 (PyTorch) | 16 tok/s |
-| 首 Token 延迟 | ~200ms |
-| 内存占用 (Q4_K_M) | ~4GB |
-| 模型加载 | ~3.7s |
-
----
-
-## 💻 硬件要求
-
-| 配置 | 规格 | 适用场景 | 参考价格 |
-|------|------|----------|----------|
-| 入门级 | Mac Mini M2 8GB | 纯文本对话 | ~$600 |
-| **推荐** | Mac Mini M4 24GB | 多模态推理 | ~$1,200 |
-| 专业级 | Mac Studio / RTX 4090 | 微调训练 | ~$4,000+ |
+| Metric | Value |
+|--------|-------|
+| Inference (llama.cpp) | 94 tok/s |
+| Inference (PyTorch) | 16 tok/s |
+| First Token Latency | ~200ms |
+| Memory (Q4_K_M) | ~4GB |
+| Model Load Time | ~3.7s |
 
 ---
 
-## 📁 项目结构
+## 💻 Hardware Requirements
+
+| Config | Specs | Use Case | Price |
+|--------|-------|----------|-------|
+| Entry | Mac Mini M2 8GB | Text-only chat | ~$600 |
+| **Recommended** | Mac Mini M4 24GB | Multimodal inference | ~$1,200 |
+| Pro | Mac Studio / RTX 4090 | Fine-tuning | ~$4,000+ |
+
+---
+
+## 📁 Project Structure
 
 ```
 gemma/
-├── apps/                          # 应用层
-│   ├── webui/                     # Web 聊天界面
-│   │   ├── server.py              # Flask 服务器
-│   │   └── static/                # 前端页面
-│   └── gemini_api/                # Gemini 兼容 API
-├── scripts/                       # 工具脚本
-│   ├── quick-install.sh           # 一键安装脚本
-│   └── install.sh                 # 完整安装脚本
-├── artifacts/                     # 产物输出
-│   ├── gguf/                      # GGUF 模型文件
-│   └── lora/                      # LoRA 适配器
-└── contexts/training/             # 微调脚本
+├── apps/                          # Applications
+│   ├── webui/                     # Web chat interface
+│   │   ├── server.py              # Flask server
+│   │   └── static/                # Frontend pages
+│   └── gemini_api/                # Gemini-compatible API
+├── scripts/                       # Utility scripts
+│   ├── quick-install.sh           # Quick install script
+│   └── install.sh                 # Full install script
+├── artifacts/                     # Build outputs
+│   ├── gguf/                      # GGUF model files
+│   └── lora/                      # LoRA adapters
+└── contexts/training/             # Fine-tuning scripts
 ```
 
 ---
 
-## 🔗 链接
+## 🔗 Links
 
-- 🌐 **官网**: [115.159.223.227](http://115.159.223.227)
-- 📚 **API 文档**: [115.159.223.227/static/docs.html](http://115.159.223.227/static/docs.html)
+- 🌐 **Website**: [115.159.223.227](http://115.159.223.227)
+- 📚 **API Docs**: [115.159.223.227/static/docs.html](http://115.159.223.227/static/docs.html)
 - 🛠️ **Playground**: [115.159.223.227/static/playground.html](http://115.159.223.227/static/playground.html)
-- 🤗 **模型**: [huggingface.co/jiaqiwang969/gemma3n-gguf](https://huggingface.co/jiaqiwang969/gemma3n-gguf)
-- 📊 **商业计划**: [115.159.223.227/static/pitch.html](http://115.159.223.227/static/pitch.html)
+- 🤗 **Models**: [huggingface.co/nicepkg/gemma-3n-gguf](https://huggingface.co/nicepkg/gemma-3n-gguf)
+- 📊 **Pitch Deck**: [115.159.223.227/static/pitch.html](http://115.159.223.227/static/pitch.html)
 
 ---
 
-## 📄 许可证
+## 📄 License
 
-MIT License - 随意使用，保留版权声明即可。
+MIT License - Free to use, just keep the copyright notice.
 
 ---
 
 <p align="center">
-  <strong>🐉 灵空 AI</strong><br>
-  你的 AI. 你的数据. 你的掌控.
+  <strong>🐉 LingKong AI</strong><br>
+  Your AI. Your data. Your control.
 </p>

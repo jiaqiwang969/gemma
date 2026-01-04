@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LingKong AI API 文档 - Gemma 3N 本地推理</title>
+    <title>LingKong AI API Documentation - Gemma 3N Local Inference</title>
+    <script src="/static/js/i18n.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -680,14 +681,14 @@
             </div>
 
             <div class="nav-section">
-                <div class="nav-title">概述</div>
-                <a class="nav-item active" href="#introduction">简介</a>
-                <a class="nav-item" href="#quickstart">快速开始</a>
-                <a class="nav-item" href="#authentication">认证方式</a>
+                <div class="nav-title" data-i18n="docs.nav.overview">Overview</div>
+                <a class="nav-item active" href="#introduction" data-i18n="docs.nav.intro">Introduction</a>
+                <a class="nav-item" href="#quickstart" data-i18n="docs.nav.quickStart">Quick Start</a>
+                <a class="nav-item" href="#authentication" data-i18n="docs.nav.auth">Authentication</a>
             </div>
 
             <div class="nav-section">
-                <div class="nav-title">核心 API</div>
+                <div class="nav-title" data-i18n="docs.nav.coreApi">Core API</div>
                 <a class="nav-item" href="#generate-content">
                     <span class="method post">POST</span>
                     generateContent
@@ -703,28 +704,32 @@
             </div>
 
             <div class="nav-section">
-                <div class="nav-title">高级功能</div>
-                <a class="nav-item" href="#thinking">思考模式</a>
-                <a class="nav-item" href="#tools">工具调用</a>
-                <a class="nav-item" href="#multimodal">多模态</a>
-                <a class="nav-item" href="#thought-signature">思维签名</a>
+                <div class="nav-title" data-i18n="docs.nav.advanced">Advanced</div>
+                <a class="nav-item" href="#thinking" data-i18n="docs.nav.thinking">Thinking Mode</a>
+                <a class="nav-item" href="#tools" data-i18n="docs.nav.tools">Tool Calling</a>
+                <a class="nav-item" href="#multimodal" data-i18n="docs.nav.multimodal">Multimodal</a>
+                <a class="nav-item" href="#thought-signature" data-i18n="docs.nav.thoughtSig">Thought Signature</a>
             </div>
 
             <div class="nav-section">
-                <div class="nav-title">加密通信</div>
-                <a class="nav-item" href="#e2e-overview">端到端加密</a>
-                <a class="nav-item" href="#crypto-status">加密 API 端点</a>
-                <a class="nav-item" href="#key-exchange">密钥交换</a>
-                <a class="nav-item" href="#message-encryption">消息加密格式</a>
-                <a class="nav-item" href="#double-ratchet">双棘轮协议</a>
+                <div class="nav-title" data-i18n="docs.nav.encryption">Encryption</div>
+                <a class="nav-item" href="#e2e-overview" data-i18n="docs.nav.e2e">E2E Encryption</a>
+                <a class="nav-item" href="#crypto-status">Crypto API</a>
+                <a class="nav-item" href="#key-exchange">Key Exchange</a>
+                <a class="nav-item" href="#message-encryption">Message Format</a>
+                <a class="nav-item" href="#double-ratchet">Double Ratchet</a>
             </div>
 
             <div class="nav-section">
-                <div class="nav-title">资源</div>
-                <a class="nav-item" href="#errors">错误处理</a>
-                <a class="nav-item" href="#examples">代码示例</a>
+                <div class="nav-title" data-i18n="docs.nav.resources">Resources</div>
+                <a class="nav-item" href="#errors" data-i18n="docs.nav.errors">Error Handling</a>
+                <a class="nav-item" href="#examples" data-i18n="docs.nav.examples">Code Examples</a>
                 <a class="nav-item" href="/static/playground.html">API Playground</a>
-                <a class="nav-item" href="/static/index.html">在线演示</a>
+                <a class="nav-item" href="/static/index.html" data-i18n="docs.nav.demo">Live Demo</a>
+                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); margin-top: 1rem;">
+                    <button class="lang-btn" data-lang="en" onclick="switchLang('en')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-right: 5px;">EN</button>
+                    <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">中</button>
+                </div>
             </div>
         </nav>
 
@@ -732,19 +737,19 @@
         <main class="main">
             <header class="main-header">
                 <div class="breadcrumb">
-                    <a href="/">首页</a>
+                    <a href="/" data-i18n="nav.home">Home</a>
                     <span>/</span>
-                    <span>API 文档</span>
+                    <span data-i18n="docs.title">API Documentation</span>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-secondary" onclick="window.open('/static/playground.html')">
                         <span>&#128736;</span> Playground
                     </button>
                     <button class="btn btn-secondary" onclick="window.open('/static/index.html')">
-                        <span>&#128172;</span> 在线演示
+                        <span>&#128172;</span> <span data-i18n="docs.nav.demo">Live Demo</span>
                     </button>
                     <a href="/" class="btn btn-primary">
-                        <span>&#127968;</span> 返回首页
+                        <span>&#127968;</span> <span data-i18n="nav.home">Home</span>
                     </a>
                 </div>
             </header>
@@ -1851,6 +1856,9 @@ restored = lk.DoubleRatchetSession.import_state(state_json)
         document.querySelectorAll('.api-section').forEach(section => {
             if (section.id) observer.observe(section);
         });
+
+        // Initialize i18n
+        initI18n();
     </script>
 </body>
 </html>

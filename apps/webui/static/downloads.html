@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>灵空 AI - 下载中心</title>
+    <title>LingKong AI - Download Center</title>
+    <script src="/static/js/i18n.js"></script>
     <style>
         * {
             margin: 0;
@@ -281,48 +282,52 @@
     <div class="container">
         <header>
             <div class="logo">&#128000;</div>
-            <h1>灵空 AI 下载中心</h1>
-            <p class="subtitle">国内高速下载 - 你的 AI，你的数据，你的掌控</p>
+            <h1 data-i18n="downloads.title">LingKong AI Download Center</h1>
+            <p class="subtitle" data-i18n="downloads.subtitle">Fast downloads - Your AI, your data, your control</p>
+            <div class="lang-switch" style="margin-top: 15px;">
+                <button class="lang-btn" data-lang="en" onclick="switchLang('en')" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-right: 5px;">EN</button>
+                <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">中</button>
+            </div>
         </header>
 
         <div class="mirror-note">
             <span class="icon">&#9889;</span>
-            <p><strong>国内镜像</strong> - 所有文件托管在国内服务器，无需翻墙，下载速度更快</p>
+            <p><strong data-i18n="downloads.mirror.title">China Mirror</strong> - <span data-i18n="downloads.mirror.desc">All files hosted on domestic servers, no VPN required, faster downloads</span></p>
         </div>
 
-        <!-- 一键安装 -->
+        <!-- One-Click Install -->
         <div class="section quick-install">
-            <h2><span class="icon">&#128640;</span> 一键安装 (推荐)</h2>
-            <p style="color: #94a3b8; margin-bottom: 15px;">
-                在终端中运行以下命令，自动完成所有下载和配置：
+            <h2><span class="icon">&#128640;</span> <span data-i18n="downloads.oneClick.title">One-Click Install (Recommended)</span></h2>
+            <p style="color: #94a3b8; margin-bottom: 15px;" data-i18n="downloads.oneClick.desc">
+                Run the following command in terminal to automatically download and configure everything:
             </p>
             <div class="code-block">
                 <code>curl -fsSL http://115.159.223.227/install.sh | bash</code>
-                <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
             </div>
-            <p style="color: #64748b; margin-top: 15px; font-size: 0.9rem;">
-                支持 macOS (Apple Silicon) 和 Linux (x86_64)，自动下载模型和配置环境
+            <p style="color: #64748b; margin-top: 15px; font-size: 0.9rem;" data-i18n="downloads.oneClick.supports">
+                Supports macOS (Apple Silicon) and Linux (x86_64), auto-downloads models and configures environment
             </p>
         </div>
 
-        <!-- 模型文件 -->
+        <!-- Model Files -->
         <div class="section">
-            <h2><span class="icon">&#129302;</span> AI 模型文件</h2>
+            <h2><span class="icon">&#129302;</span> <span data-i18n="downloads.models.title">AI Model Files</span></h2>
             <div class="download-grid">
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">
                             gemma-3n-E2B-it-Q4_K_M.gguf
-                            <span class="status-badge required">必需</span>
+                            <span class="status-badge required" data-i18n="downloads.models.required">Required</span>
                         </div>
-                        <div class="download-desc">Gemma 3n 文本模型 - 4-bit 量化版本，支持多轮对话</div>
+                        <div class="download-desc" data-i18n="downloads.models.mainModel.desc">Gemma 3n text model - 4-bit quantized, supports multi-turn chat</div>
                         <div class="download-meta">
                             <span>&#128190; 2.6 GB</span>
-                            <span>&#128202; Q4_K_M 量化</span>
+                            <span>&#128202; Q4_K_M</span>
                         </div>
                     </div>
                     <a href="http://115.159.223.227/models/gemma-3n-E2B-it-Q4_K_M.gguf" class="download-btn">
-                        &#11015; 下载
+                        &#11015; <span data-i18n="common.download">Download</span>
                     </a>
                 </div>
 
@@ -330,16 +335,16 @@
                     <div class="download-info">
                         <div class="download-name">
                             gemma-3n-vision-mmproj-f16.gguf
-                            <span class="status-badge optional">可选</span>
+                            <span class="status-badge optional" data-i18n="downloads.models.optional">Optional</span>
                         </div>
-                        <div class="download-desc">视觉理解模型 - 支持图片分析和描述</div>
+                        <div class="download-desc" data-i18n="downloads.models.visionModel.desc">Vision model - supports image analysis and description</div>
                         <div class="download-meta">
                             <span>&#128190; 570 MB</span>
-                            <span>&#127912; 图像理解</span>
+                            <span>&#127912; Vision</span>
                         </div>
                     </div>
                     <a href="http://115.159.223.227/models/gemma-3n-vision-mmproj-f16.gguf" class="download-btn">
-                        &#11015; 下载
+                        &#11015; <span data-i18n="common.download">Download</span>
                     </a>
                 </div>
 
@@ -347,160 +352,159 @@
                     <div class="download-info">
                         <div class="download-name">
                             gemma-3n-audio-mmproj-f16.gguf
-                            <span class="status-badge optional">可选</span>
+                            <span class="status-badge optional" data-i18n="downloads.models.optional">Optional</span>
                         </div>
-                        <div class="download-desc">音频理解模型 - 支持语音转录和音频分析</div>
+                        <div class="download-desc" data-i18n="downloads.models.audioModel.desc">Audio model - supports speech transcription and audio analysis</div>
                         <div class="download-meta">
                             <span>&#128190; 1.3 GB</span>
-                            <span>&#127908; 音频转录</span>
+                            <span>&#127908; Audio</span>
                         </div>
                     </div>
                     <a href="http://115.159.223.227/models/gemma-3n-audio-mmproj-f16.gguf" class="download-btn">
-                        &#11015; 下载
+                        &#11015; <span data-i18n="common.download">Download</span>
                     </a>
                 </div>
             </div>
             <div class="total-size">
-                &#128230; 全部模型总大小: <strong>4.5 GB</strong>
+                &#128230; <span data-i18n="downloads.models.totalSize">Total models size:</span> <strong>4.5 GB</strong>
             </div>
         </div>
 
-        <!-- 程序文件 -->
+        <!-- Program Files -->
         <div class="section">
-            <h2><span class="icon">&#128187;</span> 程序文件</h2>
+            <h2><span class="icon">&#128187;</span> <span data-i18n="downloads.binaries.title">Program Files</span></h2>
             <div class="download-grid">
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">llama-lingkong-macos-arm64.tar.gz</div>
-                        <div class="download-desc">macOS Apple Silicon (M1/M2/M3) 推理引擎</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.macos">macOS Apple Silicon (M1/M2/M3) inference engine</div>
                         <div class="download-meta">
                             <span>&#128190; ~50 MB</span>
                             <span>&#63743; macOS ARM64</span>
                         </div>
                     </div>
                     <a href="http://115.159.223.227/bin/llama-lingkong-macos-arm64.tar.gz" class="download-btn">
-                        &#11015; 下载
+                        &#11015; <span data-i18n="common.download">Download</span>
                     </a>
                 </div>
 
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">llama-lingkong-linux-x86_64.tar.gz</div>
-                        <div class="download-desc">Linux x86_64 推理引擎</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.linux">Linux x86_64 inference engine</div>
                         <div class="download-meta">
                             <span>&#128190; ~50 MB</span>
                             <span>&#128039; Linux x64</span>
                         </div>
                     </div>
                     <a href="http://115.159.223.227/bin/llama-lingkong-linux-x86_64.tar.gz" class="download-btn">
-                        &#11015; 下载
+                        &#11015; <span data-i18n="common.download">Download</span>
                     </a>
                 </div>
 
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">webui.tar.gz</div>
-                        <div class="download-desc">Web 界面 - 包含聊天界面和 API 服务</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.webui">Web interface - includes chat UI and API service</div>
                         <div class="download-meta">
                             <span>&#128190; ~80 MB</span>
                             <span>&#127760; Python Flask</span>
                         </div>
                     </div>
                     <a href="http://115.159.223.227/webui.tar.gz" class="download-btn">
-                        &#11015; 下载
+                        &#11015; <span data-i18n="common.download">Download</span>
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- 网络问题解决方案 -->
+        <!-- Network Issues -->
         <div class="section" style="background: rgba(234, 179, 8, 0.08); border-color: rgba(234, 179, 8, 0.3);">
-            <h2><span class="icon">&#128268;</span> 网络问题？手动下载到本地</h2>
-            <p style="color: #fcd34d; margin-bottom: 20px;">
-                如果下载过程中遇到网络中断，可以使用下载工具（如迅雷、IDM）下载后，手动放到指定目录：
+            <h2><span class="icon">&#128268;</span> <span data-i18n="downloads.help.title">Network Issues? Manual Download</span></h2>
+            <p style="color: #fcd34d; margin-bottom: 20px;" data-i18n="downloads.help.manualDownload">
+                If download is interrupted, use download tools (like wget) and manually place files in the specified directory:
             </p>
 
             <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128193; 模型文件存放位置</h3>
+                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128193; <span data-i18n="downloads.help.modelsPath">Model Files Location</span></h3>
                 <div class="code-block" style="margin: 0;">
                     <code style="color: #fcd34d;">~/.lingkong/models/</code>
-                    <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
                 </div>
-                <p style="color: #94a3b8; margin-top: 10px; font-size: 0.9rem;">
-                    即：<code style="color: #79c0ff;">/Users/你的用户名/.lingkong/models/</code> (macOS)<br>
-                    或：<code style="color: #79c0ff;">/home/你的用户名/.lingkong/models/</code> (Linux)
+                <p style="color: #94a3b8; margin-top: 10px; font-size: 0.9rem;" data-i18n="downloads.help.pathExample">
+                    i.e.: /Users/your-username/.lingkong/models/ (macOS) or /home/your-username/.lingkong/models/ (Linux)
                 </p>
             </div>
 
             <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 20px;">
-                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128203; 具体操作步骤</h3>
+                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128203; <span data-i18n="downloads.help.steps">Steps</span></h3>
                 <ol style="color: #94a3b8; line-height: 2; padding-left: 20px;">
-                    <li>先创建目录：<code style="color: #79c0ff;">mkdir -p ~/.lingkong/models</code></li>
-                    <li>用下载工具下载上方的模型文件</li>
-                    <li>将下载好的 <code style="color: #fcd34d;">.gguf</code> 文件移动到 <code style="color: #79c0ff;">~/.lingkong/models/</code></li>
-                    <li>确保文件名保持不变：
+                    <li><span data-i18n="downloads.help.step1">Create directory:</span> <code style="color: #79c0ff;">mkdir -p ~/.lingkong/models</code></li>
+                    <li data-i18n="downloads.help.step2">Download model files using your download tool</li>
+                    <li><span data-i18n="downloads.help.step3">Move downloaded .gguf files to</span> <code style="color: #79c0ff;">~/.lingkong/models/</code></li>
+                    <li><span data-i18n="downloads.help.step4">Keep file names unchanged:</span>
                         <ul style="margin-top: 5px; margin-left: 20px;">
-                            <li><code>gemma-3n-E2B-it-Q4_K_M.gguf</code> (必需)</li>
-                            <li><code>gemma-3n-vision-mmproj-f16.gguf</code> (可选)</li>
-                            <li><code>gemma-3n-audio-mmproj-f16.gguf</code> (可选)</li>
+                            <li><code>gemma-3n-E2B-it-Q4_K_M.gguf</code> (required)</li>
+                            <li><code>gemma-3n-vision-mmproj-f16.gguf</code> (optional)</li>
+                            <li><code>gemma-3n-audio-mmproj-f16.gguf</code> (optional)</li>
                         </ul>
                     </li>
-                    <li>然后运行安装脚本，会自动跳过已存在的模型：
+                    <li><span data-i18n="downloads.help.step5">Run install script, it will skip existing models:</span>
                         <div class="code-block" style="margin-top: 10px;">
                             <code>curl -fsSL http://115.159.223.227/install.sh | bash</code>
-                            <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                            <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
                         </div>
                     </li>
                 </ol>
             </div>
         </div>
 
-        <!-- 断点续传下载 -->
+        <!-- Resume Download -->
         <div class="section">
-            <h2><span class="icon">&#128260;</span> 断点续传下载</h2>
-            <p style="color: #94a3b8; margin-bottom: 15px;">使用 wget 支持断点续传，网络中断后可继续下载：</p>
+            <h2><span class="icon">&#128260;</span> <span data-i18n="downloads.resume.title">Resume Download</span></h2>
+            <p style="color: #94a3b8; margin-bottom: 15px;" data-i18n="downloads.resume.desc">Use wget with resume support, can continue download after interruption:</p>
             <div class="code-block">
-                <code># 创建目录
+                <code># Create directory
 mkdir -p ~/.lingkong/models && cd ~/.lingkong/models
 
-# 下载文本模型 (必需，2.6GB)
+# Download text model (required, 2.6GB)
 wget -c http://115.159.223.227/models/gemma-3n-E2B-it-Q4_K_M.gguf
 
-# 下载视觉模型 (可选，570MB)
+# Download vision model (optional, 570MB)
 wget -c http://115.159.223.227/models/gemma-3n-vision-mmproj-f16.gguf
 
-# 下载音频模型 (可选，1.3GB)
+# Download audio model (optional, 1.3GB)
 wget -c http://115.159.223.227/models/gemma-3n-audio-mmproj-f16.gguf</code>
-                <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
             </div>
-            <p style="color: #64748b; margin-top: 15px; font-size: 0.9rem;">
-                &#128161; 提示：<code style="color: #79c0ff;">wget -c</code> 会自动续传，如果下载中断直接重新运行即可
+            <p style="color: #64748b; margin-top: 15px; font-size: 0.9rem;" data-i18n="downloads.resume.tip">
+                &#128161; Tip: wget -c will auto-resume, just re-run if interrupted
             </p>
         </div>
 
-        <!-- 完整目录结构 -->
+        <!-- Directory Structure -->
         <div class="section">
-            <h2><span class="icon">&#128194;</span> 完整安装目录结构</h2>
+            <h2><span class="icon">&#128194;</span> <span data-i18n="downloads.structure.title">Complete Install Directory Structure</span></h2>
             <div class="code-block">
                 <code>~/.lingkong/
-├── bin/                    # 推理引擎
-│   ├── llama-server       # API 服务器
-│   └── llama-cli          # 命令行工具
-├── models/                 # ⬅️ 模型文件放这里
-│   ├── gemma-3n-E2B-it-Q4_K_M.gguf        # 文本模型 (必需)
-│   ├── gemma-3n-vision-mmproj-f16.gguf    # 视觉模型 (可选)
-│   └── gemma-3n-audio-mmproj-f16.gguf     # 音频模型 (可选)
+├── bin/                    # Inference engine
+│   ├── llama-server       # API server
+│   └── llama-cli          # CLI tool
+├── models/                 # ⬅️ Model files here
+│   ├── gemma-3n-E2B-it-Q4_K_M.gguf        # Text model (required)
+│   ├── gemma-3n-vision-mmproj-f16.gguf    # Vision model (optional)
+│   └── gemma-3n-audio-mmproj-f16.gguf     # Audio model (optional)
 ├── apps/
-│   └── webui/              # Web 界面
-└── lib/                    # 依赖库</code>
-                <button class="copy-btn" onclick="copyCode(this)">复制</button>
+│   └── webui/              # Web interface
+└── lib/                    # Dependencies</code>
+                <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
             </div>
         </div>
 
         <nav class="nav-links">
-            <a href="/static/home.html" class="nav-link">&#127968; 首页</a>
-            <a href="/" class="nav-link">&#128172; 开始对话</a>
-            <a href="/static/docs.html" class="nav-link">&#128218; API 文档</a>
+            <a href="/static/home.html" class="nav-link">&#127968; <span data-i18n="nav.home">Home</span></a>
+            <a href="/" class="nav-link">&#128172; <span data-i18n="nav.chat">Chat</span></a>
+            <a href="/static/docs.html" class="nav-link">&#128218; <span data-i18n="nav.apiDocs">API Docs</span></a>
             <a href="https://github.com/jiaqiwang969/gemma" class="nav-link" target="_blank">&#128736; GitHub</a>
         </nav>
     </div>
@@ -510,7 +514,7 @@ wget -c http://115.159.223.227/models/gemma-3n-audio-mmproj-f16.gguf</code>
             const code = btn.parentElement.querySelector('code').textContent;
             navigator.clipboard.writeText(code).then(() => {
                 const originalText = btn.textContent;
-                btn.textContent = '已复制!';
+                btn.textContent = i18n ? i18n.t('common.copied') : 'Copied!';
                 btn.style.background = 'rgba(34, 197, 94, 0.3)';
                 setTimeout(() => {
                     btn.textContent = originalText;
@@ -518,6 +522,11 @@ wget -c http://115.159.223.227/models/gemma-3n-audio-mmproj-f16.gguf</code>
                 }, 2000);
             });
         }
+
+        // Initialize i18n
+        document.addEventListener('DOMContentLoaded', () => {
+            initI18n();
+        });
     </script>
 </body>
 </html>

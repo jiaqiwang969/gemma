@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LingKong AI - E2E Encrypted Chat</title>
+    <script src="/static/js/i18n.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -686,30 +687,30 @@
                     <span class="logo-text">LingKong</span>
                 </a>
                 <button class="new-chat-btn" onclick="newChat()">
-                    <span>+</span> New Chat
+                    <span>+</span> <span data-i18n="chat.newChat">New Chat</span>
                 </button>
             </div>
 
             <div class="chat-history" id="chatHistory">
-                <div class="history-section-title">Recent Chats</div>
+                <div class="history-section-title" data-i18n="chat.recentChats">Recent Chats</div>
             </div>
 
             <div class="sidebar-footer">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="label">GPU Usage</div>
+                        <div class="label" data-i18n="chat.status.gpuUsage">GPU Usage</div>
                         <div class="value" id="gpuUsage">-</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">VRAM</div>
+                        <div class="label" data-i18n="chat.status.vram">VRAM</div>
                         <div class="value" id="vramUsage">-</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Requests</div>
+                        <div class="label" data-i18n="chat.status.requests">Requests</div>
                         <div class="value" id="totalRequests">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Avg Speed</div>
+                        <div class="label" data-i18n="chat.status.avgSpeed">Avg Speed</div>
                         <div class="value" id="avgSpeed">0 t/s</div>
                     </div>
                 </div>
@@ -719,22 +720,22 @@
         <div class="main">
             <div class="main-header">
                 <div class="header-left">
-                    <h1>LingKong AI</h1>
+                    <h1 data-i18n="chat.title">LingKong AI</h1>
                     <div class="encryption-badge">
                         <span class="dot"></span>
-                        <span>E2E Encrypted</span>
+                        <span data-i18n="chat.status.encrypted">E2E Encrypted</span>
                     </div>
                 </div>
                 <div class="header-right">
                     <select id="backendSelect" class="backend-select">
-                        <option value="llama.cpp">llama.cpp (Fast)</option>
-                        <option value="mps">MPS (Transformers)</option>
-                        <option value="mmproj">mmproj (Multimodal)</option>
+                        <option value="llama.cpp" data-i18n="chat.backend.llamacpp">llama.cpp (Fast)</option>
+                        <option value="mps" data-i18n="chat.backend.mps">MPS (Transformers)</option>
+                        <option value="mmproj" data-i18n="chat.backend.mmproj">mmproj (Multimodal)</option>
                     </select>
-                    <button class="clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
+                    <button class="clear-btn" onclick="clearCurrentChat()" data-i18n="chat.clearChat">Clear Chat</button>
                     <div class="status-badge loading" id="statusBadge">
                         <div class="status-dot"></div>
-                        <span id="statusText">Loading...</span>
+                        <span id="statusText" data-i18n="common.loading">Loading...</span>
                     </div>
                 </div>
             </div>
@@ -742,24 +743,24 @@
             <div class="chat-container" id="chatContainer">
                 <div class="welcome-card" id="welcomeCard">
                     <div class="welcome-icon">&#128274;</div>
-                    <h2>Private AI Assistant</h2>
-                    <p>Your conversations are end-to-end encrypted. All data is processed locally, never uploaded to the cloud.</p>
+                    <h2 data-i18n="chat.welcome.title">Private AI Assistant</h2>
+                    <p data-i18n="chat.welcome.subtitle">Your conversations are end-to-end encrypted. All data is processed locally, never uploaded to the cloud.</p>
                     <div class="feature-pills">
                         <div class="feature-pill">
                             <span class="icon">&#128274;</span>
-                            <span>E2E Encrypted</span>
+                            <span data-i18n="chat.welcome.feature1">E2E Encrypted</span>
                         </div>
                         <div class="feature-pill">
                             <span class="icon">&#128247;</span>
-                            <span>Image Analysis</span>
+                            <span data-i18n="chat.welcome.feature2">Image Analysis</span>
                         </div>
                         <div class="feature-pill">
                             <span class="icon">&#127908;</span>
-                            <span>Voice Input</span>
+                            <span data-i18n="chat.welcome.feature3">Voice Input</span>
                         </div>
                         <div class="feature-pill">
                             <span class="icon">&#127760;</span>
-                            <span>Works Offline</span>
+                            <span data-i18n="chat.welcome.feature4">Works Offline</span>
                         </div>
                     </div>
                 </div>
@@ -774,11 +775,11 @@
                     <div class="attachments-preview" id="attachmentsPreview"></div>
                     <div class="input-row">
                         <div class="input-buttons">
-                            <button id="fileBtn" title="Upload Images">&#128247;</button>
-                            <button id="audioFileBtn" title="Upload Audio Files">&#127925;</button>
+                            <button id="fileBtn" title="Upload Images" data-i18n-title="chat.attachments.addImage">&#128247;</button>
+                            <button id="audioFileBtn" title="Upload Audio Files" data-i18n-title="chat.attachments.addAudio">&#127925;</button>
                             <button id="audioBtn" title="Record Audio">&#127908;</button>
                         </div>
-                        <input type="text" id="textInput" placeholder="Type a message... (supports multimodal input)" />
+                        <input type="text" id="textInput" placeholder="Type a message... (supports multimodal input)" data-i18n-placeholder="chat.typeMessage" />
                         <button id="sendBtn">&#10148;</button>
                     </div>
                 </div>
@@ -1372,6 +1373,17 @@
         };
 
         init();
+
+        // Initialize i18n
+        initI18n().then(() => {
+            // Update status text based on language
+            const updateStatusI18n = () => {
+                if (statusData && statusData.loaded) {
+                    statusText.textContent = i18n.t('common.ready');
+                }
+            };
+            updateStatusI18n();
+        });
     </script>
 </body>
 </html>

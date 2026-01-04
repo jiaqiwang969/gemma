@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>灵空 AI - 你的 AI. 你的数据. 你的掌控.</title>
+    <title>LingKong AI - Your AI. Your data. Your control.</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -66,6 +66,7 @@
             display: flex;
             gap: 2rem;
             list-style: none;
+            align-items: center;
         }
 
         .nav-links a {
@@ -76,6 +77,38 @@
         }
 
         .nav-links a:hover { color: var(--text-primary); }
+
+        /* Language Switch */
+        .lang-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .lang-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
 
         /* Hero - Homebrew Style */
         .hero {
@@ -118,7 +151,7 @@
             margin-bottom: 3rem;
         }
 
-        /* Install Command - The Star of the Show */
+        /* Install Command */
         .install-box {
             background: var(--bg-code);
             border: 1px solid var(--border-color);
@@ -171,13 +204,8 @@
             white-space: nowrap;
         }
 
-        .install-command .comment {
-            color: #666;
-        }
-
-        .install-command .prompt {
-            color: var(--accent-primary);
-        }
+        .install-command .comment { color: #666; }
+        .install-command .prompt { color: var(--accent-primary); }
 
         /* Quick Links */
         .quick-links {
@@ -222,16 +250,12 @@
             width: 100%;
         }
 
-        .stat {
-            text-align: center;
-        }
-
+        .stat { text-align: center; }
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--accent-primary);
         }
-
         .stat-label {
             font-size: 0.8rem;
             color: var(--text-muted);
@@ -254,9 +278,7 @@
             margin-bottom: 0.5rem;
         }
 
-        .section-header p {
-            color: var(--text-secondary);
-        }
+        .section-header p { color: var(--text-secondary); }
 
         .steps-container {
             max-width: 900px;
@@ -308,9 +330,7 @@
         }
 
         /* Features Grid */
-        .features {
-            padding: 80px 2rem;
-        }
+        .features { padding: 80px 2rem; }
 
         .features-grid {
             max-width: 1000px;
@@ -412,6 +432,7 @@
             .nav-links { display: none; }
             .stats-row { gap: 1.5rem; }
             .step { flex-direction: column; gap: 1rem; }
+            .lang-switch { margin-left: 0; padding-left: 0; border-left: none; }
         }
     </style>
 </head>
@@ -420,60 +441,64 @@
         <div class="nav-container">
             <a href="/" class="logo">
                 <span class="logo-icon">🐉</span>
-                <span>灵空 AI</span>
+                <span data-i18n="common.brand">LingKong AI</span>
             </a>
             <ul class="nav-links">
-                <li><a href="#features">功能</a></li>
-                <li><a href="#how-it-works">安装</a></li>
-                <li><a href="/static/downloads.html">下载</a></li>
-                <li><a href="/static/docs.html">API 文档</a></li>
-                <li><a href="/static/playground.html">Playground</a></li>
+                <li><a href="#features" data-i18n="nav.features">Features</a></li>
+                <li><a href="#how-it-works" data-i18n="nav.installation">Installation</a></li>
+                <li><a href="/static/downloads.html" data-i18n="nav.downloads">Downloads</a></li>
+                <li><a href="/static/docs.html" data-i18n="nav.apiDocs">API Docs</a></li>
+                <li><a href="/static/playground.html" data-i18n="nav.playground">Playground</a></li>
                 <li><a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></li>
+                <li class="lang-switch">
+                    <button class="lang-btn" data-lang="en" onclick="switchLang('en')">EN</button>
+                    <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')">中</button>
+                </li>
             </ul>
         </div>
     </nav>
 
-    <!-- Hero Section - Homebrew Style -->
+    <!-- Hero Section -->
     <section class="hero">
         <div class="hero-icon">🐉</div>
-        <h1>灵空 AI</h1>
-        <p class="hero-tagline">你的 AI. 你的数据. 你的掌控.</p>
+        <h1 data-i18n="home.hero.title">LingKong AI</h1>
+        <p class="hero-tagline" data-i18n="home.hero.subtitle">Your AI. Your data. Your control.</p>
 
-        <!-- THE INSTALL COMMAND - Most Important Element -->
+        <!-- Install Command -->
         <div class="install-box">
             <div class="install-header">
-                <span>一键安装 (多模态版)</span>
-                <button class="copy-btn" onclick="copyInstall()">复制</button>
+                <span data-i18n="home.install.oneLineInstall">One-line install:</span>
+                <button class="copy-btn" onclick="copyInstall()" data-i18n="common.copy">Copy</button>
             </div>
             <div class="install-command">
-                <span class="comment"># 一键安装灵空 AI</span><br>
+                <span class="comment"># Install LingKong AI</span><br>
                 <span class="prompt">$</span> curl -fsSL http://115.159.223.227/install.sh | bash
             </div>
         </div>
 
         <div class="quick-links">
-            <a href="/static/index.html" class="quick-link primary">💬 在线体验</a>
-            <a href="/static/downloads.html" class="quick-link">📥 下载中心</a>
-            <a href="/static/docs.html" class="quick-link">📚 API 文档</a>
+            <a href="/static/index.html" class="quick-link primary">💬 <span data-i18n="home.quickLinks.tryOnline">Try Online</span></a>
+            <a href="/static/downloads.html" class="quick-link">📥 <span data-i18n="home.quickLinks.downloadCenter">Downloads</span></a>
+            <a href="/static/docs.html" class="quick-link">📚 <span data-i18n="home.quickLinks.apiDocs">API Docs</span></a>
             <a href="https://github.com/jiaqiwang969/gemma" class="quick-link" target="_blank">⭐ GitHub</a>
         </div>
 
         <div class="stats-row">
             <div class="stat">
-                <div class="stat-value">100%</div>
-                <div class="stat-label">本地运行</div>
+                <div class="stat-value" data-i18n="home.stats.localRun">100% Local</div>
+                <div class="stat-label" data-i18n="home.stats.localRunDesc">Data never leaves</div>
             </div>
             <div class="stat">
-                <div class="stat-value">$0</div>
-                <div class="stat-label">持续成本</div>
+                <div class="stat-value" data-i18n="home.stats.zeroCost">$0/month</div>
+                <div class="stat-label" data-i18n="home.stats.zeroCostDesc">After setup</div>
             </div>
             <div class="stat">
-                <div class="stat-value">94 t/s</div>
-                <div class="stat-label">推理速度</div>
+                <div class="stat-value" data-i18n="home.stats.speed">94 tok/s</div>
+                <div class="stat-label" data-i18n="home.stats.speedDesc">Local inference</div>
             </div>
             <div class="stat">
-                <div class="stat-value">三模态</div>
-                <div class="stat-label">文本+视觉+音频</div>
+                <div class="stat-value" data-i18n="home.stats.multimodal">Text+Vision+Audio</div>
+                <div class="stat-label" data-i18n="home.stats.multimodalDesc">Full multimodal</div>
             </div>
         </div>
     </section>
@@ -481,24 +506,24 @@
     <!-- How It Works -->
     <section class="how-it-works" id="how-it-works">
         <div class="section-header">
-            <h2>两步启动你的私有 AI</h2>
-            <p>无需 Python，无需复杂配置，一键完成</p>
+            <h2 data-i18n="home.install.title">Quick Install</h2>
+            <p data-i18n="home.install.noPython">No Python required. No complex setup. Three steps to your private AI!</p>
         </div>
 
         <div class="steps-container">
             <div class="step">
                 <div class="step-number">1</div>
                 <div class="step-content">
-                    <h3>运行安装脚本</h3>
-                    <p>自动安装引擎 + 下载模型 (约 5.7GB: 文本+视觉+音频)</p>
+                    <h3 data-i18n="home.install.step1">Run install script</h3>
+                    <p data-i18n="home.install.step1Desc">Downloads and configures everything automatically</p>
                     <code>curl -fsSL http://115.159.223.227/install.sh | bash</code>
                 </div>
             </div>
             <div class="step">
                 <div class="step-number">2</div>
                 <div class="step-content">
-                    <h3>启动服务</h3>
-                    <p>一行命令启动，自动使用 GPU 加速</p>
+                    <h3 data-i18n="home.install.step2">Start service</h3>
+                    <p data-i18n="home.install.step2Desc">Visit http://localhost:5001</p>
                     <code>lingkong</code>
                 </div>
             </div>
@@ -508,40 +533,39 @@
     <!-- Features -->
     <section class="features" id="features">
         <div class="section-header">
-            <h2>为什么选择灵空？</h2>
-            <p>我们相信 AI 的未来是去中心化和保护隐私的</p>
+            <h2 data-i18n="home.features.title">Core Features</h2>
         </div>
 
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🔐</div>
-                <h3>完全私密</h3>
-                <p>数据永不离开你的设备，无需信任任何第三方</p>
+                <h3 data-i18n="home.features.privacy.title">Complete Privacy</h3>
+                <p data-i18n="home.features.privacy.desc">Data never leaves your device. No account, no login, zero-knowledge architecture.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">💰</div>
-                <h3>零持续成本</h3>
-                <p>一次性硬件投入，永久免费使用，告别 Token 计费</p>
+                <h3 data-i18n="home.features.cost.title">Zero Ongoing Cost</h3>
+                <p data-i18n="home.features.cost.desc">One-time setup, forever free. No per-token fees, no subscriptions.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
-                <h3>即时响应</h3>
-                <p>本地推理零网络延迟，离线也能用</p>
+                <h3 data-i18n="home.features.speed.title">Instant Response</h3>
+                <p data-i18n="home.features.speed.desc">94 tokens/second local inference. No network latency, works offline.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🎯</div>
-                <h3>三模态</h3>
-                <p>文本、图像、音频，一个模型全能处理</p>
+                <h3 data-i18n="home.features.multimodal.title">Trimodal AI</h3>
+                <p data-i18n="home.features.multimodal.desc">Understand text, images, and audio. Complete multimodal capabilities.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔌</div>
-                <h3>API 兼容</h3>
-                <p>兼容 Gemini API，无缝接入现有应用</p>
+                <h3 data-i18n="home.features.api.title">API Compatible</h3>
+                <p data-i18n="home.features.api.desc">Gemini-compatible API. Easy integration with existing apps.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔧</div>
-                <h3>可微调</h3>
-                <p>进阶用户可使用 LoRA 微调打造专属模型</p>
+                <h3 data-i18n="home.features.finetune.title">Customizable</h3>
+                <p data-i18n="home.features.finetune.desc">Fine-tune on your data. Create your personalized AI assistant.</p>
             </div>
         </div>
     </section>
@@ -549,77 +573,85 @@
     <!-- Products -->
     <section class="products">
         <div class="section-header">
-            <h2>探索灵空生态</h2>
+            <h2 data-i18n="home.products.title">Explore</h2>
         </div>
 
         <div class="products-grid">
             <a href="/static/index.html" class="product-card">
                 <div class="product-icon">💬</div>
-                <h3>WebUI 聊天</h3>
-                <p>三模态对话界面</p>
+                <h3 data-i18n="home.products.webui.title">WebUI Chat</h3>
+                <p data-i18n="home.products.webui.desc">Beautiful chat interface with multimodal support</p>
             </a>
             <a href="/static/downloads.html" class="product-card">
                 <div class="product-icon">📥</div>
-                <h3>下载中心</h3>
-                <p>国内高速下载</p>
+                <h3 data-i18n="home.products.downloads.title">Download Center</h3>
+                <p data-i18n="home.products.downloads.desc">Pre-built models and binaries</p>
             </a>
             <a href="/static/docs.html" class="product-card">
                 <div class="product-icon">📚</div>
-                <h3>API 文档</h3>
-                <p>Gemini 兼容接口</p>
+                <h3 data-i18n="home.products.docs.title">API Documentation</h3>
+                <p data-i18n="home.products.docs.desc">Gemini-compatible REST API</p>
             </a>
             <a href="/static/playground.html" class="product-card">
                 <div class="product-icon">🛠️</div>
-                <h3>Playground</h3>
-                <p>交互式 API 测试</p>
+                <h3 data-i18n="home.products.playground.title">API Playground</h3>
+                <p data-i18n="home.products.playground.desc">Interactive API testing tool</p>
             </a>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-        <p>灵空 AI - 开源本地三模态 AI 平台 (文本 + 视觉 + 音频)</p>
+        <p data-i18n="home.footer.description">LingKong AI - Open-source local trimodal AI platform (Text + Vision + Audio)</p>
         <p style="margin-top: 0.5rem;">
             <a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a>
             &nbsp;|&nbsp;
-            <a href="/static/docs.html">文档</a>
+            <a href="/static/docs.html" data-i18n="common.docs">Docs</a>
             &nbsp;|&nbsp;
             <a href="https://huggingface.co/nicepkg/gemma-3n-gguf" target="_blank">HuggingFace</a>
         </p>
     </footer>
 
+    <!-- i18n Script -->
+    <script src="/static/js/i18n.js"></script>
     <script>
         function copyInstall() {
             const cmd = 'curl -fsSL http://115.159.223.227/install.sh | bash';
             const btn = document.querySelector('.copy-btn');
 
-            // 尝试使用现代 API，如果失败则用回退方案
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(cmd).then(() => {
-                    btn.textContent = '已复制!';
-                    setTimeout(() => btn.textContent = '复制', 2000);
+                    btn.textContent = i18n.t('common.copied');
+                    setTimeout(() => btn.textContent = i18n.t('common.copy'), 2000);
                 });
             } else {
-                // HTTP 环境下的回退方案
                 const textArea = document.createElement('textarea');
                 textArea.value = cmd;
                 textArea.style.position = 'fixed';
                 textArea.style.left = '-999999px';
-                textArea.style.top = '-999999px';
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    btn.textContent = '已复制!';
-                    setTimeout(() => btn.textContent = '复制', 2000);
+                    btn.textContent = i18n.t('common.copied');
+                    setTimeout(() => btn.textContent = i18n.t('common.copy'), 2000);
                 } catch (err) {
-                    btn.textContent = '复制失败';
-                    setTimeout(() => btn.textContent = '复制', 2000);
+                    btn.textContent = i18n.t('common.error');
+                    setTimeout(() => btn.textContent = i18n.t('common.copy'), 2000);
                 }
                 document.body.removeChild(textArea);
             }
         }
+
+        // Update page title based on language
+        document.addEventListener('DOMContentLoaded', () => {
+            const updateTitle = () => {
+                document.title = i18n.t('common.brand') + ' - ' + i18n.t('common.tagline');
+            };
+            // Wait for i18n to load
+            setTimeout(updateTitle, 100);
+        });
     </script>
 </body>
 </html>

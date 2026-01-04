@@ -1,0 +1,249 @@
+{
+  "common": {
+    "brand": "LingKong AI",
+    "tagline": "Your AI. Your data. Your control.",
+    "loading": "Loading...",
+    "ready": "Ready",
+    "error": "Error",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "download": "Download",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "github": "GitHub",
+    "docs": "Docs"
+  },
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "installation": "Installation",
+    "downloads": "Downloads",
+    "apiDocs": "API Docs",
+    "playground": "Playground",
+    "chat": "Chat",
+    "about": "About"
+  },
+  "home": {
+    "hero": {
+      "title": "LingKong AI",
+      "subtitle": "Your AI. Your data. Your control.",
+      "description": "An open-source local multimodal AI platform. Run powerful AI on your own device without sending data to any cloud."
+    },
+    "install": {
+      "title": "Quick Install",
+      "oneLineInstall": "One-line install:",
+      "step1": "Run install script",
+      "step2": "Start service",
+      "step1Desc": "Downloads and configures everything automatically",
+      "step2Desc": "Visit http://localhost:5001",
+      "noPython": "No Python required. No complex setup. Three steps to your private AI!"
+    },
+    "stats": {
+      "localRun": "100% Local",
+      "localRunDesc": "Data never leaves",
+      "zeroCost": "$0/month",
+      "zeroCostDesc": "After setup",
+      "speed": "94 tok/s",
+      "speedDesc": "Local inference",
+      "multimodal": "Text+Vision+Audio",
+      "multimodalDesc": "Full multimodal"
+    },
+    "features": {
+      "title": "Core Features",
+      "privacy": {
+        "title": "Complete Privacy",
+        "desc": "Data never leaves your device. No account, no login, zero-knowledge architecture."
+      },
+      "cost": {
+        "title": "Zero Ongoing Cost",
+        "desc": "One-time setup, forever free. No per-token fees, no subscriptions."
+      },
+      "speed": {
+        "title": "Instant Response",
+        "desc": "94 tokens/second local inference. No network latency, works offline."
+      },
+      "multimodal": {
+        "title": "Trimodal AI",
+        "desc": "Understand text, images, and audio. Complete multimodal capabilities."
+      },
+      "api": {
+        "title": "API Compatible",
+        "desc": "Gemini-compatible API. Easy integration with existing apps."
+      },
+      "finetune": {
+        "title": "Customizable",
+        "desc": "Fine-tune on your data. Create your personalized AI assistant."
+      }
+    },
+    "quickLinks": {
+      "tryOnline": "Try Online",
+      "downloadCenter": "Downloads",
+      "apiDocs": "API Docs"
+    },
+    "products": {
+      "title": "Explore",
+      "webui": {
+        "title": "WebUI Chat",
+        "desc": "Beautiful chat interface with multimodal support"
+      },
+      "downloads": {
+        "title": "Download Center",
+        "desc": "Pre-built models and binaries"
+      },
+      "docs": {
+        "title": "API Documentation",
+        "desc": "Gemini-compatible REST API"
+      },
+      "playground": {
+        "title": "API Playground",
+        "desc": "Interactive API testing tool"
+      }
+    },
+    "footer": {
+      "description": "LingKong AI - Open-source local trimodal AI platform (Text + Vision + Audio)",
+      "links": "Home | Docs | GitHub"
+    }
+  },
+  "chat": {
+    "title": "LingKong AI",
+    "newChat": "New Chat",
+    "recentChats": "Recent Chats",
+    "clearChat": "Clear Chat",
+    "send": "Send",
+    "typeMessage": "Type a message...",
+    "welcome": {
+      "title": "Private AI Assistant",
+      "subtitle": "Your conversations are end-to-end encrypted and processed locally.",
+      "feature1": "E2E Encrypted",
+      "feature2": "Image Analysis",
+      "feature3": "Voice Input",
+      "feature4": "Works Offline"
+    },
+    "status": {
+      "encrypted": "E2E Encrypted",
+      "gpuUsage": "GPU Usage",
+      "vram": "VRAM",
+      "requests": "Requests",
+      "avgSpeed": "Avg Speed"
+    },
+    "backend": {
+      "llamacpp": "llama.cpp (Fast)",
+      "mps": "MPS (Transformers)",
+      "mmproj": "mmproj (Multimodal)"
+    },
+    "attachments": {
+      "addImage": "Add Image",
+      "addAudio": "Add Audio",
+      "recording": "Recording...",
+      "processing": "Processing..."
+    }
+  },
+  "downloads": {
+    "title": "Download Center",
+    "subtitle": "Fast downloads - Your AI, your data, your control",
+    "mirror": {
+      "title": "Fast Mirror",
+      "desc": "All files hosted on fast servers for quick downloads"
+    },
+    "oneClick": {
+      "title": "One-Click Install (Recommended)",
+      "desc": "Run the following command in terminal to automatically download and configure everything:",
+      "supports": "Supports macOS (Apple Silicon) and Linux (x86_64), auto-downloads models and configures environment"
+    },
+    "models": {
+      "title": "AI Model Files",
+      "required": "Required",
+      "optional": "Optional",
+      "totalSize": "Total models size:",
+      "mainModel": {
+        "name": "Main Text Model",
+        "desc": "Gemma 3n text model - 4-bit quantized, supports multi-turn chat"
+      },
+      "visionModel": {
+        "name": "Vision Module",
+        "desc": "Vision model - supports image analysis and description"
+      },
+      "audioModel": {
+        "name": "Audio Module",
+        "desc": "Audio model - supports speech transcription and audio analysis"
+      }
+    },
+    "binaries": {
+      "title": "Program Files",
+      "macos": "macOS Apple Silicon (M1/M2/M3) inference engine",
+      "linux": "Linux x86_64 inference engine",
+      "webui": "Web interface - includes chat UI and API service"
+    },
+    "help": {
+      "title": "Network Issues? Manual Download",
+      "manualDownload": "If download is interrupted, use download tools (like wget) and manually place files in the specified directory:",
+      "modelsPath": "Model Files Location",
+      "pathExample": "i.e.: /Users/your-username/.lingkong/models/ (macOS) or /home/your-username/.lingkong/models/ (Linux)",
+      "steps": "Steps",
+      "step1": "Create directory:",
+      "step2": "Download model files using your download tool",
+      "step3": "Move downloaded .gguf files to",
+      "step4": "Keep file names unchanged:",
+      "step5": "Run install script, it will skip existing models:"
+    },
+    "resume": {
+      "title": "Resume Download",
+      "desc": "Use wget with resume support, can continue download after interruption:",
+      "tip": "Tip: wget -c will auto-resume, just re-run if interrupted"
+    },
+    "structure": {
+      "title": "Complete Install Directory Structure"
+    }
+  },
+  "docs": {
+    "title": "API Documentation",
+    "subtitle": "Gemini-compatible REST API",
+    "nav": {
+      "overview": "Overview",
+      "intro": "Introduction",
+      "quickStart": "Quick Start",
+      "auth": "Authentication",
+      "coreApi": "Core API",
+      "advanced": "Advanced",
+      "thinking": "Thinking Mode",
+      "tools": "Tool Calling",
+      "multimodal": "Multimodal",
+      "thoughtSig": "Thought Signature",
+      "encryption": "Encryption",
+      "e2e": "E2E Encryption",
+      "resources": "Resources",
+      "errors": "Error Handling",
+      "examples": "Code Examples",
+      "demo": "Live Demo"
+    },
+    "sections": {
+      "overview": "Overview",
+      "request": "Request",
+      "response": "Response",
+      "parameters": "Parameters"
+    }
+  },
+  "playground": {
+    "title": "API Playground",
+    "subtitle": "Interactive API testing tool",
+    "config": {
+      "realApi": "Real API",
+      "localService": "Local Service",
+      "apiKey": "API Key"
+    },
+    "actions": {
+      "runTest": "Run Test",
+      "runAll": "Run All",
+      "compare": "Compare"
+    },
+    "results": {
+      "realResponse": "Real Gemini API",
+      "localResponse": "Local Gemma 3n",
+      "comparison": "Comparison",
+      "pending": "Pending",
+      "match": "Match",
+      "mismatch": "Mismatch"
+    }
+  }
+}

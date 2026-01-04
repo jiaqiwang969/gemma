@@ -1,0 +1,249 @@
+{
+  "common": {
+    "brand": "灵空 AI",
+    "tagline": "你的 AI. 你的数据. 你的掌控.",
+    "loading": "加载中...",
+    "ready": "就绪",
+    "error": "错误",
+    "copy": "复制",
+    "copied": "已复制!",
+    "download": "下载",
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "github": "GitHub",
+    "docs": "文档"
+  },
+  "nav": {
+    "home": "首页",
+    "features": "功能",
+    "installation": "安装",
+    "downloads": "下载",
+    "apiDocs": "API 文档",
+    "playground": "Playground",
+    "chat": "对话",
+    "about": "关于"
+  },
+  "home": {
+    "hero": {
+      "title": "灵空 AI",
+      "subtitle": "你的 AI. 你的数据. 你的掌控.",
+      "description": "一个开源的本地多模态 AI 平台，让你在自己的设备上运行强大的 AI，无需将数据发送到任何云端。"
+    },
+    "install": {
+      "title": "快速安装",
+      "oneLineInstall": "一键安装:",
+      "step1": "运行安装脚本",
+      "step2": "启动服务",
+      "step1Desc": "自动下载并配置所有组件",
+      "step2Desc": "访问 http://localhost:5001",
+      "noPython": "无需 Python，无需复杂配置。三步启动你的私有 AI！"
+    },
+    "stats": {
+      "localRun": "100% 本地",
+      "localRunDesc": "数据永不外传",
+      "zeroCost": "￥0/月",
+      "zeroCostDesc": "一次安装",
+      "speed": "94 tok/s",
+      "speedDesc": "本地推理",
+      "multimodal": "文本+视觉+音频",
+      "multimodalDesc": "三模态支持"
+    },
+    "features": {
+      "title": "核心特性",
+      "privacy": {
+        "title": "完全私密",
+        "desc": "数据永不离开你的设备。无需账号、无需登录、零知识架构。"
+      },
+      "cost": {
+        "title": "零持续成本",
+        "desc": "一次性安装，永久免费。无按 Token 付费，无订阅费用。"
+      },
+      "speed": {
+        "title": "即时响应",
+        "desc": "94 tok/s 本地推理。无网络延迟，离线可用。"
+      },
+      "multimodal": {
+        "title": "三模态 AI",
+        "desc": "理解文本、图像和音频。完整的多模态能力。"
+      },
+      "api": {
+        "title": "API 兼容",
+        "desc": "Gemini 兼容 API，轻松集成现有应用。"
+      },
+      "finetune": {
+        "title": "可微调",
+        "desc": "在你的数据上微调，创建个性化 AI 助手。"
+      }
+    },
+    "quickLinks": {
+      "tryOnline": "在线体验",
+      "downloadCenter": "下载中心",
+      "apiDocs": "API 文档"
+    },
+    "products": {
+      "title": "探索",
+      "webui": {
+        "title": "WebUI 聊天",
+        "desc": "精美的聊天界面，支持多模态"
+      },
+      "downloads": {
+        "title": "下载中心",
+        "desc": "预编译模型和程序"
+      },
+      "docs": {
+        "title": "API 文档",
+        "desc": "Gemini 兼容 REST API"
+      },
+      "playground": {
+        "title": "API Playground",
+        "desc": "交互式 API 测试工具"
+      }
+    },
+    "footer": {
+      "description": "灵空 AI - 开源本地三模态 AI 平台 (文本 + 视觉 + 音频)",
+      "links": "首页 | 文档 | GitHub"
+    }
+  },
+  "chat": {
+    "title": "灵空 AI",
+    "newChat": "新对话",
+    "recentChats": "最近对话",
+    "clearChat": "清空对话",
+    "send": "发送",
+    "typeMessage": "输入消息...",
+    "welcome": {
+      "title": "私密 AI 助手",
+      "subtitle": "你的对话经过端到端加密，完全在本地处理。",
+      "feature1": "端到端加密",
+      "feature2": "图像分析",
+      "feature3": "语音输入",
+      "feature4": "离线可用"
+    },
+    "status": {
+      "encrypted": "端到端加密",
+      "gpuUsage": "GPU 使用率",
+      "vram": "显存",
+      "requests": "请求数",
+      "avgSpeed": "平均速度"
+    },
+    "backend": {
+      "llamacpp": "llama.cpp (快速)",
+      "mps": "MPS (Transformers)",
+      "mmproj": "mmproj (多模态)"
+    },
+    "attachments": {
+      "addImage": "添加图片",
+      "addAudio": "添加音频",
+      "recording": "录音中...",
+      "processing": "处理中..."
+    }
+  },
+  "downloads": {
+    "title": "下载中心",
+    "subtitle": "国内高速下载 - 你的 AI，你的数据，你的掌控",
+    "mirror": {
+      "title": "国内镜像",
+      "desc": "所有文件托管在国内服务器，无需翻墙，下载速度更快"
+    },
+    "oneClick": {
+      "title": "一键安装 (推荐)",
+      "desc": "在终端中运行以下命令，自动完成所有下载和配置：",
+      "supports": "支持 macOS (Apple Silicon) 和 Linux (x86_64)，自动下载模型和配置环境"
+    },
+    "models": {
+      "title": "AI 模型文件",
+      "required": "必需",
+      "optional": "可选",
+      "totalSize": "全部模型总大小：",
+      "mainModel": {
+        "name": "主文本模型",
+        "desc": "Gemma 3n 文本模型 - 4-bit 量化版本，支持多轮对话"
+      },
+      "visionModel": {
+        "name": "视觉模块",
+        "desc": "视觉理解模型 - 支持图片分析和描述"
+      },
+      "audioModel": {
+        "name": "音频模块",
+        "desc": "音频理解模型 - 支持语音转录和音频分析"
+      }
+    },
+    "binaries": {
+      "title": "程序文件",
+      "macos": "macOS Apple Silicon (M1/M2/M3) 推理引擎",
+      "linux": "Linux x86_64 推理引擎",
+      "webui": "Web 界面 - 包含聊天界面和 API 服务"
+    },
+    "help": {
+      "title": "网络问题？手动下载到本地",
+      "manualDownload": "如果下载过程中遇到网络中断，可以使用下载工具下载后，手动放到指定目录：",
+      "modelsPath": "模型文件存放位置",
+      "pathExample": "即：/Users/你的用户名/.lingkong/models/ (macOS) 或 /home/你的用户名/.lingkong/models/ (Linux)",
+      "steps": "具体操作步骤",
+      "step1": "先创建目录：",
+      "step2": "用下载工具下载上方的模型文件",
+      "step3": "将下载好的 .gguf 文件移动到",
+      "step4": "确保文件名保持不变：",
+      "step5": "然后运行安装脚本，会自动跳过已存在的模型："
+    },
+    "resume": {
+      "title": "断点续传下载",
+      "desc": "使用 wget 支持断点续传，网络中断后可继续下载：",
+      "tip": "提示：wget -c 会自动续传，如果下载中断直接重新运行即可"
+    },
+    "structure": {
+      "title": "完整安装目录结构"
+    }
+  },
+  "docs": {
+    "title": "API 文档",
+    "subtitle": "Gemini 兼容 REST API",
+    "nav": {
+      "overview": "概述",
+      "intro": "简介",
+      "quickStart": "快速开始",
+      "auth": "认证方式",
+      "coreApi": "核心 API",
+      "advanced": "高级功能",
+      "thinking": "思考模式",
+      "tools": "工具调用",
+      "multimodal": "多模态",
+      "thoughtSig": "思维签名",
+      "encryption": "加密通信",
+      "e2e": "端到端加密",
+      "resources": "资源",
+      "errors": "错误处理",
+      "examples": "代码示例",
+      "demo": "在线演示"
+    },
+    "sections": {
+      "overview": "概述",
+      "request": "请求",
+      "response": "响应",
+      "parameters": "参数"
+    }
+  },
+  "playground": {
+    "title": "API Playground",
+    "subtitle": "交互式 API 测试工具",
+    "config": {
+      "realApi": "真实 API",
+      "localService": "本地服务",
+      "apiKey": "API Key"
+    },
+    "actions": {
+      "runTest": "运行测试",
+      "runAll": "全部测试",
+      "compare": "对比"
+    },
+    "results": {
+      "realResponse": "真实 Gemini API",
+      "localResponse": "本地 Gemma 3n",
+      "comparison": "对比结果",
+      "pending": "待测试",
+      "match": "匹配",
+      "mismatch": "不匹配"
+    }
+  }
+}
