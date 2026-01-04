@@ -93,13 +93,19 @@ ssh $SERVER "mkdir -p /tmp/pitch"
 scp apps/webui/static/pitch/*.jpg $SERVER:/tmp/pitch/ 2>/dev/null || true
 echo "✓ pitch 图片已上传"
 
+echo "▶ 上传 i18n 国际化文件..."
+ssh $SERVER "mkdir -p /tmp/i18n /tmp/js"
+scp apps/webui/static/i18n/*.json $SERVER:/tmp/i18n/ 2>/dev/null || true
+scp apps/webui/static/js/*.js $SERVER:/tmp/js/ 2>/dev/null || true
+echo "✓ i18n 文件已上传"
+
 echo "▶ 上传灵空聊天界面..."
 scp apps/webui/static/lingkong.html $SERVER:/tmp/lingkong.html 2>/dev/null || true
 echo "✓ lingkong.html 已上传"
 
 # 移动文件并设置权限
 echo "▶ 部署文件..."
-ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/models && \
+ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/models && \
     sudo mv /tmp/install.sh $REMOTE_DIR/install.sh && \
     sudo mv /tmp/webui.tar.gz $REMOTE_DIR/webui.tar.gz && \
     sudo mv /tmp/gemini_api.tar.gz $REMOTE_DIR/gemini_api.tar.gz && \
@@ -114,13 +120,17 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/models && \
     sudo mv /tmp/pitch.html $REMOTE_DIR/static/pitch.html 2>/dev/null || true && \
     sudo mv /tmp/pitch.pdf $REMOTE_DIR/static/pitch.pdf 2>/dev/null || true && \
     sudo mv /tmp/pitch/*.jpg $REMOTE_DIR/static/pitch/ 2>/dev/null || true && \
-    sudo rmdir /tmp/pitch 2>/dev/null || true && \
+    sudo mv /tmp/i18n/*.json $REMOTE_DIR/static/i18n/ 2>/dev/null || true && \
+    sudo mv /tmp/js/*.js $REMOTE_DIR/static/js/ 2>/dev/null || true && \
+    sudo rmdir /tmp/pitch /tmp/i18n /tmp/js 2>/dev/null || true && \
     sudo chmod 755 $REMOTE_DIR/install.sh && \
     sudo chmod 644 $REMOTE_DIR/webui.tar.gz && \
     sudo chmod 644 $REMOTE_DIR/gemini_api.tar.gz && \
     sudo chmod 644 $REMOTE_DIR/static/*.html 2>/dev/null || true && \
     sudo chmod 644 $REMOTE_DIR/static/*.pdf 2>/dev/null || true && \
     sudo chmod 644 $REMOTE_DIR/static/pitch/*.jpg 2>/dev/null || true && \
+    sudo chmod 644 $REMOTE_DIR/static/i18n/*.json 2>/dev/null || true && \
+    sudo chmod 644 $REMOTE_DIR/static/js/*.js 2>/dev/null || true && \
     sudo chown -R ubuntu:ubuntu $REMOTE_DIR/static $REMOTE_DIR/install.sh $REMOTE_DIR/webui.tar.gz $REMOTE_DIR/gemini_api.tar.gz"
 echo "✓ 文件已部署"
 
