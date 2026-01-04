@@ -430,10 +430,34 @@
             margin-bottom: 0.75rem;
         }
 
-        .bubble .attachments img {
-            max-width: 300px;
-            max-height: 200px;
-            border-radius: 10px;
+        .bubble .attachments .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .bubble .attachments .images-grid.single {
+            grid-template-columns: 1fr;
+        }
+
+        .bubble .attachments .images-grid img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .bubble .attachments .images-grid img:hover {
+            transform: scale(1.02);
+        }
+
+        .bubble .attachments .audios-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .bubble .attachments .audio-indicator {
@@ -750,7 +774,8 @@
                     <div class="attachments-preview" id="attachmentsPreview"></div>
                     <div class="input-row">
                         <div class="input-buttons">
-                            <button id="fileBtn" title="Upload File">&#128206;</button>
+                            <button id="fileBtn" title="Upload Images">&#128247;</button>
+                            <button id="audioFileBtn" title="Upload Audio Files">&#127925;</button>
                             <button id="audioBtn" title="Record Audio">&#127908;</button>
                         </div>
                         <input type="text" id="textInput" placeholder="Type a message... (supports multimodal input)" />
@@ -761,12 +786,15 @@
         </div>
     </div>
 
-    <input type="file" id="fileInput" accept="image/*,audio/*" />
+    <input type="file" id="fileInput" accept="image/*" multiple />
+    <input type="file" id="audioFileInput" accept="audio/*" multiple />
 
     <script>
-        // State
-        let currentImage = null;
-        let currentAudio = null;
+        // State - 支持多图片/多音频
+        let currentImages = [];  // 图片数组 (最多14张)
+        let currentAudios = [];  // 音频数组 (最多10个)
+        const MAX_IMAGES = 14;
+        const MAX_AUDIOS = 10;
         let isRecording = false;
         let audioContext = null;
         let mediaStream = null;
@@ -945,20 +973,58 @@
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
 
-            if (attachments.image || attachments.audio) {
+            // 支持多图片和多音频
+            const hasImages = attachments.images && attachments.images.length > 0;
+            const hasAudios = attachments.audios && attachments.audios.length > 0;
+            const hasSingleImage = attachments.image;
+            const hasSingleAudio = attachments.audio;
+
+            if (hasImages || hasAudios || hasSingleImage || hasSingleAudio) {
                 const attDiv = document.createElement('div');
                 attDiv.className = 'attachments';
-                if (attachments.image) {
+
+                // 多图片显示 (网格布局)
+                if (hasImages) {
+                    const imagesGrid = document.createElement('div');
+                    imagesGrid.className = 'images-grid' + (attachments.images.length === 1 ? ' single' : '');
+                    attachments.images.forEach((imgSrc, idx) => {
+                        const img = document.createElement('img');
+                        img.src = imgSrc;
+                        img.title = `图片 ${idx + 1}`;
+                        img.onclick = () => window.open(imgSrc, '_blank');
+                        imagesGrid.appendChild(img);
+                    });
+                    attDiv.appendChild(imagesGrid);
+                } else if (hasSingleImage) {
+                    // 向后兼容: 单图片
+                    const imagesGrid = document.createElement('div');
+                    imagesGrid.className = 'images-grid single';
                     const img = document.createElement('img');
                     img.src = attachments.image;
-                    attDiv.appendChild(img);
+                    img.onclick = () => window.open(attachments.image, '_blank');
+                    imagesGrid.appendChild(img);
+                    attDiv.appendChild(imagesGrid);
                 }
-                if (attachments.audio) {
+
+                // 多音频显示
+                if (hasAudios) {
+                    const audiosList = document.createElement('div');
+                    audiosList.className = 'audios-list';
+                    attachments.audios.forEach((_, idx) => {
+                        const audioDiv = document.createElement('div');
+                        audioDiv.className = 'audio-indicator';
+                        audioDiv.innerHTML = `&#127911; 音频 ${idx + 1}`;
+                        audiosList.appendChild(audioDiv);
+                    });
+                    attDiv.appendChild(audiosList);
+                } else if (hasSingleAudio) {
+                    // 向后兼容: 单音频
                     const audioDiv = document.createElement('div');
                     audioDiv.className = 'audio-indicator';
                     audioDiv.innerHTML = '&#127911; Voice Message';
                     attDiv.appendChild(audioDiv);
                 }
+
                 bubble.appendChild(attDiv);
             }
 
@@ -969,11 +1035,19 @@
             if (metrics) {
                 const metricsDiv = document.createElement('div');
                 metricsDiv.className = 'metrics';
-                metricsDiv.innerHTML = `
+                let metricsHtml = `
                     <div class="metric">&#9201; <span class="value">${metrics.total_time}s</span></div>
                     <div class="metric">&#128640; <span class="value">${metrics.speed || '-'} t/s</span></div>
                     <div class="metric">&#9881; <span class="value">${metrics.backend || 'mps'}</span></div>
                 `;
+                // 显示图片/音频数量
+                if (metrics.images) {
+                    metricsHtml += `<div class="metric">&#128247; <span class="value">${metrics.images}</span></div>`;
+                }
+                if (metrics.audios) {
+                    metricsHtml += `<div class="metric">&#127925; <span class="value">${metrics.audios}</span></div>`;
+                }
+                metricsDiv.innerHTML = metricsHtml;
                 bubble.appendChild(metricsDiv);
             }
 
@@ -1004,42 +1078,61 @@
 
         async function sendMessage() {
             const text = textInput.value.trim();
-            if (!text && !currentImage && !currentAudio) return;
+            if (!text && currentImages.length === 0 && currentAudios.length === 0) return;
 
-            const attachments = {};
-            if (currentImage) attachments.image = currentImage;
-            if (currentAudio) attachments.audio = true;
+            // 构建显示文本
+            let displayText = text || '(Multimodal Input)';
+            if (currentImages.length > 0) displayText = `[${currentImages.length}张图片] ` + displayText;
+            if (currentAudios.length > 0) displayText = `[${currentAudios.length}个音频] ` + displayText;
 
+            // 保存完整的图片/音频数组用于显示
             const userMsg = {
                 role: 'user',
-                text: text || '(Multimodal Input)',
-                attachments: { ...attachments }
+                text: displayText,
+                attachments: {
+                    images: currentImages.length > 0 ? [...currentImages] : null,
+                    audios: currentAudios.length > 0 ? [...currentAudios] : null
+                }
             };
             currentMessages.push(userMsg);
-            addMessageToDOM('user', userMsg.text, attachments);
+            addMessageToDOM('user', displayText, userMsg.attachments);
 
-            const imageToSend = currentImage;
-            const audioToSend = currentAudio;
+            const imagesToSend = [...currentImages];
+            const audiosToSend = [...currentAudios];
             const backend = backendSelect.value;
             textInput.value = '';
-            currentImage = null;
-            currentAudio = null;
+            currentImages = [];
+            currentAudios = [];
             updateAttachmentsPreview();
 
             sendBtn.disabled = true;
             showTyping();
 
             try {
+                // 构建请求体 - 使用新的多文件 API
+                const requestBody = {
+                    text: text || 'Please describe what you see/hear.',
+                    session_id: currentSessionId,
+                    backend: backend
+                };
+
+                // 向后兼容: 单个文件使用旧字段
+                if (imagesToSend.length === 1) {
+                    requestBody.image = imagesToSend[0];
+                } else if (imagesToSend.length > 1) {
+                    requestBody.images = imagesToSend;
+                }
+
+                if (audiosToSend.length === 1) {
+                    requestBody.audio = audiosToSend[0];
+                } else if (audiosToSend.length > 1) {
+                    requestBody.audios = audiosToSend;
+                }
+
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: text || 'Please describe what you see/hear.',
-                        image: imageToSend,
-                        audio: audioToSend,
-                        session_id: currentSessionId,
-                        backend: backend
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await res.json();
@@ -1070,42 +1163,89 @@
 
         function updateAttachmentsPreview() {
             attachmentsPreview.innerHTML = '';
-            if (currentImage) {
+
+            // 显示所有图片
+            currentImages.forEach((img, idx) => {
                 const item = document.createElement('div');
                 item.className = 'attachment-item';
                 item.innerHTML = `
-                    <img src="${currentImage}" />
-                    <button class="remove" onclick="currentImage=null;updateAttachmentsPreview()">&times;</button>
+                    <img src="${img}" />
+                    <button class="remove" onclick="removeImage(${idx})">&times;</button>
                 `;
                 attachmentsPreview.appendChild(item);
-            }
-            if (currentAudio) {
+            });
+
+            // 显示所有音频
+            currentAudios.forEach((audio, idx) => {
                 const item = document.createElement('div');
                 item.className = 'attachment-item';
                 item.innerHTML = `
-                    &#127911; Audio Recorded
-                    <button class="remove" onclick="currentAudio=null;updateAttachmentsPreview()">&times;</button>
+                    &#127911; Audio ${idx + 1}
+                    <button class="remove" onclick="removeAudio(${idx})">&times;</button>
                 `;
                 attachmentsPreview.appendChild(item);
+            });
+
+            // 显示数量限制提示
+            if (currentImages.length > 0 || currentAudios.length > 0) {
+                const hint = document.createElement('div');
+                hint.style.cssText = 'font-size: 0.75rem; color: var(--text-muted); padding: 0.5rem;';
+                hint.textContent = `Images: ${currentImages.length}/${MAX_IMAGES} | Audio: ${currentAudios.length}/${MAX_AUDIOS}`;
+                attachmentsPreview.appendChild(hint);
             }
+        }
+
+        function removeImage(idx) {
+            currentImages.splice(idx, 1);
+            updateAttachmentsPreview();
+        }
+
+        function removeAudio(idx) {
+            currentAudios.splice(idx, 1);
+            updateAttachmentsPreview();
         }
 
         fileBtn.onclick = () => fileInput.click();
         fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     if (file.type.startsWith('image/')) {
-                        currentImage = e.target.result;
-                    } else if (file.type.startsWith('audio/')) {
-                        currentAudio = e.target.result;
+                        if (currentImages.length < MAX_IMAGES) {
+                            currentImages.push(e.target.result);
+                        } else {
+                            alert(`最多支持 ${MAX_IMAGES} 张图片`);
+                        }
                     }
                     updateAttachmentsPreview();
                 };
                 reader.readAsDataURL(file);
-            }
+            });
             fileInput.value = '';
+        };
+
+        // 音频文件上传按钮
+        const audioFileBtn = document.getElementById('audioFileBtn');
+        const audioFileInput = document.getElementById('audioFileInput');
+        audioFileBtn.onclick = () => audioFileInput.click();
+        audioFileInput.onchange = (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (file.type.startsWith('audio/')) {
+                        if (currentAudios.length < MAX_AUDIOS) {
+                            currentAudios.push(e.target.result);
+                        } else {
+                            alert(`最多支持 ${MAX_AUDIOS} 个音频`);
+                        }
+                    }
+                    updateAttachmentsPreview();
+                };
+                reader.readAsDataURL(file);
+            });
+            audioFileInput.value = '';
         };
 
         // Audio recording functions
@@ -1191,7 +1331,11 @@
                 const wavBlob = createWavBlob(finalSamples, finalSampleRate);
                 const reader = new FileReader();
                 reader.onload = () => {
-                    currentAudio = reader.result;
+                    if (currentAudios.length < MAX_AUDIOS) {
+                        currentAudios.push(reader.result);
+                    } else {
+                        alert(`最多支持 ${MAX_AUDIOS} 个音频`);
+                    }
                     updateAttachmentsPreview();
                     resolve();
                 };

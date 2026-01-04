@@ -2,21 +2,21 @@
 AI 多模态聊天服务器
 支持: 文本 + 图片 + 音频 + 多轮对话历史
 存储: ~/.gemma3n/ (参考 Codex 架构)
+
+后端模式:
+  - mmproj (默认): 使用 llama.cpp 多模态，无需 PyTorch
+  - mps (进阶): 使用 PyTorch MPS 加速，需要安装 torch/transformers
 """
 import os
 import io
 import base64
-import torch
-import numpy as np
 import uuid
 import json
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from transformers import AutoProcessor, Gemma3nForConditionalGeneration
 from PIL import Image
-import librosa
 import warnings
 import time
 import psutil
@@ -25,8 +25,36 @@ import platform
 import threading
 
 warnings.filterwarnings("ignore")
-os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# PyTorch 是可选依赖 (仅 MPS 模式需要)
+PYTORCH_AVAILABLE = False
+torch = None
+np = None
+librosa = None
+AutoProcessor = None
+Gemma3nForConditionalGeneration = None
+
+# 先单独导入 librosa (用于音频处理，不依赖 PyTorch)
+try:
+    import librosa as _librosa
+    librosa = _librosa
+except ImportError:
+    pass
+
+try:
+    import torch as _torch
+    import numpy as _np
+    from transformers import AutoProcessor as _AutoProcessor
+    from transformers import Gemma3nForConditionalGeneration as _Gemma3nForConditionalGeneration
+    torch = _torch
+    np = _np
+    AutoProcessor = _AutoProcessor
+    Gemma3nForConditionalGeneration = _Gemma3nForConditionalGeneration
+    PYTORCH_AVAILABLE = True
+    os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+except ImportError:
+    pass
 
 app = Flask(__name__, static_folder="static")
 CORS(app)
@@ -37,14 +65,30 @@ processor = None
 model_loaded = False
 model_info = {}
 dummy_image = None
-DEFAULT_BACKEND = os.environ.get("GEMMA3N_BACKEND", "mps")  # mps | mmproj
+# 默认使用 llama.cpp (mmproj)，MPS 需要 PyTorch
+DEFAULT_BACKEND = os.environ.get("GEMMA3N_BACKEND", "mmproj")  # mmproj | mps
 
 # llama.cpp 路径/模型（mmproj 模式使用）
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LLAMA_MTMD_BIN = os.environ.get("LLAMA_MTMD_BIN", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-mtmd-cli"))
-LLAMA_MM_MODEL = os.environ.get("LLAMA_MM_MODEL", str(REPO_ROOT / "artifacts/gguf/gemma-3n-E2B-it-Q4_K_M.gguf"))
-LLAMA_MM_PROJ_IMAGE = os.environ.get("LLAMA_MM_PROJ_IMAGE", str(REPO_ROOT / "artifacts/gguf/gemma-3n-vision-mmproj-f16.gguf"))
-LLAMA_MM_PROJ_AUDIO = os.environ.get("LLAMA_MM_PROJ_AUDIO", str(REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-f16.gguf"))
+LINGKONG_HOME = Path.home() / ".lingkong"
+
+# 优先使用 ~/.lingkong 安装目录，回退到项目目录
+def _find_binary(name, fallback):
+    lingkong_path = LINGKONG_HOME / "bin" / name
+    if lingkong_path.exists():
+        return str(lingkong_path)
+    return fallback
+
+def _find_model(name, fallback):
+    lingkong_path = LINGKONG_HOME / "models" / name
+    if lingkong_path.exists():
+        return str(lingkong_path)
+    return fallback
+
+LLAMA_MTMD_BIN = os.environ.get("LLAMA_MTMD_BIN", _find_binary("llama-mtmd-cli", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-mtmd-cli")))
+LLAMA_MM_MODEL = os.environ.get("LLAMA_MM_MODEL", _find_model("gemma-3n-E2B-it-Q4_K_M.gguf", str(REPO_ROOT / "artifacts/gguf/gemma-3n-E2B-it-Q4_K_M.gguf")))
+LLAMA_MM_PROJ_IMAGE = os.environ.get("LLAMA_MM_PROJ_IMAGE", _find_model("gemma-3n-vision-mmproj-f16.gguf", str(REPO_ROOT / "artifacts/gguf/gemma-3n-vision-mmproj-f16.gguf")))
+LLAMA_MM_PROJ_AUDIO = os.environ.get("LLAMA_MM_PROJ_AUDIO", _find_model("gemma-3n-audio-mmproj-f16.gguf", str(REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-f16.gguf")))
 LLAMA_MM_PROJ = os.environ.get("LLAMA_MM_PROJ", "")
 LLAMA_MM_PROJ_COMBINED = ",".join([p for p in [LLAMA_MM_PROJ_IMAGE, LLAMA_MM_PROJ_AUDIO] if p]) if (LLAMA_MM_PROJ_IMAGE or LLAMA_MM_PROJ_AUDIO) else LLAMA_MM_PROJ
 LLAMA_MM_N_PREDICT = int(os.environ.get("LLAMA_MM_N_PREDICT", "128"))
@@ -52,13 +96,14 @@ LLAMA_MM_DEVICE = os.environ.get("LLAMA_MM_DEVICE", "none")
 LLAMA_MM_N_GPU_LAYERS = os.environ.get("LLAMA_MM_N_GPU_LAYERS", "0")
 
 # llama-run 路径/模型（llama.cpp 纯文本模式）
-LLAMA_RUN_BIN = os.environ.get("LLAMA_RUN_BIN", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-run"))
-LLAMA_SERVER_BIN = os.environ.get("LLAMA_SERVER_BIN", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-server"))
+LLAMA_RUN_BIN = os.environ.get("LLAMA_RUN_BIN", _find_binary("llama-run", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-run")))
+LLAMA_SERVER_BIN = os.environ.get("LLAMA_SERVER_BIN", _find_binary("llama-server", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-server")))
 LLAMA_SERVER_PORT = int(os.environ.get("LLAMA_SERVER_PORT", "8081"))
 LLAMA_RUN_MODEL = os.environ.get("LLAMA_RUN_MODEL", "")
 # 自动查找可用的 GGUF 模型
 if not LLAMA_RUN_MODEL:
     for candidate in [
+        LINGKONG_HOME / "models/gemma-3n-E2B-it-Q4_K_M.gguf",
         REPO_ROOT / "artifacts/gguf/gemma-3n-finetuned-Q4_K_M.gguf",
         REPO_ROOT / "artifacts/gguf/gemma-3n-E2B-it-Q4_K_M.gguf",
         REPO_ROOT / "artifacts/gguf/gemma-3n-E2B-it-fp16.gguf",
@@ -476,13 +521,46 @@ def cleanup_old_sessions():
             del sessions[sid]
 
 def load_model():
+    """
+    加载 PyTorch 模型 (仅 MPS 模式需要)
+    mmproj 模式下跳过，使用 llama.cpp
+    """
     global model, processor, model_loaded, model_info, dummy_image
 
     if model_loaded:
         return True
 
+    # mmproj 模式不需要加载 PyTorch 模型
+    if DEFAULT_BACKEND == "mmproj":
+        print("=" * 60)
+        print("使用 llama.cpp 多模态后端 (mmproj)")
+        print("跳过 PyTorch 模型加载")
+        print("=" * 60)
+        model_info = {
+            "name": "Gemma 3N (llama.cpp)",
+            "params": "2B",
+            "dtype": "Q4_K_M",
+            "device": "GPU (Metal)",
+            "load_time": 0,
+            "memory_gb": 0,
+            "capabilities": ["文本对话", "图像理解", "音频转录", "多轮对话"],
+            "max_tokens": 8192,
+            "backend": "llama.cpp mmproj"
+        }
+        model_loaded = True
+        return True
+
+    # MPS 模式需要 PyTorch
+    if not PYTORCH_AVAILABLE:
+        print("=" * 60)
+        print("错误: MPS 模式需要安装 PyTorch")
+        print("请运行: pip install torch transformers librosa")
+        print("或切换到 mmproj 模式: export GEMMA3N_BACKEND=mmproj")
+        print("=" * 60)
+        return False
+
     print("=" * 60)
-    print("加载 AI 多模态模型...")
+    print("加载 AI 多模态模型 (PyTorch MPS)...")
     print("=" * 60)
 
     model_name = "google/gemma-3n-E2B-it"
@@ -601,13 +679,28 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
 
     Args:
         prompt: 用户输入的文本
-        image_path: 图片路径
-        audio_path: 音频路径
+        image_path: 图片路径 (单个字符串或路径列表)
+        audio_path: 音频路径 (单个字符串或路径列表)
         messages_history: 历史消息列表 [{"role": "user/assistant", "text": "..."}]
         session_id: 会话ID (用于 thought signature)
         has_media: 当前消息是否包含媒体
     """
     global llama_mmproj_server_ready
+
+    # 标准化路径为列表
+    image_paths = []
+    if image_path:
+        if isinstance(image_path, str):
+            image_paths = [image_path]
+        else:
+            image_paths = list(image_path)
+
+    audio_paths = []
+    if audio_path:
+        if isinstance(audio_path, str):
+            audio_paths = [audio_path]
+        else:
+            audio_paths = list(audio_path)
 
     # 构建包含上下文的完整 prompt
     full_prompt = _build_mmproj_prompt(
@@ -615,14 +708,15 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
     )
 
     # 音频暂不支持 server 模式，回退到 CLI
-    if audio_path:
-        return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
+    # 多图片也使用 CLI (llama-server 单次请求只支持一张图)
+    if audio_paths or len(image_paths) > 1:
+        return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
-    # 尝试使用 server 模式
+    # 尝试使用 server 模式 (单图片情况)
     if not llama_mmproj_server_ready:
         if not start_llama_mmproj_server():
             print("[mmproj] Server 启动失败，回退到 CLI 模式")
-            return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
+            return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
     start = time.time()
     try:
@@ -630,9 +724,9 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
 
         # 构建消息内容
         content = []
-        if image_path:
-            # 将图片转为 base64
-            with open(image_path, "rb") as f:
+        if image_paths:
+            # 将图片转为 base64 (server 模式只处理第一张)
+            with open(image_paths[0], "rb") as f:
                 img_b64 = base64.b64encode(f.read()).decode("utf-8")
             content.append({
                 "type": "image_url",
@@ -656,7 +750,7 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
         if resp.status_code != 200:
             # 服务器可能出错，回退到 CLI
             llama_mmproj_server_ready = False
-            return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
+            return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
         data = resp.json()
         response = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -679,7 +773,7 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
         # 服务器可能挂了，标记为不可用并回退到 CLI
         print(f"[mmproj] Server 请求失败: {e}，回退到 CLI 模式")
         llama_mmproj_server_ready = False
-        return run_llama_mmproj_cli(full_prompt, image_path, audio_path)
+        return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
 
 def _build_mmproj_prompt(prompt, messages_history=None, session_id=None, has_media=False):
@@ -728,18 +822,80 @@ Please respond to the current message, taking into account the context above."""
         return prompt
 
 
-def run_llama_mmproj_cli(prompt, image_path=None, audio_path=None):
-    """使用 llama-mtmd-cli 生成回复 (回退模式)"""
+def run_llama_mmproj_cli(prompt, image_paths=None, audio_paths=None):
+    """
+    使用 llama-mtmd-cli 生成回复 (支持多图片/多音频)
+
+    注意: llama.cpp 目前不支持同时加载视觉和音频 projector (Metal bug)
+    解决方案: 分两次调用，先处理图片，再处理音频
+
+    Args:
+        prompt: 用户输入的文本
+        image_paths: 图片路径列表
+        audio_paths: 音频路径列表
+    """
     if not Path(LLAMA_MTMD_BIN).exists():
         return {"error": f"llama-mtmd-cli 不存在: {LLAMA_MTMD_BIN}"}
     if not Path(LLAMA_MM_MODEL).exists():
         return {"error": f"模型文件不存在: {LLAMA_MM_MODEL}"}
 
+    # 标准化为列表
+    if image_paths is None:
+        image_paths = []
+    elif isinstance(image_paths, str):
+        image_paths = [image_paths]
+
+    if audio_paths is None:
+        audio_paths = []
+    elif isinstance(audio_paths, str):
+        audio_paths = [audio_paths]
+
+    print(f"[DEBUG] mmproj CLI: {len(image_paths)} 张图片, {len(audio_paths)} 个音频")
+
+    # llama.cpp 不支持同时加载视觉和音频 projector (Metal bug)
+    # 解决方案: 分两次处理
+    if image_paths and audio_paths:
+        print("[DEBUG] 同时有图片和音频，分两次处理...")
+
+        # 第一次: 处理图片
+        image_result = _run_mmproj_single(prompt + " (Focus on describing the images)", image_paths, None)
+        if "error" in image_result:
+            return image_result
+
+        # 第二次: 处理音频
+        audio_result = _run_mmproj_single("Transcribe the audio content", None, audio_paths)
+        if "error" in audio_result:
+            return audio_result
+
+        # 合并结果
+        combined_response = f"**图像分析:**\n{image_result['response']}\n\n**音频转录:**\n{audio_result['response']}"
+        total_time = image_result['metrics']['total_time'] + audio_result['metrics']['total_time']
+
+        return {
+            "response": combined_response,
+            "metrics": {
+                "total_time": round(total_time, 2),
+                "speed": round((image_result['metrics'].get('speed', 0) + audio_result['metrics'].get('speed', 0)) / 2, 1),
+                "backend": "mmproj-cli (split)",
+                "images": len(image_paths),
+                "audios": len(audio_paths)
+            }
+        }
+    else:
+        # 只有图片或只有音频，直接处理
+        return _run_mmproj_single(prompt, image_paths, audio_paths)
+
+
+def _run_mmproj_single(prompt, image_paths=None, audio_paths=None):
+    """单次 mmproj CLI 调用 (只处理图片或只处理音频)"""
+    image_paths = image_paths or []
+    audio_paths = audio_paths or []
+
     # 根据输入类型动态选择 mmproj
     mmproj_list = []
-    if image_path and LLAMA_MM_PROJ_IMAGE and Path(LLAMA_MM_PROJ_IMAGE).exists():
+    if image_paths and LLAMA_MM_PROJ_IMAGE and Path(LLAMA_MM_PROJ_IMAGE).exists():
         mmproj_list.append(LLAMA_MM_PROJ_IMAGE)
-    if audio_path and LLAMA_MM_PROJ_AUDIO and Path(LLAMA_MM_PROJ_AUDIO).exists():
+    if audio_paths and LLAMA_MM_PROJ_AUDIO and Path(LLAMA_MM_PROJ_AUDIO).exists():
         mmproj_list.append(LLAMA_MM_PROJ_AUDIO)
 
     if not mmproj_list:
@@ -764,10 +920,10 @@ def run_llama_mmproj_cli(prompt, image_path=None, audio_path=None):
         "-n", str(LLAMA_MM_N_PREDICT),
         "--temp", "0.7",
     ]
-    if image_path:
-        cmd += ["--image", image_path if isinstance(image_path, str) else ",".join(image_path)]
-    if audio_path:
-        cmd += ["--audio", audio_path if isinstance(audio_path, str) else ",".join(audio_path)]
+    if image_paths:
+        cmd += ["--image", ",".join(image_paths)]
+    if audio_paths:
+        cmd += ["--audio", ",".join(audio_paths)]
 
     start = time.time()
     try:
@@ -791,7 +947,9 @@ def run_llama_mmproj_cli(prompt, image_path=None, audio_path=None):
             "metrics": {
                 "total_time": round(elapsed, 2),
                 "speed": round(speed, 1),
-                "backend": "mmproj-cli"
+                "backend": "mmproj-cli",
+                "images": len(image_paths),
+                "audios": len(audio_paths)
             }
         }
     except subprocess.TimeoutExpired:
@@ -1328,13 +1486,30 @@ def chat():
     try:
         data = request.json
         text = data.get("text", "")
-        image_data = data.get("image")
-        audio_data = data.get("audio")
+        # 支持单个或多个图片/音频 (兼容旧API)
+        image_data = data.get("image")  # 单个图片 (向后兼容)
+        images_data = data.get("images", [])  # 多个图片 (新API)
+        audio_data = data.get("audio")  # 单个音频 (向后兼容)
+        audios_data = data.get("audios", [])  # 多个音频 (新API)
         session_id = data.get("session_id")
         backend = data.get("backend") or DEFAULT_BACKEND
 
+        # 合并单个和多个文件
+        if image_data and image_data not in images_data:
+            images_data = [image_data] + images_data
+        if audio_data and audio_data not in audios_data:
+            audios_data = [audio_data] + audios_data
+
+        # 限制最多14张图片，10个音频 (与MPS模式保持一致)
+        MAX_IMAGES = 14
+        MAX_AUDIOS = 10
+        if len(images_data) > MAX_IMAGES:
+            return jsonify({"error": f"最多支持 {MAX_IMAGES} 张图片，当前 {len(images_data)} 张"}), 400
+        if len(audios_data) > MAX_AUDIOS:
+            return jsonify({"error": f"最多支持 {MAX_AUDIOS} 个音频，当前 {len(audios_data)} 个"}), 400
+
         import sys
-        print(f"[DEBUG /api/chat] backend={backend}, has_image={bool(image_data)}, has_audio={bool(audio_data)}, text={repr(text[:50] if text else '')}", flush=True)
+        print(f"[DEBUG /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, text={repr(text[:50] if text else '')}", flush=True)
         sys.stdout.flush()
 
         # 获取或创建会话
@@ -1354,28 +1529,30 @@ def chat():
                 sessions[session_id] = {"messages": [], "created_at": time.time(), "title": "新对话"}
 
         session = sessions[session_id]
-        image = None
-        audio = None
-        audio_path = None
-        image_path = None
+        images = []  # PIL Image 对象列表 (MPS模式用)
+        audios = []  # (audio_array, sr) 元组列表 (MPS模式用)
+        image_paths = []  # 图片路径列表 (mmproj模式用)
+        audio_paths = []  # 音频路径列表 (mmproj模式用)
 
-        # 处理图片
-        if image_data:
-            if "," in image_data:
-                image_data = image_data.split(",")[1]
-            image_bytes = base64.b64decode(image_data)
-            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        # 处理多个图片
+        for idx, img_data in enumerate(images_data):
+            if "," in img_data:
+                img_data = img_data.split(",")[1]
+            image_bytes = base64.b64decode(img_data)
+            img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            images.append(img)
             # 保存临时图片供 mmproj 使用
-            image_path = f"/tmp/image_{session_id}.png"
-            image.save(image_path)
+            img_path = f"/tmp/image_{session_id}_{idx}.png"
+            img.save(img_path)
+            image_paths.append(img_path)
 
-        # 处理音频
-        if audio_data:
+        # 处理多个音频
+        for idx, aud_data in enumerate(audios_data):
             mime_part = ""
-            if "," in audio_data:
-                mime_part = audio_data.split(",")[0]
-                audio_data = audio_data.split(",")[1]
-            audio_bytes = base64.b64decode(audio_data)
+            if "," in aud_data:
+                mime_part = aud_data.split(",")[0]
+                aud_data = aud_data.split(",")[1]
+            audio_bytes = base64.b64decode(aud_data)
 
             if "wav" in mime_part:
                 ext = ".wav"
@@ -1390,14 +1567,20 @@ def chat():
             else:
                 ext = ".wav"
 
-            temp_path = f"/tmp/audio_{session_id}{ext}"
+            temp_path = f"/tmp/audio_{session_id}_{idx}{ext}"
             with open(temp_path, "wb") as f:
                 f.write(audio_bytes)
 
             audio_array, sr = librosa.load(temp_path, sr=16000)
-            audio = (audio_array, sr)
-            audio_path = temp_path
-            print(f"[DEBUG] 音频: {len(audio_array)/sr:.2f}秒")
+            audios.append((audio_array, sr))
+            audio_paths.append(temp_path)
+            print(f"[DEBUG] 音频 {idx}: {len(audio_array)/sr:.2f}秒")
+
+        # 向后兼容: 单个变量
+        image = images[0] if images else None
+        audio = audios[0] if audios else None
+        image_path = image_paths[0] if image_paths else None
+        audio_path = audio_paths[0] if audio_paths else None
 
         # 构建当前消息内容
         content = []
@@ -1405,6 +1588,13 @@ def chat():
         display_text = text
 
         if backend == "mps":
+            # MPS 模式需要 PyTorch
+            if not PYTORCH_AVAILABLE:
+                return jsonify({
+                    "error": "MPS 后端需要安装 PyTorch (进阶功能)",
+                    "hint": "请使用 mmproj 后端，或安装: pip install torch transformers librosa"
+                }), 400
+
             if not has_media:
                 # 纯文本消息：添加 dummy_image
                 content.append({"type": "image", "image": dummy_image})
@@ -1466,12 +1656,15 @@ def chat():
             # llama.cpp/mmproj 模式
             # 传入历史消息和 session_id，支持多轮对话和 thought signature
             mm_prompt = text or "Please describe what you see/hear."
-            print(f"[DEBUG mmproj] backend={backend}, text={repr(text)}, image_path={image_path}, audio_path={audio_path}")
+            # 使用多文件路径 (如有)，否则回退到单文件
+            mm_image_paths = image_paths if image_paths else None
+            mm_audio_paths = audio_paths if audio_paths else None
+            print(f"[DEBUG mmproj] backend={backend}, text={repr(text)}, images={len(image_paths)}, audios={len(audio_paths)}")
 
             result = run_llama_mmproj(
                 mm_prompt,
-                image_path=image_path,
-                audio_path=audio_path,
+                image_path=mm_image_paths,  # 支持单个路径或路径列表
+                audio_path=mm_audio_paths,  # 支持单个路径或路径列表
                 messages_history=session["messages"],
                 session_id=session_id,
                 has_media=has_media
@@ -1494,16 +1687,18 @@ def chat():
 
             # 保存到历史（只保存文本摘要）
             user_summary = display_text
-            if image is not None:
-                user_summary = "[图片] " + user_summary
-            if audio is not None:
-                user_summary = "[音频] " + user_summary
+            if len(images) > 0:
+                user_summary = f"[{len(images)}张图片] " + user_summary
+            if len(audios) > 0:
+                user_summary = f"[{len(audios)}个音频] " + user_summary
 
             session["messages"].append({
                 "role": "user",
                 "text": user_summary,
-                "has_image": image is not None,
-                "has_audio": audio is not None,
+                "has_image": len(images) > 0,
+                "has_audio": len(audios) > 0,
+                "image_count": len(images),
+                "audio_count": len(audios),
                 "timestamp": time.time()
             })
             session["messages"].append({
@@ -1538,18 +1733,27 @@ def chat():
 if __name__ == "__main__":
     init_storage()
 
-    # macOS: 请求 sudo 权限用于硬件监控
-    if platform.system() == "Darwin":
+    # macOS: 请求 sudo 权限用于硬件监控 (可选)
+    if platform.system() == "Darwin" and DEFAULT_BACKEND == "mps":
         request_sudo_permission()
 
     load_model()
     print("\n" + "=" * 60)
-    print("AI 多模态聊天服务器启动: http://localhost:5000")
-    print(f"会话存储: {GEMMA3N_HOME}")
-    print("支持多轮对话历史记忆")
-    if sudo_authorized:
-        print("GPU 温度监控: ✅ 已启用")
-    else:
-        print("GPU 温度监控: ❌ 未启用 (可重启服务并授权)")
+    print("🐉 灵空 AI 多模态聊天服务器")
     print("=" * 60)
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    print(f"  地址: http://localhost:5000")
+    print(f"  后端: {DEFAULT_BACKEND}")
+    if DEFAULT_BACKEND == "mmproj":
+        print(f"  模型: {LLAMA_MM_MODEL}")
+        print(f"  视觉: {LLAMA_MM_PROJ_IMAGE}")
+        print(f"  音频: {LLAMA_MM_PROJ_AUDIO}")
+    print(f"  存储: {GEMMA3N_HOME}")
+    print("")
+    if DEFAULT_BACKEND == "mmproj":
+        print("  提示: 使用 llama.cpp 多模态后端，无需 PyTorch")
+        print("  进阶: export GEMMA3N_BACKEND=mps (需要 PyTorch)")
+    if sudo_authorized:
+        print("  GPU 温度监控: ✅ 已启用")
+    print("=" * 60)
+    port = int(os.environ.get("WEBUI_PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

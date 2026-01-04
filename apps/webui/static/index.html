@@ -1,10 +1,30 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 多模态聊天</title>
+    <title>LingKong AI - E2E Encrypted Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-tertiary: #18181b;
+            --bg-card: #1a1a1d;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #6366f1;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --border-color: rgba(255,255,255,0.08);
+            --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,10 +32,12 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            color: #e2e8f0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
         }
 
         .layout {
@@ -23,204 +45,269 @@
             height: 100vh;
         }
 
-        /* 侧边栏 */
+        /* Sidebar */
         .sidebar {
-            width: 300px;
-            background: rgba(0,0,0,0.3);
-            border-right: 1px solid rgba(255,255,255,0.1);
+            width: 320px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
         .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .sidebar-header h2 {
-            font-size: 18px;
-            color: #9f7aea;
-            margin-bottom: 15px;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-purple);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
         }
 
         .new-chat-btn {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+            padding: 0.875rem 1rem;
+            background: var(--gradient-purple);
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             color: white;
-            font-size: 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
         }
 
         .new-chat-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(159, 122, 234, 0.4);
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
         }
 
         .chat-history {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 1rem;
         }
 
-        .chat-history-title {
-            font-size: 12px;
-            color: #718096;
-            margin-bottom: 10px;
+        .history-section-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .history-item {
-            padding: 12px;
-            background: rgba(255,255,255,0.05);
+            padding: 0.875rem 1rem;
+            background: transparent;
             border-radius: 10px;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
             border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .history-item:hover {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
         }
 
         .history-item.active {
-            background: rgba(159, 122, 234, 0.2);
-            border-color: rgba(159, 122, 234, 0.5);
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
         }
 
         .history-item .title {
-            font-size: 14px;
-            color: #e2e8f0;
-            margin-bottom: 4px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .history-item .meta {
-            font-size: 11px;
-            color: #718096;
-            display: flex;
-            justify-content: space-between;
+            flex: 1;
         }
 
         .history-item .delete-btn {
             opacity: 0;
             background: none;
             border: none;
-            color: #e53e3e;
+            color: var(--accent-red);
             cursor: pointer;
-            padding: 2px 6px;
-            border-radius: 4px;
-            transition: opacity 0.2s;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
         }
 
         .history-item:hover .delete-btn {
-            opacity: 1;
+            opacity: 0.7;
         }
 
         .history-item .delete-btn:hover {
-            background: rgba(229, 62, 62, 0.2);
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.15);
         }
 
         .sidebar-footer {
-            padding: 15px;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
         }
 
-        .info-card {
-            background: rgba(255,255,255,0.05);
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
             border-radius: 10px;
-            padding: 12px;
+            padding: 0.75rem;
         }
 
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            font-size: 12px;
+        .stat-card .label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .info-item .label {
-            color: #718096;
+        .stat-card .value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-green);
+            margin-top: 2px;
         }
 
-        .info-item .value {
-            color: #68d391;
-            font-weight: 500;
-        }
-
-        /* 主聊天区域 */
+        /* Main Area */
         .main {
             flex: 1;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        .header {
-            background: rgba(0,0,0,0.3);
-            padding: 15px 25px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+        .main-header {
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
-        .header h1 {
-            font-size: 20px;
+        .header-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 1rem;
         }
 
-        .header-actions {
+        .header-left h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .encryption-badge {
             display: flex;
-            gap: 10px;
             align-items: center;
+            gap: 6px;
+            padding: 0.4rem 0.75rem;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--accent-green);
+        }
+
+        .encryption-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .backend-select {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
         }
 
         .clear-btn {
-            padding: 8px 16px;
-            background: rgba(229, 62, 62, 0.2);
-            border: 1px solid rgba(229, 62, 62, 0.5);
+            padding: 0.5rem 1rem;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
             border-radius: 8px;
-            color: #fc8181;
-            font-size: 13px;
+            color: var(--accent-red);
+            font-size: 0.85rem;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
         .clear-btn:hover {
-            background: rgba(229, 62, 62, 0.3);
+            background: rgba(239, 68, 68, 0.25);
         }
 
         .status-badge {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-        }
-
-        .status-badge.loading {
-            background: rgba(237, 137, 54, 0.2);
-            color: #ed8936;
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
         }
 
         .status-badge.ready {
-            background: rgba(72, 187, 120, 0.2);
-            color: #48bb78;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+
+        .status-badge.loading {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
         }
 
         .status-dot {
@@ -234,64 +321,66 @@
             animation: pulse 1s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
+        /* Chat Container */
         .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 25px;
+            padding: 2rem;
         }
 
         .welcome-card {
-            background: linear-gradient(135deg, rgba(159, 122, 234, 0.2) 0%, rgba(102, 126, 234, 0.2) 100%);
-            border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(159, 122, 234, 0.3);
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
         }
 
         .welcome-card h2 {
-            font-size: 22px;
-            margin-bottom: 15px;
-            color: #fff;
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
         }
 
         .welcome-card p {
-            color: #a0aec0;
-            line-height: 1.6;
-            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
         }
 
-        .feature-list {
+        .feature-pills {
             display: flex;
-            gap: 15px;
+            gap: 1rem;
+            justify-content: center;
             flex-wrap: wrap;
         }
 
-        .feature-item {
-            background: rgba(0,0,0,0.2);
-            padding: 12px 18px;
-            border-radius: 10px;
+        .feature-pill {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 0.9rem;
         }
 
-        .feature-item .icon {
-            font-size: 24px;
+        .feature-pill .icon {
+            font-size: 1.1rem;
         }
 
-        .feature-item .text {
-            font-size: 14px;
-        }
-
+        /* Messages */
         .message {
-            margin-bottom: 20px;
             display: flex;
-            gap: 12px;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .message.user {
@@ -305,240 +394,284 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 1.1rem;
             flex-shrink: 0;
         }
 
         .message.user .avatar {
-            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            background: var(--accent-blue);
         }
 
         .message.assistant .avatar {
-            background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+            background: var(--gradient-purple);
         }
 
         .bubble {
-            max-width: 70%;
-            padding: 15px 20px;
+            max-width: 75%;
+            padding: 1rem 1.25rem;
             border-radius: 16px;
-            line-height: 1.6;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            white-space: pre-wrap;
+            line-height: 1.7;
         }
 
         .message.user .bubble {
-            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            background: var(--accent-blue);
             color: white;
-            border-bottom-right-radius: 5px;
+            border-bottom-right-radius: 4px;
         }
 
         .message.assistant .bubble {
-            background: rgba(255,255,255,0.1);
-            color: #e2e8f0;
-            border-bottom-left-radius: 5px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
         }
 
         .bubble .attachments {
-            margin-bottom: 10px;
+            margin-bottom: 0.75rem;
         }
 
-        .bubble .attachments img {
-            max-width: 250px;
+        .bubble .attachments .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .bubble .attachments .images-grid.single {
+            grid-template-columns: 1fr;
+        }
+
+        .bubble .attachments .images-grid img {
+            width: 100%;
             max-height: 180px;
-            border-radius: 10px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .bubble .attachments .images-grid img:hover {
+            transform: scale(1.02);
+        }
+
+        .bubble .attachments .audios-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .bubble .attachments .audio-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
             background: rgba(0,0,0,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            display: inline-block;
+            border-radius: 100px;
+            font-size: 0.85rem;
         }
 
         .bubble .metrics {
-            margin-top: 12px;
-            padding-top: 12px;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
             border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            font-size: 12px;
-            color: #718096;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         .bubble .metrics .metric {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
         }
 
-        .bubble .metrics .metric .value {
-            color: #68d391;
+        .bubble .metrics .value {
+            color: var(--accent-green);
             font-weight: 600;
         }
 
-        .typing {
+        .typing-indicator {
             display: flex;
-            gap: 5px;
-            padding: 10px;
+            gap: 4px;
+            padding: 1rem;
         }
 
-        .typing span {
+        .typing-indicator span {
             width: 8px;
             height: 8px;
-            background: #9f7aea;
+            background: var(--accent-primary);
             border-radius: 50%;
             animation: typing 1s infinite;
         }
 
-        .typing span:nth-child(2) { animation-delay: 0.2s; }
-        .typing span:nth-child(3) { animation-delay: 0.4s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
 
         @keyframes typing {
             0%, 100% { transform: translateY(0); opacity: 0.5; }
-            50% { transform: translateY(-5px); opacity: 1; }
+            50% { transform: translateY(-6px); opacity: 1; }
         }
 
-        /* 输入区域 */
+        /* Input Area */
         .input-area {
-            padding: 20px 25px;
-            background: rgba(0,0,0,0.3);
-            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
         }
 
-        .context-indicator {
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .context-bar {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            font-size: 12px;
-            color: #718096;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
         }
 
-        .context-indicator .count {
-            background: rgba(159, 122, 234, 0.2);
-            color: #9f7aea;
-            padding: 2px 8px;
-            border-radius: 10px;
+        .context-bar .turn-count {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.25rem 0.75rem;
+            background: rgba(139, 92, 246, 0.15);
+            border-radius: 100px;
+            color: var(--accent-primary);
         }
 
         .attachments-preview {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
         .attachment-item {
             position: relative;
-            background: rgba(255,255,255,0.1);
+            background: var(--bg-tertiary);
             border-radius: 10px;
-            padding: 10px;
+            padding: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 0.75rem;
         }
 
         .attachment-item img {
-            max-width: 80px;
-            max-height: 60px;
-            border-radius: 5px;
+            max-width: 100px;
+            max-height: 80px;
+            border-radius: 6px;
         }
 
         .attachment-item .remove {
             position: absolute;
             top: -8px;
             right: -8px;
-            width: 22px;
-            height: 22px;
-            background: #e53e3e;
+            width: 24px;
+            height: 24px;
+            background: var(--accent-red);
             color: white;
             border: none;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .input-row {
             display: flex;
-            gap: 10px;
+            gap: 0.75rem;
             align-items: center;
         }
 
         .input-buttons {
             display: flex;
-            gap: 5px;
+            gap: 0.5rem;
         }
 
         .input-buttons button {
-            width: 45px;
-            height: 45px;
+            width: 48px;
+            height: 48px;
             border: none;
             border-radius: 12px;
-            background: rgba(255,255,255,0.1);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
             cursor: pointer;
-            font-size: 18px;
+            font-size: 1.25rem;
             transition: all 0.2s;
-            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .input-buttons button:hover {
-            background: rgba(255,255,255,0.2);
-            transform: scale(1.05);
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
 
         .input-buttons button.recording {
-            background: #e53e3e;
+            background: var(--accent-red);
+            color: white;
             animation: pulse 1s infinite;
         }
 
         #textInput {
             flex: 1;
-            padding: 12px 20px;
-            border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 25px;
-            font-size: 15px;
+            padding: 0.875rem 1.25rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
             outline: none;
             transition: border-color 0.2s;
-            background: rgba(255,255,255,0.05);
-            color: #e2e8f0;
         }
 
         #textInput:focus {
-            border-color: #9f7aea;
+            border-color: var(--accent-primary);
         }
 
         #textInput::placeholder {
-            color: #718096;
+            color: var(--text-muted);
         }
 
         #sendBtn {
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             border: none;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+            border-radius: 12px;
+            background: var(--gradient-purple);
             color: white;
             cursor: pointer;
-            font-size: 18px;
-            transition: transform 0.2s;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #sendBtn:hover {
             transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
         }
 
         #sendBtn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .hidden { display: none !important; }
         #fileInput { display: none; }
 
-        /* 响应式 */
+        /* Responsive */
         @media (max-width: 900px) {
             .sidebar { display: none; }
         }
@@ -548,139 +681,128 @@
     <div class="layout">
         <div class="sidebar">
             <div class="sidebar-header">
-                <h2>💬 对话历史</h2>
+                <a href="/" class="logo">
+                    <div class="logo-icon">LK</div>
+                    <span class="logo-text">LingKong</span>
+                </a>
                 <button class="new-chat-btn" onclick="newChat()">
-                    <span>+</span> 新建对话
+                    <span>+</span> New Chat
                 </button>
             </div>
 
             <div class="chat-history" id="chatHistory">
-                <div class="chat-history-title">最近对话</div>
-                <!-- 动态生成历史列表 -->
+                <div class="history-section-title">Recent Chats</div>
             </div>
 
             <div class="sidebar-footer">
-                <div class="info-card">
-                    <div class="info-item">
-                        <span class="label">GPU 使用率</span>
-                        <span class="value" id="gpuUsage">-</span>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">GPU Usage</div>
+                        <div class="value" id="gpuUsage">-</div>
                     </div>
-                    <div class="info-item">
-                        <span class="label">显存占用</span>
-                        <span class="value" id="vramUsage">-</span>
+                    <div class="stat-card">
+                        <div class="label">VRAM</div>
+                        <div class="value" id="vramUsage">-</div>
                     </div>
-                    <div class="info-item">
-                        <span class="label">GPU 温度</span>
-                        <span class="value" id="gpuTemp">-</span>
+                    <div class="stat-card">
+                        <div class="label">Requests</div>
+                        <div class="value" id="totalRequests">0</div>
                     </div>
-                    <div class="info-item">
-                        <span class="label">内存占用</span>
-                        <span class="value" id="memoryUsage">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">CPU 使用率</span>
-                        <span class="value" id="cpuUsage">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">请求数</span>
-                        <span class="value" id="totalRequests">0</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">平均速度</span>
-                        <span class="value" id="avgSpeed">0 t/s</span>
+                    <div class="stat-card">
+                        <div class="label">Avg Speed</div>
+                        <div class="value" id="avgSpeed">0 t/s</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="main">
-            <div class="header">
-                <h1>🤖 AI 多模态聊天</h1>
-                <div class="header-actions" style="gap:12px;">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <label for="backendSelect" style="font-size:12px;color:#cbd5e0;">后端</label>
-                        <select id="backendSelect" style="padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:#e2e8f0;">
-                            <option value="llama.cpp">llama.cpp (快速)</option>
-                            <option value="mps">MPS (Transformers)</option>
-                            <option value="mmproj">llama.cpp mmproj</option>
-                        </select>
-                        <div id="backendHint" style="font-size:12px;color:#cbd5e0;margin-left:8px;">llama.cpp：快速纯文本推理</div>
+            <div class="main-header">
+                <div class="header-left">
+                    <h1>LingKong AI</h1>
+                    <div class="encryption-badge">
+                        <span class="dot"></span>
+                        <span>E2E Encrypted</span>
                     </div>
-                    <button class="clear-btn" onclick="clearCurrentChat()">🗑️ 清空对话</button>
+                </div>
+                <div class="header-right">
+                    <select id="backendSelect" class="backend-select">
+                        <option value="llama.cpp">llama.cpp (Fast)</option>
+                        <option value="mps">MPS (Transformers)</option>
+                        <option value="mmproj">mmproj (Multimodal)</option>
+                    </select>
+                    <button class="clear-btn" onclick="clearCurrentChat()">Clear Chat</button>
                     <div class="status-badge loading" id="statusBadge">
                         <div class="status-dot"></div>
-                        <span id="statusText">正在加载...</span>
+                        <span id="statusText">Loading...</span>
                     </div>
                 </div>
             </div>
 
             <div class="chat-container" id="chatContainer">
                 <div class="welcome-card" id="welcomeCard">
-                    <h2>👋 欢迎使用 AI 助手</h2>
-                    <p>🔒 <strong>完全离线运行</strong> - 无需联网，所有数据本地处理，保护您的隐私安全。</p>
-                    <p>支持多轮对话记忆、文本、图像和音频输入。</p>
-                    <div class="feature-list">
-                        <div class="feature-item">
-                            <span class="icon">🔐</span>
-                            <span class="text">隐私保护</span>
+                    <div class="welcome-icon">&#128274;</div>
+                    <h2>Private AI Assistant</h2>
+                    <p>Your conversations are end-to-end encrypted. All data is processed locally, never uploaded to the cloud.</p>
+                    <div class="feature-pills">
+                        <div class="feature-pill">
+                            <span class="icon">&#128274;</span>
+                            <span>E2E Encrypted</span>
                         </div>
-                        <div class="feature-item">
-                            <span class="icon">📡</span>
-                            <span class="text">离线可用</span>
+                        <div class="feature-pill">
+                            <span class="icon">&#128247;</span>
+                            <span>Image Analysis</span>
                         </div>
-                        <div class="feature-item">
-                            <span class="icon">💬</span>
-                            <span class="text">多轮对话</span>
+                        <div class="feature-pill">
+                            <span class="icon">&#127908;</span>
+                            <span>Voice Input</span>
                         </div>
-                        <div class="feature-item">
-                            <span class="icon">📷</span>
-                            <span class="text">图像理解</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="icon">🎤</span>
-                            <span class="text">语音识别</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="icon">🧠</span>
-                            <span class="text">上下文记忆</span>
+                        <div class="feature-pill">
+                            <span class="icon">&#127760;</span>
+                            <span>Works Offline</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="input-area">
-                <div class="context-indicator" id="contextIndicator">
-                    <span>📝 当前对话:</span>
-                    <span class="count" id="turnCount">0 轮</span>
-                </div>
-                <div class="attachments-preview" id="attachmentsPreview"></div>
-                <div class="input-row">
-                    <div class="input-buttons">
-                        <button id="fileBtn" title="上传文件 (图片/音频)">📎</button>
-                        <button id="audioBtn" title="录制语音">🎤</button>
+                <div class="input-container">
+                    <div class="context-bar">
+                        <span>Current Session:</span>
+                        <span class="turn-count" id="turnCount">0 turns</span>
                     </div>
-                    <input type="text" id="textInput" placeholder="输入消息... (支持多轮对话)" />
-                    <button id="sendBtn">➤</button>
+                    <div class="attachments-preview" id="attachmentsPreview"></div>
+                    <div class="input-row">
+                        <div class="input-buttons">
+                            <button id="fileBtn" title="Upload Images">&#128247;</button>
+                            <button id="audioFileBtn" title="Upload Audio Files">&#127925;</button>
+                            <button id="audioBtn" title="Record Audio">&#127908;</button>
+                        </div>
+                        <input type="text" id="textInput" placeholder="Type a message... (supports multimodal input)" />
+                        <button id="sendBtn">&#10148;</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <input type="file" id="fileInput" accept="image/*,audio/*" />
+    <input type="file" id="fileInput" accept="image/*" multiple />
+    <input type="file" id="audioFileInput" accept="audio/*" multiple />
 
     <script>
-        // 状态
-        let currentImage = null;
-        let currentAudio = null;
+        // State - 支持多图片/多音频
+        let currentImages = [];  // 图片数组 (最多14张)
+        let currentAudios = [];  // 音频数组 (最多10个)
+        const MAX_IMAGES = 14;
+        const MAX_AUDIOS = 10;
         let isRecording = false;
         let audioContext = null;
         let mediaStream = null;
         let recordedSamples = [];
 
-        // 会话管理 (从服务器获取)
         let currentSessionId = null;
-        let sessionList = [];  // 服务器返回的会话列表
-        let currentMessages = [];  // 当前对话的消息
+        let sessionList = [];
+        let currentMessages = [];
         let backendInitialized = false;
         let statusData = null;
 
@@ -698,18 +820,14 @@
         const welcomeCard = document.getElementById('welcomeCard');
         const turnCountEl = document.getElementById('turnCount');
         const backendSelect = document.getElementById('backendSelect');
-        const backendHint = document.getElementById('backendHint');
 
-        // 初始化
         async function init() {
             await loadSessionList();
             await createNewSession();
-            updateBackendHint();
             updateStatus();
             setInterval(updateStatus, 5000);
         }
 
-        // 从服务器加载会话列表
         async function loadSessionList() {
             try {
                 const res = await fetch('/api/session/list');
@@ -717,39 +835,25 @@
                 sessionList = data.sessions || [];
                 renderChatHistory();
             } catch (e) {
-                console.error('加载会话列表失败:', e);
+                console.error('Failed to load sessions:', e);
             }
         }
 
         function renderChatHistory() {
-            const titleEl = chatHistoryEl.querySelector('.chat-history-title');
+            const titleEl = chatHistoryEl.querySelector('.history-section-title');
             chatHistoryEl.innerHTML = '';
             chatHistoryEl.appendChild(titleEl);
 
             sessionList.forEach((session) => {
                 const item = document.createElement('div');
                 item.className = 'history-item' + (session.session_id === currentSessionId ? ' active' : '');
-                const msgCount = session.message_count || 0;
                 item.innerHTML = `
                     <div class="title">${session.title || '新对话'}</div>
-                    <div class="meta">
-                        <span>${formatTime(session.updated_at)}</span>
-                        <button class="delete-btn" onclick="event.stopPropagation(); deleteChat('${session.session_id}')">🗑️</button>
-                    </div>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deleteChat('${session.session_id}')">&#128465;</button>
                 `;
                 item.onclick = () => loadChat(session.session_id);
                 chatHistoryEl.appendChild(item);
             });
-        }
-
-        function formatTime(ts) {
-            if (!ts) return '';
-            const d = new Date(ts * 1000);
-            const now = new Date();
-            if (d.toDateString() === now.toDateString()) {
-                return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-            }
-            return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
         }
 
         async function createNewSession() {
@@ -761,7 +865,7 @@
                 await loadSessionList();
                 renderMessages();
             } catch (e) {
-                console.error('创建会话失败:', e);
+                console.error('Failed to create session:', e);
             }
         }
 
@@ -773,17 +877,14 @@
             try {
                 const res = await fetch(`/api/session/${sessionId}/load`);
                 const data = await res.json();
-                if (data.error) {
-                    console.error('加载会话失败:', data.error);
-                    return;
-                }
+                if (data.error) return;
                 currentSessionId = sessionId;
                 currentMessages = data.messages || [];
                 renderMessages();
                 renderChatHistory();
                 updateTurnCount();
             } catch (e) {
-                console.error('加载会话失败:', e);
+                console.error('Failed to load session:', e);
             }
         }
 
@@ -791,19 +892,16 @@
             try {
                 await fetch(`/api/session/${sessionId}/delete`, { method: 'POST' });
                 await loadSessionList();
-
-                // 如果删除的是当前对话，创建新对话
                 if (sessionId === currentSessionId) {
                     await createNewSession();
                 }
             } catch (e) {
-                console.error('删除会话失败:', e);
+                console.error('Failed to delete session:', e);
             }
         }
 
         async function clearCurrentChat() {
             if (!currentSessionId) return;
-
             try {
                 await fetch(`/api/session/${currentSessionId}/clear`, { method: 'POST' });
                 currentMessages = [];
@@ -811,36 +909,15 @@
                 renderMessages();
                 updateTurnCount();
             } catch (e) {
-                console.error('清空对话失败:', e);
+                console.error('Failed to clear chat:', e);
             }
         }
 
         function updateTurnCount() {
             const turns = Math.floor(currentMessages.length / 2);
-            turnCountEl.textContent = `${turns} 轮`;
+            turnCountEl.textContent = `${turns} turns`;
         }
 
-        function updateBackendHint() {
-            const backend = backendSelect.value;
-            if (backend === 'llama.cpp') {
-                const ready = statusData ? statusData.llama_cpp_ready : true;
-                backendHint.textContent = ready
-                    ? 'llama.cpp：快速纯文本推理（持久化服务，首次启动需几秒）'
-                    : 'llama.cpp 文件缺失，请检查路径';
-                backendHint.style.color = ready ? '#68d391' : '#f6ad55';
-            } else if (backend === 'mmproj') {
-                const ready = statusData ? statusData.mmproj_ready : true;
-                backendHint.textContent = ready
-                    ? 'llama.cpp mmproj：支持文本/图片/音频，多模态集成；首次调用可能需要几秒加载模型'
-                    : 'llama.cpp mmproj 文件缺失，请检查路径后再切换';
-                backendHint.style.color = ready ? '#cbd5e0' : '#f6ad55';
-            } else {
-                backendHint.textContent = 'MPS 模式：支持纯文本、图片或音频（需加载模型，约 15 t/s）';
-                backendHint.style.color = '#cbd5e0';
-            }
-        }
-
-        // 更新状态
         async function updateStatus() {
             try {
                 const res = await fetch('/api/status');
@@ -851,50 +928,38 @@
                     backendSelect.value = data.default_backend;
                     backendInitialized = true;
                 }
-                updateBackendHint();
 
                 if (data.loaded) {
                     statusBadge.className = 'status-badge ready';
-                    statusText.textContent = '服务就绪';
+                    statusText.textContent = 'Ready';
 
-                    // 硬件监控
                     const hw = data.hardware || {};
                     document.getElementById('gpuUsage').textContent = hw.gpu_usage || '-';
                     document.getElementById('vramUsage').textContent = hw.vram_usage || '-';
-                    document.getElementById('gpuTemp').textContent = hw.gpu_temp || '-';
-                    document.getElementById('memoryUsage').textContent = hw.memory_usage || data.memory_gb + ' GB';
-                    document.getElementById('cpuUsage').textContent = hw.cpu_usage || '-';
-
-                    // 统计信息
                     document.getElementById('totalRequests').textContent = data.stats.total_requests;
                     document.getElementById('avgSpeed').textContent = data.stats.avg_speed.toFixed(1) + ' t/s';
                 } else {
                     statusBadge.className = 'status-badge loading';
-                    statusText.textContent = '正在加载...';
+                    statusText.textContent = 'Loading...';
                 }
             } catch (e) {
                 statusBadge.className = 'status-badge loading';
-                statusText.textContent = '连接失败';
+                statusText.textContent = 'Connecting...';
             }
         }
 
         function renderMessages() {
-            // 清空并重新渲染
             chatContainer.innerHTML = '';
-
             if (currentMessages.length === 0) {
                 chatContainer.appendChild(welcomeCard.cloneNode(true));
             }
-
             currentMessages.forEach(msg => {
                 addMessageToDOM(msg.role, msg.text, msg.attachments || {}, msg.metrics);
             });
-
             updateTurnCount();
         }
 
         function addMessageToDOM(role, content, attachments = {}, metrics = null) {
-            // 隐藏欢迎卡片
             const welcome = chatContainer.querySelector('.welcome-card');
             if (welcome) welcome.remove();
 
@@ -903,25 +968,63 @@
 
             const avatar = document.createElement('div');
             avatar.className = 'avatar';
-            avatar.textContent = role === 'user' ? '👤' : '🤖';
+            avatar.innerHTML = role === 'user' ? '&#128100;' : '&#129302;';
 
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
 
-            if (attachments.image || attachments.audio) {
+            // 支持多图片和多音频
+            const hasImages = attachments.images && attachments.images.length > 0;
+            const hasAudios = attachments.audios && attachments.audios.length > 0;
+            const hasSingleImage = attachments.image;
+            const hasSingleAudio = attachments.audio;
+
+            if (hasImages || hasAudios || hasSingleImage || hasSingleAudio) {
                 const attDiv = document.createElement('div');
                 attDiv.className = 'attachments';
-                if (attachments.image) {
+
+                // 多图片显示 (网格布局)
+                if (hasImages) {
+                    const imagesGrid = document.createElement('div');
+                    imagesGrid.className = 'images-grid' + (attachments.images.length === 1 ? ' single' : '');
+                    attachments.images.forEach((imgSrc, idx) => {
+                        const img = document.createElement('img');
+                        img.src = imgSrc;
+                        img.title = `图片 ${idx + 1}`;
+                        img.onclick = () => window.open(imgSrc, '_blank');
+                        imagesGrid.appendChild(img);
+                    });
+                    attDiv.appendChild(imagesGrid);
+                } else if (hasSingleImage) {
+                    // 向后兼容: 单图片
+                    const imagesGrid = document.createElement('div');
+                    imagesGrid.className = 'images-grid single';
                     const img = document.createElement('img');
                     img.src = attachments.image;
-                    attDiv.appendChild(img);
+                    img.onclick = () => window.open(attachments.image, '_blank');
+                    imagesGrid.appendChild(img);
+                    attDiv.appendChild(imagesGrid);
                 }
-                if (attachments.audio) {
+
+                // 多音频显示
+                if (hasAudios) {
+                    const audiosList = document.createElement('div');
+                    audiosList.className = 'audios-list';
+                    attachments.audios.forEach((_, idx) => {
+                        const audioDiv = document.createElement('div');
+                        audioDiv.className = 'audio-indicator';
+                        audioDiv.innerHTML = `&#127911; 音频 ${idx + 1}`;
+                        audiosList.appendChild(audioDiv);
+                    });
+                    attDiv.appendChild(audiosList);
+                } else if (hasSingleAudio) {
+                    // 向后兼容: 单音频
                     const audioDiv = document.createElement('div');
                     audioDiv.className = 'audio-indicator';
-                    audioDiv.textContent = '🎵 语音消息';
+                    audioDiv.innerHTML = '&#127911; Voice Message';
                     attDiv.appendChild(audioDiv);
                 }
+
                 bubble.appendChild(attDiv);
             }
 
@@ -932,12 +1035,19 @@
             if (metrics) {
                 const metricsDiv = document.createElement('div');
                 metricsDiv.className = 'metrics';
-                const speedDisplay = metrics.speed !== undefined ? metrics.speed : '-';
-                metricsDiv.innerHTML = `
-                    <div class="metric">⏱️ <span class="value">${metrics.total_time}s</span></div>
-                    <div class="metric">🚀 <span class="value">${speedDisplay} t/s</span></div>
-                    <div class="metric">🧭 <span class="value">${metrics.backend || 'mps'}</span></div>
+                let metricsHtml = `
+                    <div class="metric">&#9201; <span class="value">${metrics.total_time}s</span></div>
+                    <div class="metric">&#128640; <span class="value">${metrics.speed || '-'} t/s</span></div>
+                    <div class="metric">&#9881; <span class="value">${metrics.backend || 'mps'}</span></div>
                 `;
+                // 显示图片/音频数量
+                if (metrics.images) {
+                    metricsHtml += `<div class="metric">&#128247; <span class="value">${metrics.images}</span></div>`;
+                }
+                if (metrics.audios) {
+                    metricsHtml += `<div class="metric">&#127925; <span class="value">${metrics.audios}</span></div>`;
+                }
+                metricsDiv.innerHTML = metricsHtml;
                 bubble.appendChild(metricsDiv);
             }
 
@@ -952,9 +1062,9 @@
             div.className = 'message assistant';
             div.id = 'typingIndicator';
             div.innerHTML = `
-                <div class="avatar">🤖</div>
+                <div class="avatar">&#129302;</div>
                 <div class="bubble">
-                    <div class="typing"><span></span><span></span><span></span></div>
+                    <div class="typing-indicator"><span></span><span></span><span></span></div>
                 </div>
             `;
             chatContainer.appendChild(div);
@@ -966,60 +1076,72 @@
             if (typing) typing.remove();
         }
 
-        // 发送消息
         async function sendMessage() {
             const text = textInput.value.trim();
-            if (!text && !currentImage && !currentAudio) return;
+            if (!text && currentImages.length === 0 && currentAudios.length === 0) return;
 
-            const attachments = {};
-            if (currentImage) attachments.image = currentImage;
-            if (currentAudio) attachments.audio = true;
+            // 构建显示文本
+            let displayText = text || '(Multimodal Input)';
+            if (currentImages.length > 0) displayText = `[${currentImages.length}张图片] ` + displayText;
+            if (currentAudios.length > 0) displayText = `[${currentAudios.length}个音频] ` + displayText;
 
-            // 添加用户消息到 UI
+            // 保存完整的图片/音频数组用于显示
             const userMsg = {
                 role: 'user',
-                text: text || '(多模态输入)',
-                attachments: { ...attachments }
+                text: displayText,
+                attachments: {
+                    images: currentImages.length > 0 ? [...currentImages] : null,
+                    audios: currentAudios.length > 0 ? [...currentAudios] : null
+                }
             };
             currentMessages.push(userMsg);
-            addMessageToDOM('user', userMsg.text, attachments);
+            addMessageToDOM('user', displayText, userMsg.attachments);
 
-            const imageToSend = currentImage;
-            const audioToSend = currentAudio;
+            const imagesToSend = [...currentImages];
+            const audiosToSend = [...currentAudios];
             const backend = backendSelect.value;
             textInput.value = '';
-            currentImage = null;
-            currentAudio = null;
+            currentImages = [];
+            currentAudios = [];
             updateAttachmentsPreview();
 
             sendBtn.disabled = true;
             showTyping();
 
             try {
+                // 构建请求体 - 使用新的多文件 API
+                const requestBody = {
+                    text: text || 'Please describe what you see/hear.',
+                    session_id: currentSessionId,
+                    backend: backend
+                };
+
+                // 向后兼容: 单个文件使用旧字段
+                if (imagesToSend.length === 1) {
+                    requestBody.image = imagesToSend[0];
+                } else if (imagesToSend.length > 1) {
+                    requestBody.images = imagesToSend;
+                }
+
+                if (audiosToSend.length === 1) {
+                    requestBody.audio = audiosToSend[0];
+                } else if (audiosToSend.length > 1) {
+                    requestBody.audios = audiosToSend;
+                }
+
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: text || 'Please describe what you see/hear.',
-                        image: imageToSend,
-                        audio: audioToSend,
-                        session_id: currentSessionId,
-                        backend: backend
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const data = await res.json();
                 hideTyping();
 
                 if (data.error) {
-                    addMessageToDOM('assistant', `错误: ${data.error}`);
+                    addMessageToDOM('assistant', `Error: ${data.error}`);
                 } else {
-                    // 更新 session_id
-                    if (data.session_id) {
-                        currentSessionId = data.session_id;
-                    }
-
-                    // 添加助手消息
+                    if (data.session_id) currentSessionId = data.session_id;
                     const assistantMsg = {
                         role: 'assistant',
                         text: data.response,
@@ -1027,15 +1149,13 @@
                     };
                     currentMessages.push(assistantMsg);
                     addMessageToDOM('assistant', data.response, {}, data.metrics);
-
-                    // 刷新会话列表 (从服务器)
                     await loadSessionList();
                     updateTurnCount();
                     updateStatus();
                 }
             } catch (e) {
                 hideTyping();
-                addMessageToDOM('assistant', `请求失败: ${e.message}`);
+                addMessageToDOM('assistant', `Request failed: ${e.message}`);
             }
 
             sendBtn.disabled = false;
@@ -1044,54 +1164,91 @@
         function updateAttachmentsPreview() {
             attachmentsPreview.innerHTML = '';
 
-            if (currentImage) {
+            // 显示所有图片
+            currentImages.forEach((img, idx) => {
                 const item = document.createElement('div');
                 item.className = 'attachment-item';
                 item.innerHTML = `
-                    <img src="${currentImage}" />
-                    <button class="remove" onclick="currentImage=null;updateAttachmentsPreview()">×</button>
+                    <img src="${img}" />
+                    <button class="remove" onclick="removeImage(${idx})">&times;</button>
                 `;
                 attachmentsPreview.appendChild(item);
-            }
+            });
 
-            if (currentAudio) {
+            // 显示所有音频
+            currentAudios.forEach((audio, idx) => {
                 const item = document.createElement('div');
                 item.className = 'attachment-item';
                 item.innerHTML = `
-                    🎵 语音已录制
-                    <button class="remove" onclick="currentAudio=null;updateAttachmentsPreview()">×</button>
+                    &#127911; Audio ${idx + 1}
+                    <button class="remove" onclick="removeAudio(${idx})">&times;</button>
                 `;
                 attachmentsPreview.appendChild(item);
+            });
+
+            // 显示数量限制提示
+            if (currentImages.length > 0 || currentAudios.length > 0) {
+                const hint = document.createElement('div');
+                hint.style.cssText = 'font-size: 0.75rem; color: var(--text-muted); padding: 0.5rem;';
+                hint.textContent = `Images: ${currentImages.length}/${MAX_IMAGES} | Audio: ${currentAudios.length}/${MAX_AUDIOS}`;
+                attachmentsPreview.appendChild(hint);
             }
         }
 
-        // 文件上传（图片或音频）
+        function removeImage(idx) {
+            currentImages.splice(idx, 1);
+            updateAttachmentsPreview();
+        }
+
+        function removeAudio(idx) {
+            currentAudios.splice(idx, 1);
+            updateAttachmentsPreview();
+        }
+
         fileBtn.onclick = () => fileInput.click();
         fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const result = e.target.result;
-                    // 根据文件类型判断是图片还是音频
                     if (file.type.startsWith('image/')) {
-                        currentImage = result;
-                    } else if (file.type.startsWith('audio/')) {
-                        currentAudio = result;
+                        if (currentImages.length < MAX_IMAGES) {
+                            currentImages.push(e.target.result);
+                        } else {
+                            alert(`最多支持 ${MAX_IMAGES} 张图片`);
+                        }
                     }
                     updateAttachmentsPreview();
                 };
                 reader.readAsDataURL(file);
-            }
+            });
             fileInput.value = '';
         };
 
-        backendSelect.onchange = () => {
-            updateBackendHint();
-            updateAttachmentsPreview();
+        // 音频文件上传按钮
+        const audioFileBtn = document.getElementById('audioFileBtn');
+        const audioFileInput = document.getElementById('audioFileInput');
+        audioFileBtn.onclick = () => audioFileInput.click();
+        audioFileInput.onchange = (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (file.type.startsWith('audio/')) {
+                        if (currentAudios.length < MAX_AUDIOS) {
+                            currentAudios.push(e.target.result);
+                        } else {
+                            alert(`最多支持 ${MAX_AUDIOS} 个音频`);
+                        }
+                    }
+                    updateAttachmentsPreview();
+                };
+                reader.readAsDataURL(file);
+            });
+            audioFileInput.value = '';
         };
 
-        // WAV 相关函数
+        // Audio recording functions
         function floatTo16BitPCM(float32Array) {
             const buffer = new ArrayBuffer(float32Array.length * 2);
             const view = new DataView(buffer);
@@ -1106,7 +1263,6 @@
             const pcmData = floatTo16BitPCM(samples);
             const wavHeader = new ArrayBuffer(44);
             const view = new DataView(wavHeader);
-
             view.setUint32(0, 0x46464952, true);
             view.setUint32(4, 36 + pcmData.byteLength, true);
             view.setUint32(8, 0x45564157, true);
@@ -1120,31 +1276,26 @@
             view.setUint16(34, 16, true);
             view.setUint32(36, 0x61746164, true);
             view.setUint32(40, pcmData.byteLength, true);
-
             return new Blob([wavHeader, pcmData], { type: 'audio/wav' });
         }
 
-        // 录音
         async function startRecording() {
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
                     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
                 });
-
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                 const source = audioContext.createMediaStreamSource(mediaStream);
                 const processor = audioContext.createScriptProcessor(4096, 1, 1);
-
                 recordedSamples = [];
                 processor.onaudioprocess = (e) => {
                     recordedSamples.push(new Float32Array(e.inputBuffer.getChannelData(0)));
                 };
-
                 source.connect(processor);
                 processor.connect(audioContext.destination);
                 return true;
             } catch (e) {
-                alert('无法访问麦克风: ' + e.message);
+                alert('Cannot access microphone: ' + e.message);
                 return false;
             }
         }
@@ -1154,7 +1305,6 @@
                 if (mediaStream) {
                     mediaStream.getTracks().forEach(track => track.stop());
                 }
-
                 const totalLength = recordedSamples.reduce((sum, arr) => sum + arr.length, 0);
                 const mergedSamples = new Float32Array(totalLength);
                 let offset = 0;
@@ -1162,11 +1312,9 @@
                     mergedSamples.set(chunk, offset);
                     offset += chunk.length;
                 }
-
                 const originalSampleRate = audioContext ? audioContext.sampleRate : 48000;
                 let finalSamples = mergedSamples;
                 let finalSampleRate = originalSampleRate;
-
                 if (originalSampleRate !== 16000) {
                     const ratio = originalSampleRate / 16000;
                     const newLength = Math.floor(mergedSamples.length / ratio);
@@ -1180,16 +1328,18 @@
                     }
                     finalSampleRate = 16000;
                 }
-
                 const wavBlob = createWavBlob(finalSamples, finalSampleRate);
                 const reader = new FileReader();
                 reader.onload = () => {
-                    currentAudio = reader.result;
+                    if (currentAudios.length < MAX_AUDIOS) {
+                        currentAudios.push(reader.result);
+                    } else {
+                        alert(`最多支持 ${MAX_AUDIOS} 个音频`);
+                    }
                     updateAttachmentsPreview();
                     resolve();
                 };
                 reader.readAsDataURL(wavBlob);
-
                 if (audioContext) {
                     audioContext.close();
                     audioContext = null;
@@ -1200,14 +1350,14 @@
         audioBtn.onclick = async () => {
             if (isRecording) {
                 audioBtn.classList.remove('recording');
-                audioBtn.textContent = '🎤';
+                audioBtn.innerHTML = '&#127908;';
                 isRecording = false;
                 await stopRecording();
             } else {
                 const success = await startRecording();
                 if (success) {
                     audioBtn.classList.add('recording');
-                    audioBtn.textContent = '⏹';
+                    audioBtn.innerHTML = '&#9209;';
                     isRecording = true;
                 }
             }
@@ -1221,7 +1371,6 @@
             }
         };
 
-        // 启动
         init();
     </script>
 </body>
