@@ -48,9 +48,18 @@ import json
 import time
 import uuid
 import base64
+import binascii
 import hashlib
 import subprocess
 import re
+import signal
+import atexit
+import logging
+import threading
+import struct
+import tempfile
+import urllib.request
+import urllib.error
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List, Any
@@ -58,12 +67,122 @@ from typing import Optional, Dict, List, Any
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
+# ========== 日志配置 ==========
+# 配置结构化日志，替代 print 语句
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOG_FORMAT = os.environ.get(
+    "LOG_FORMAT",
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format=LOG_FORMAT,
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+logger = logging.getLogger("gemini_api")
+
+# 减少第三方库的日志噪音
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 # 路径配置
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 app = Flask(__name__)
 CORS(app)
+
+# ========== 请求验证配置 ==========
+# 最大请求体大小 (默认 100MB，用于支持大型音频/图像)
+MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 100 * 1024 * 1024))
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+# 请求速率限制 (每分钟最大请求数)
+RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
+
+# 简单的内存速率限制器
+_rate_limit_cache: Dict[str, List[float]] = {}
+_rate_limit_lock = threading.Lock()
+
+
+def check_rate_limit(client_ip: str) -> bool:
+    """
+    检查请求是否超过速率限制
+
+    Args:
+        client_ip: 客户端 IP 地址
+
+    Returns:
+        True 如果请求被允许，False 如果超过限制
+    """
+    if RATE_LIMIT_PER_MINUTE <= 0:
+        return True  # 禁用速率限制
+
+    current_time = time.time()
+    window_start = current_time - 60  # 1 分钟窗口
+
+    with _rate_limit_lock:
+        if client_ip not in _rate_limit_cache:
+            _rate_limit_cache[client_ip] = []
+
+        # 清理过期的请求记录
+        _rate_limit_cache[client_ip] = [
+            t for t in _rate_limit_cache[client_ip] if t > window_start
+        ]
+
+        # 检查是否超过限制
+        if len(_rate_limit_cache[client_ip]) >= RATE_LIMIT_PER_MINUTE:
+            return False
+
+        # 记录当前请求
+        _rate_limit_cache[client_ip].append(current_time)
+        return True
+
+
+@app.before_request
+def before_request_handler():
+    """请求前处理: 验证和速率限制"""
+    # 跳过健康检查端点
+    if request.path == "/health":
+        return None
+
+    # 检查速率限制
+    client_ip = request.remote_addr or "unknown"
+    if not check_rate_limit(client_ip):
+        logger.warning(f"Rate limit exceeded for {client_ip}")
+        return jsonify({
+            "error": {
+                "message": "Rate limit exceeded. Please try again later.",
+                "code": "429"
+            }
+        }), 429
+
+    # 验证 Content-Type (仅对 POST 请求)
+    if request.method == "POST":
+        content_type = request.content_type or ""
+        if not content_type.startswith("application/json"):
+            return jsonify({
+                "error": {
+                    "message": f"Invalid Content-Type: {content_type}. Expected application/json",
+                    "code": "415"
+                }
+            }), 415
+
+    return None
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """处理请求体过大错误"""
+    return jsonify({
+        "error": {
+            "message": f"Request body too large. Maximum size is {MAX_CONTENT_LENGTH // (1024*1024)}MB",
+            "code": "413"
+        }
+    }), 413
+
 
 # ========== 全局配置 ==========
 MODEL_VERSION = "gemma-3n-local"
@@ -140,9 +259,57 @@ VISION_ENABLED = bool(LLAMA_MMPROJ_VISION) and Path(LLAMA_MMPROJ_VISION).exists(
 AUDIO_ENABLED = bool(LLAMA_MMPROJ_AUDIO) and Path(LLAMA_MMPROJ_AUDIO).exists() if LLAMA_MMPROJ_AUDIO else False
 MULTIMODAL_ENABLED = VISION_ENABLED or AUDIO_ENABLED
 
-# llama-server 进程管理
-llama_server_process = None
-llama_server_ready = False
+# ========== 线程安全的全局状态管理 ==========
+# 使用锁保护全局状态，防止并发问题
+
+class ThreadSafeState:
+    """线程安全的全局状态容器"""
+
+    def __init__(self):
+        self._lock = threading.RLock()  # 可重入锁
+        self._llama_server_process = None
+        self._llama_server_ready = False
+        self._shutdown_requested = False
+
+    @property
+    def llama_server_process(self):
+        with self._lock:
+            return self._llama_server_process
+
+    @llama_server_process.setter
+    def llama_server_process(self, value):
+        with self._lock:
+            self._llama_server_process = value
+
+    @property
+    def llama_server_ready(self):
+        with self._lock:
+            return self._llama_server_ready
+
+    @llama_server_ready.setter
+    def llama_server_ready(self, value):
+        with self._lock:
+            self._llama_server_ready = value
+
+    @property
+    def shutdown_requested(self):
+        with self._lock:
+            return self._shutdown_requested
+
+    @shutdown_requested.setter
+    def shutdown_requested(self, value):
+        with self._lock:
+            self._shutdown_requested = value
+
+# 全局状态实例
+_state = ThreadSafeState()
+
+# 向后兼容的属性访问
+llama_server_process = property(lambda self: _state.llama_server_process)
+llama_server_ready = property(lambda self: _state.llama_server_ready)
+
+# 线程安全的缓存锁
+_cache_lock = threading.RLock()
 
 # ========== Thought Signature 系统 ==========
 #
@@ -275,7 +442,7 @@ def generate_thought_signature(
     if KV_CACHE_ENABLED:
         kv_cache_id = save_kv_cache(slot_id)
         if kv_cache_id:
-            print(f"[thoughtSignature] KV Cache saved: {kv_cache_id}")
+            logger.debug(f"KV Cache saved: {kv_cache_id}")
 
     # 4. 保存推理状态到内存缓存
     state = ThoughtState(
@@ -390,8 +557,11 @@ def validate_thought_signature(signature: str) -> Optional[Dict]:
             # 尝试 JSON 格式 (兼容旧版)
             return _validate_json_signature(raw)
 
+    except (ValueError, IndexError, KeyError) as e:
+        logger.warning(f"validate_thought_signature parse error: {e}")
+        return None
     except Exception as e:
-        print(f"[validate_thought_signature] Error: {e}")
+        logger.warning(f"validate_thought_signature unexpected error: {type(e).__name__}: {e}")
         return None
 
 
@@ -440,7 +610,7 @@ def _validate_protobuf_signature(raw: bytes) -> Optional[Dict]:
         # 检查时间戳有效性
         current_time = int(time.time())
         if current_time - timestamp > SIGNATURE_TTL:
-            print(f"[validate_thought_signature] Signature expired")
+            logger.debug("Signature expired")
             return None
 
         # 从缓存中恢复状态
@@ -454,17 +624,20 @@ def _validate_protobuf_signature(raw: bytes) -> Optional[Dict]:
             if kv_cache_id and version == 2:
                 if restore_kv_cache(kv_cache_id, slot_id):
                     state["kv_cache_restored"] = True
-                    print(f"[validate_thought_signature] KV Cache restored: {kv_cache_id}")
+                    logger.debug(f"KV Cache restored: {kv_cache_id}")
                 else:
                     state["kv_cache_restored"] = False
 
             return state
 
-        print(f"[validate_thought_signature] No matching state found")
+        logger.debug("No matching state found for signature")
         return None
 
+    except (IndexError, KeyError, struct.error) as e:
+        logger.warning(f"_validate_protobuf_signature parse error: {e}")
+        return None
     except Exception as e:
-        print(f"[_validate_protobuf_signature] Error: {e}")
+        logger.warning(f"_validate_protobuf_signature unexpected error: {type(e).__name__}: {e}")
         return None
 
 
@@ -569,6 +742,44 @@ KV_CACHE_DIR = Path(os.environ.get("KV_CACHE_DIR", "/tmp/gemma3n_thought_cache")
 KV_CACHE_ENABLED = os.environ.get("KV_CACHE_ENABLED", "true").lower() == "true"
 
 
+def cleanup_subprocess():
+    """清理 llama-server 子进程"""
+    proc = _state.llama_server_process
+    if proc is not None:
+        logger.info("正在关闭 llama-server 子进程...")
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+            logger.info("llama-server 子进程已正常关闭")
+        except subprocess.TimeoutExpired:
+            logger.warning("llama-server 未响应 SIGTERM，强制终止...")
+            proc.kill()
+            proc.wait()
+            logger.info("llama-server 子进程已强制终止")
+        except OSError as e:
+            logger.error(f"关闭 llama-server 时 OS 错误: {e}")
+        except ProcessLookupError:
+            logger.debug("llama-server 进程已不存在")
+        finally:
+            _state.llama_server_process = None
+            _state.llama_server_ready = False
+
+
+def signal_handler(signum, frame):
+    """处理终止信号"""
+    sig_name = signal.Signals(signum).name
+    logger.info(f"收到信号 {sig_name}，开始优雅关闭...")
+    _state.shutdown_requested = True
+    cleanup_subprocess()
+    sys.exit(0)
+
+
+# 注册信号处理器和退出钩子
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+atexit.register(cleanup_subprocess)
+
+
 def start_llama_server():
     """
     启动 llama-server
@@ -576,14 +787,12 @@ def start_llama_server():
     改进: 开启 slot persistence 支持真正的 KV Cache 持久化
     参考: https://github.com/ggml-org/llama.cpp/discussions/13606
     """
-    global llama_server_process, llama_server_ready
-
     if not Path(LLAMA_SERVER_BIN).exists():
-        print(f"[ERROR] llama-server 不存在: {LLAMA_SERVER_BIN}")
+        logger.error(f"llama-server 不存在: {LLAMA_SERVER_BIN}")
         return False
 
     if not LLAMA_MODEL or not Path(LLAMA_MODEL).exists():
-        print(f"[ERROR] 模型文件不存在: {LLAMA_MODEL}")
+        logger.error(f"模型文件不存在: {LLAMA_MODEL}")
         return False
 
     # 检查是否已在运行
@@ -591,19 +800,19 @@ def start_llama_server():
         import requests
         resp = requests.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=2)
         if resp.status_code == 200:
-            print(f"[llama-server] 已在端口 {LLAMA_SERVER_PORT} 运行")
-            llama_server_ready = True
+            logger.info(f"llama-server 已在端口 {LLAMA_SERVER_PORT} 运行")
+            _state.llama_server_ready = True
             return True
-    except:
+    except requests.exceptions.RequestException:
         pass
 
     # 创建 KV Cache 目录
     if KV_CACHE_ENABLED:
         KV_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        print(f"[llama-server] KV Cache 目录: {KV_CACHE_DIR}")
+        logger.info(f"KV Cache 目录: {KV_CACHE_DIR}")
 
-    print(f"[llama-server] 启动中... 端口: {LLAMA_SERVER_PORT}")
-    print(f"[llama-server] 模型: {LLAMA_MODEL}")
+    logger.info(f"启动 llama-server... 端口: {LLAMA_SERVER_PORT}")
+    logger.info(f"模型: {LLAMA_MODEL}")
 
     env = os.environ.copy()
     bin_dir = str(Path(LLAMA_SERVER_BIN).parent)
@@ -629,11 +838,11 @@ def start_llama_server():
             capabilities.append("视觉")
         if AUDIO_ENABLED:
             capabilities.append("音频")
-        print(f"[llama-server] 多模态已启用: {'+'.join(capabilities)}")
+        logger.info(f"多模态已启用: {'+'.join(capabilities)}")
         if VISION_ENABLED:
-            print(f"  - Vision: {Path(LLAMA_MMPROJ_VISION).name}")
+            logger.debug(f"  Vision: {Path(LLAMA_MMPROJ_VISION).name}")
         if AUDIO_ENABLED:
-            print(f"  - Audio: {Path(LLAMA_MMPROJ_AUDIO).name}")
+            logger.debug(f"  Audio: {Path(LLAMA_MMPROJ_AUDIO).name}")
 
     # 开启 slot persistence (真正的 KV Cache 持久化)
     if KV_CACHE_ENABLED:
@@ -641,9 +850,9 @@ def start_llama_server():
             "--slot-save-path", str(KV_CACHE_DIR),  # KV Cache 保存目录
             "-np", "4",  # 4 个 slots 支持并发
         ])
-        print(f"[llama-server] KV Cache 持久化已启用")
+        logger.info("KV Cache 持久化已启用")
 
-    llama_server_process = subprocess.Popen(
+    _state.llama_server_process = subprocess.Popen(
         cmd,
         env=env,
         stdout=subprocess.DEVNULL,
@@ -656,16 +865,16 @@ def start_llama_server():
         try:
             resp = requests.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=1)
             if resp.status_code == 200:
-                print(f"[llama-server] 启动成功！")
-                llama_server_ready = True
+                logger.info("llama-server 启动成功")
+                _state.llama_server_ready = True
                 return True
-        except:
+        except requests.exceptions.RequestException:
             pass
         time.sleep(1)
         if i % 10 == 0:
-            print(f"[llama-server] 等待启动... {i}s")
+            logger.info(f"等待 llama-server 启动... {i}s")
 
-    print("[llama-server] 启动超时")
+    logger.error("llama-server 启动超时")
     return False
 
 
@@ -677,9 +886,7 @@ def query_llama_server(
     image_data: List[str] = None  # 多模态: Base64 图像数据列表
 ) -> Dict[str, Any]:
     """查询 llama-server"""
-    global llama_server_ready
-
-    if not llama_server_ready:
+    if not _state.llama_server_ready:
         if not start_llama_server():
             return {"error": "llama-server 未就绪"}
 
@@ -707,7 +914,7 @@ def query_llama_server(
                     try:
                         _, b64_data = img.split(",", 1)
                         processed_images.append(b64_data)
-                    except:
+                    except ValueError:
                         processed_images.append(img)
                 else:
                     processed_images.append(img)
@@ -717,7 +924,7 @@ def query_llama_server(
                 "prompt_string": prompt,
                 "multimodal_data": processed_images
             }
-            print(f"[query] 多模态请求: {len(processed_images)} 张图像")
+            logger.debug(f"多模态请求: {len(processed_images)} 张图像")
         else:
             # 纯文本格式
             request_body["prompt"] = prompt
@@ -754,9 +961,14 @@ def query_llama_server(
             "total_time": elapsed,
             "speed": speed
         }
-    except Exception as e:
-        llama_server_ready = False
-        return {"error": f"llama-server 错误: {str(e)}"}
+    except requests.exceptions.Timeout:
+        _state.llama_server_ready = False
+        return {"error": "llama-server 请求超时"}
+    except requests.exceptions.ConnectionError as e:
+        _state.llama_server_ready = False
+        return {"error": f"llama-server 连接失败: {e}"}
+    except (json.JSONDecodeError, KeyError) as e:
+        return {"error": f"llama-server 响应解析失败: {e}"}
 
 
 def run_llama_mtmd_cli(
@@ -833,14 +1045,14 @@ def run_llama_mtmd_cli(
     # 添加图像
     if image_path:
         cmd.extend(["--image", image_path])
-        print(f"[llama-mtmd-cli] 图像: {image_path}")
+        logger.debug(f"llama-mtmd-cli 图像: {image_path}")
 
     # 添加音频
     if audio_path:
         cmd.extend(["--audio", audio_path])
-        print(f"[llama-mtmd-cli] 音频: {audio_path}")
+        logger.debug(f"llama-mtmd-cli 音频: {audio_path}")
 
-    print(f"[llama-mtmd-cli] 执行命令: {' '.join(cmd[:8])}...")
+    logger.debug(f"llama-mtmd-cli 执行命令: {' '.join(cmd[:8])}...")
 
     try:
         result = subprocess.run(
@@ -869,7 +1081,7 @@ def run_llama_mtmd_cli(
         # 估算 token 数量
         tokens_predicted = len(response) // 4
 
-        print(f"[llama-mtmd-cli] 完成, 耗时 {elapsed:.2f}s, 输出 {len(response)} 字符")
+        logger.debug(f"llama-mtmd-cli 完成, 耗时 {elapsed:.2f}s, 输出 {len(response)} 字符")
 
         return {
             "response": response,
@@ -881,8 +1093,10 @@ def run_llama_mtmd_cli(
 
     except subprocess.TimeoutExpired:
         return {"error": "llama-mtmd-cli 执行超时"}
-    except Exception as e:
-        return {"error": f"llama-mtmd-cli 错误: {str(e)}"}
+    except subprocess.SubprocessError as e:
+        return {"error": f"llama-mtmd-cli 子进程错误: {e}"}
+    except OSError as e:
+        return {"error": f"llama-mtmd-cli OS 错误: {e}"}
 
 
 # ========== KV Cache 持久化 (真正的 thoughtSignature) ==========
@@ -915,11 +1129,15 @@ def save_kv_cache(slot_id: int = 0) -> Optional[str]:
         req = urllib.request.Request(url, method="POST")
         with urllib.request.urlopen(req, timeout=30) as resp:
             if resp.status == 200:
-                print(f"[KV Cache] Saved slot {slot_id} to {cache_id}")
+                logger.debug(f"KV Cache: saved slot {slot_id} to {cache_id}")
                 return cache_id
 
-    except Exception as e:
-        print(f"[KV Cache] Save failed: {e}")
+    except urllib.error.URLError as e:
+        logger.warning(f"KV Cache save network error: {e}")
+    except urllib.error.HTTPError as e:
+        logger.warning(f"KV Cache save HTTP error {e.code}: {e.reason}")
+    except TimeoutError:
+        logger.warning("KV Cache save timeout")
 
     return None
 
@@ -946,7 +1164,7 @@ def restore_kv_cache(cache_id: str, slot_id: int = 0) -> bool:
         # 检查缓存文件是否存在
         cache_file = KV_CACHE_DIR / f"{cache_id}.bin"
         if not cache_file.exists():
-            print(f"[KV Cache] Cache file not found: {cache_id}")
+            logger.debug(f"KV Cache file not found: {cache_id}")
             return False
 
         # 调用 llama-server 的 slot restore API
@@ -955,11 +1173,15 @@ def restore_kv_cache(cache_id: str, slot_id: int = 0) -> bool:
         req = urllib.request.Request(url, method="POST")
         with urllib.request.urlopen(req, timeout=30) as resp:
             if resp.status == 200:
-                print(f"[KV Cache] Restored slot {slot_id} from {cache_id}")
+                logger.debug(f"KV Cache: restored slot {slot_id} from {cache_id}")
                 return True
 
-    except Exception as e:
-        print(f"[KV Cache] Restore failed: {e}")
+    except urllib.error.URLError as e:
+        logger.warning(f"KV Cache restore network error: {e}")
+    except urllib.error.HTTPError as e:
+        logger.warning(f"KV Cache restore HTTP error {e.code}: {e.reason}")
+    except TimeoutError:
+        logger.warning("KV Cache restore timeout")
 
     return False
 
@@ -977,10 +1199,12 @@ def cleanup_old_kv_cache(max_age_hours: int = 1):
             file_age = current_time - cache_file.stat().st_mtime
             if file_age > max_age_seconds:
                 cache_file.unlink()
-                print(f"[KV Cache] Cleaned up: {cache_file.name}")
+                logger.debug(f"KV Cache cleaned up: {cache_file.name}")
 
-    except Exception as e:
-        print(f"[KV Cache] Cleanup error: {e}")
+    except OSError as e:
+        logger.warning(f"KV Cache cleanup OS error: {e}")
+    except PermissionError as e:
+        logger.warning(f"KV Cache cleanup permission denied: {e}")
 
 
 # ========== Gemini API 格式转换 ==========
@@ -1088,11 +1312,14 @@ def save_audio_to_temp_file(audio_data_uri: str) -> Optional[str]:
         with os.fdopen(fd, 'wb') as f:
             f.write(audio_bytes)
 
-        print(f"[save_audio] 保存音频到: {temp_path} ({len(audio_bytes)} bytes)")
+        logger.debug(f"保存音频到: {temp_path} ({len(audio_bytes)} bytes)")
         return temp_path
 
-    except Exception as e:
-        print(f"[save_audio] 保存音频失败: {e}")
+    except (ValueError, binascii.Error) as e:
+        logger.warning(f"保存音频 base64 解码失败: {e}")
+        return None
+    except OSError as e:
+        logger.warning(f"保存音频文件失败: {e}")
         return None
 
 
@@ -1138,11 +1365,11 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
 
                         # 日志记录媒体类型
                         if mime_type in SUPPORTED_IMAGE_TYPES:
-                            print(f"[parse] 检测到图像: {mime_type}")
+                            logger.debug(f"检测到图像: {mime_type}")
                         elif mime_type in SUPPORTED_AUDIO_TYPES:
-                            print(f"[parse] 检测到音频: {mime_type}")
+                            logger.debug(f"检测到音频: {mime_type}")
                     else:
-                        print(f"[parse] 不支持的媒体类型: {mime_type}")
+                        logger.warning(f"不支持的媒体类型: {mime_type}")
                 elif "fileData" in part:
                     # 文件引用 (需要下载)
                     file_data = part["fileData"]
@@ -1160,11 +1387,13 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
                                 media_data_list.append(f"data:{mime_type};base64,{data}")
 
                                 if mime_type in SUPPORTED_IMAGE_TYPES:
-                                    print(f"[parse] 下载图像成功: {file_uri[:50]}...")
+                                    logger.debug(f"下载图像成功: {file_uri[:50]}...")
                                 elif mime_type in SUPPORTED_AUDIO_TYPES:
-                                    print(f"[parse] 下载音频成功: {file_uri[:50]}...")
-                        except Exception as e:
-                            print(f"[parse] 下载文件失败: {e}")
+                                    logger.debug(f"下载音频成功: {file_uri[:50]}...")
+                        except requests.exceptions.RequestException as e:
+                            logger.warning(f"下载文件网络错误: {e}")
+                        except (ValueError, binascii.Error) as e:
+                            logger.warning(f"下载文件编码错误: {e}")
                 elif "thought" in part and part.get("thought"):
                     # 思考过程，跳过
                     continue
@@ -1760,12 +1989,95 @@ def enforce_json_schema(response_text: str, schema: Dict) -> str:
 
 @app.route("/health", methods=["GET"])
 def health():
-    """健康检查"""
-    return jsonify({
-        "status": "ok",
-        "model": LLAMA_MODEL,
-        "server_ready": llama_server_ready
-    })
+    """
+    健康检查端点
+
+    返回服务器状态、模型信息、系统资源使用情况等。
+    用于监控和负载均衡健康检查。
+    """
+    import psutil
+
+    # 基本状态
+    is_ready = _state.llama_server_ready
+    status = "ok" if is_ready else "starting"
+
+    # 系统资源
+    try:
+        memory = psutil.virtual_memory()
+        cpu_percent = psutil.cpu_percent(interval=None)
+        memory_info = {
+            "total_gb": round(memory.total / (1024**3), 2),
+            "available_gb": round(memory.available / (1024**3), 2),
+            "percent_used": memory.percent
+        }
+    except (psutil.Error, OSError, AttributeError):
+        memory_info = None
+        cpu_percent = None
+
+    # llama-server 子进程状态
+    subprocess_status = None
+    if _state.llama_server_process:
+        try:
+            proc = psutil.Process(_state.llama_server_process.pid)
+            subprocess_status = {
+                "pid": proc.pid,
+                "status": proc.status(),
+                "memory_mb": round(proc.memory_info().rss / (1024**2), 2),
+                "cpu_percent": proc.cpu_percent()
+            }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            subprocess_status = {"status": "not_found"}
+
+    # KV Cache 统计
+    kv_cache_stats = None
+    if KV_CACHE_ENABLED and KV_CACHE_DIR.exists():
+        try:
+            cache_files = list(KV_CACHE_DIR.glob("thought_*.bin"))
+            total_size = sum(f.stat().st_size for f in cache_files)
+            kv_cache_stats = {
+                "enabled": True,
+                "files_count": len(cache_files),
+                "total_size_mb": round(total_size / (1024**2), 2),
+                "directory": str(KV_CACHE_DIR)
+            }
+        except (OSError, PermissionError):
+            kv_cache_stats = {"enabled": True, "error": "unable to read stats"}
+    else:
+        kv_cache_stats = {"enabled": False}
+
+    # 构建响应
+    response = {
+        "status": status,
+        "server_ready": is_ready,
+        "model": {
+            "path": LLAMA_MODEL,
+            "name": Path(LLAMA_MODEL).stem if LLAMA_MODEL else None,
+            "version": MODEL_VERSION
+        },
+        "capabilities": {
+            "vision": VISION_ENABLED,
+            "audio": AUDIO_ENABLED,
+            "multimodal": MULTIMODAL_ENABLED,
+            "kv_cache": KV_CACHE_ENABLED
+        },
+        "llama_server": {
+            "port": LLAMA_SERVER_PORT,
+            "subprocess": subprocess_status
+        },
+        "kv_cache": kv_cache_stats,
+        "thought_cache_entries": len(thought_state_cache),
+        "system": {
+            "memory": memory_info,
+            "cpu_percent": cpu_percent
+        },
+        "uptime_info": {
+            "shutdown_requested": _state.shutdown_requested
+        }
+    }
+
+    # HTTP 状态码: 200 如果就绪，503 如果还在启动
+    http_status = 200 if is_ready else 503
+    return jsonify(response), http_status
 
 
 @app.route(f"/{API_VERSION}/models/<model_name>:generateContent", methods=["POST"])
@@ -1848,10 +2160,10 @@ Your response must be valid JSON only, no other text.
         full_prompt = "".join(prompt_parts)
 
         # 日志
-        print(f"[generateContent] model={model_name}, thinking={thinking_level}")
-        print(f"[generateContent] prompt length: {len(full_prompt)} chars")
+        logger.info(f"generateContent: model={model_name}, thinking={thinking_level}")
+        logger.debug(f"generateContent: prompt length: {len(full_prompt)} chars")
         if media_data:
-            print(f"[generateContent] 多模态: {len(media_data)} 个媒体文件")
+            logger.debug(f"generateContent: 多模态: {len(media_data)} 个媒体文件")
 
         # 分离图像和音频
         image_data, audio_data = extract_audio_from_media(media_data) if media_data else ([], [])
@@ -1861,7 +2173,7 @@ Your response must be valid JSON only, no other text.
         try:
             if audio_data:
                 # 音频模式: 使用 llama-mtmd-cli (支持音频)
-                print(f"[generateContent] 音频模式: {len(audio_data)} 个音频文件")
+                logger.debug(f"generateContent: 音频模式: {len(audio_data)} 个音频文件")
 
                 # 保存第一个音频到临时文件
                 temp_audio_file = save_audio_to_temp_file(audio_data[0])
@@ -1881,7 +2193,7 @@ Your response must be valid JSON only, no other text.
                 )
             elif image_data:
                 # 图像模式: 使用 llama-server (仅支持视觉)
-                print(f"[generateContent] 图像模式: {len(image_data)} 个图像文件")
+                logger.debug(f"generateContent: 图像模式: {len(image_data)} 个图像文件")
                 result = query_llama_server(
                     prompt=full_prompt,
                     max_tokens=max_tokens,
@@ -1901,8 +2213,8 @@ Your response must be valid JSON only, no other text.
             if temp_audio_file and Path(temp_audio_file).exists():
                 try:
                     Path(temp_audio_file).unlink()
-                    print(f"[generateContent] 清理临时文件: {temp_audio_file}")
-                except:
+                    logger.debug(f"generateContent: 清理临时文件: {temp_audio_file}")
+                except OSError:
                     pass
 
         if "error" in result:
@@ -1926,7 +2238,7 @@ Your response must be valid JSON only, no other text.
             thinking_text, answer_text, thoughts_tokens = parse_thinking_response(response_text)
             if thinking_text:
                 response_text = answer_text
-                print(f"[generateContent] Thinking: {len(thinking_text)} chars, Answer: {len(response_text)} chars")
+                logger.debug(f"generateContent: Thinking: {len(thinking_text)} chars, Answer: {len(response_text)} chars")
 
         # 检查是否有工具调用 (支持多个函数调用和 codeExecution)
         function_call = None
@@ -1942,13 +2254,13 @@ Your response must be valid JSON only, no other text.
                         function_call = tool_result["function_calls"][0]
                     else:
                         function_calls = tool_result["function_calls"]
-                    print(f"[generateContent] Function calls: {len(tool_result['function_calls'])}")
+                    logger.debug(f"generateContent: Function calls: {len(tool_result['function_calls'])}")
 
                 if tool_result.get("executable_code"):
                     executable_code = tool_result["executable_code"]
                     # codeExecution 的 token 估算
                     tool_use_tokens = len(str(executable_code)) // 4
-                    print(f"[generateContent] Code execution detected")
+                    logger.debug("generateContent: Code execution detected")
 
                 # 清理响应文本，只保留工具调用
                 response_text = ""
@@ -1974,31 +2286,31 @@ Your response must be valid JSON only, no other text.
         total_output_chars = len(response_text or "") + len(thinking_text or "")
         estimated_total_tokens = total_output_chars // 4
 
-        import sys
-        print(f"[finishReason debug] completion_tokens={completion_tokens}, max_tokens={max_tokens}, "
-              f"response_text_len={len(response_text) if response_text else 0}, "
-              f"thinking_text_len={len(thinking_text) if thinking_text else 0}, "
-              f"estimated_total_tokens={estimated_total_tokens}, thinking_level={thinking_level}", flush=True)
-        sys.stdout.flush()
+        logger.debug(
+            f"finishReason debug: completion_tokens={completion_tokens}, max_tokens={max_tokens}, "
+            f"response_text_len={len(response_text) if response_text else 0}, "
+            f"thinking_text_len={len(thinking_text) if thinking_text else 0}, "
+            f"estimated_total_tokens={estimated_total_tokens}, thinking_level={thinking_level}"
+        )
 
         if not response_text and thinking_text:
             # 只有思考没有答案，可能是 token 不够
             finish_reason = "MAX_TOKENS"
-            print(f"[finishReason] MAX_TOKENS: no response, only thinking", flush=True)
+            logger.debug("finishReason: MAX_TOKENS - no response, only thinking")
         elif completion_tokens >= max_tokens - 10:
             # 输出 token 接近限制，可能被截断
             finish_reason = "MAX_TOKENS"
-            print(f"[finishReason] MAX_TOKENS: tokens near limit", flush=True)
+            logger.debug("finishReason: MAX_TOKENS - tokens near limit")
         elif thinking_level == "high" and thinking_text:
             # 高思考模式下，只要有思考内容就认为可能达到限制
             # 因为真实 Gemini API 在高思考+音频场景下通常返回 MAX_TOKENS
             finish_reason = "MAX_TOKENS"
-            print(f"[finishReason] MAX_TOKENS: high thinking mode with thinking content", flush=True)
+            logger.debug("finishReason: MAX_TOKENS - high thinking mode with thinking content")
 
         # 尝试从历史 thoughtSignature 恢复上下文 (用于多轮对话)
         restored_context = restore_context_from_signature(contents)
         if restored_context:
-            print(f"[generateContent] Restored context from thoughtSignature")
+            logger.debug("generateContent: Restored context from thoughtSignature")
 
         # 确定是否显示思考过程
         # 1. includeThoughts=false 时完全隐藏
@@ -2105,13 +2417,11 @@ def stream_generate_content(model_name: str):
 
         full_prompt = "".join(prompt_parts)
 
-        print(f"[streamGenerateContent] model={model_name}, thinking={thinking_level}")
+        logger.info(f"streamGenerateContent: model={model_name}, thinking={thinking_level}")
 
         def generate_stream():
             """生成 SSE 流"""
-            global llama_server_ready
-
-            if not llama_server_ready:
+            if not _state.llama_server_ready:
                 if not start_llama_server():
                     yield f"data: {json.dumps({'error': {'message': 'llama-server 未就绪'}})}\n\n"
                     return
@@ -2794,57 +3104,42 @@ def test_audio_status():
     })
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("Gemini API 兼容服务器")
-    print("=" * 60)
-    print(f"模型: {LLAMA_MODEL}")
+    logger.info("=" * 60)
+    logger.info("Gemini API 兼容服务器")
+    logger.info("=" * 60)
+    logger.info(f"模型: {LLAMA_MODEL}")
     if MULTIMODAL_ENABLED:
         capabilities = []
         if VISION_ENABLED:
             capabilities.append("视觉")
         if AUDIO_ENABLED:
             capabilities.append("音频")
-        print(f"多模态: {'+'.join(capabilities)}")
+        logger.info(f"多模态: {'+'.join(capabilities)}")
         if VISION_ENABLED:
-            print(f"  - Vision: {Path(LLAMA_MMPROJ_VISION).name}")
+            logger.info(f"  Vision: {Path(LLAMA_MMPROJ_VISION).name}")
         if AUDIO_ENABLED:
-            print(f"  - Audio: {Path(LLAMA_MMPROJ_AUDIO).name}")
+            logger.info(f"  Audio: {Path(LLAMA_MMPROJ_AUDIO).name}")
             if LLAMA_MODEL_AUDIO and LLAMA_MODEL_AUDIO != LLAMA_MODEL:
-                print(f"  - Audio Model: {Path(LLAMA_MODEL_AUDIO).name}")
+                logger.info(f"  Audio Model: {Path(LLAMA_MODEL_AUDIO).name}")
     else:
-        print("多模态: 未启用")
-    print(f"llama-server 端口: {LLAMA_SERVER_PORT}")
-    print()
+        logger.info("多模态: 未启用")
+    logger.info(f"llama-server 端口: {LLAMA_SERVER_PORT}")
 
     # 预启动 llama-server
     start_llama_server()
 
-    print()
-    print("API 端点:")
-    print(f"  POST /{API_VERSION}/models/{{model}}:generateContent")
-    print(f"  GET  /{API_VERSION}/models")
-    print(f"  GET  /health")
-    print()
-    print("测试端点:")
-    print("  GET  /test/basic")
-    print("  GET  /test/thinking")
-    print("  GET  /test/system")
-    print("  GET  /test/json-schema")
-    print("  GET  /test/function-call")
-    print("  GET  /test/multi-turn")
-    print("  GET  /test/tool-config-any")
-    print("  GET  /test/tool-config-none")
-    print("  GET  /test/parallel-function-call")
-    print("  GET  /test/code-execution")
-    print("  GET  /test/include-thoughts-false")
+    logger.info("API 端点:")
+    logger.info(f"  POST /{API_VERSION}/models/{{model}}:generateContent")
+    logger.info(f"  GET  /{API_VERSION}/models")
+    logger.info(f"  GET  /health")
+    logger.info("测试端点:")
+    logger.info("  GET  /test/basic, /test/thinking, /test/system, /test/json-schema")
+    logger.info("  GET  /test/function-call, /test/multi-turn, /test/tool-config-any")
     if VISION_ENABLED:
-        print("  GET  /test/vision")
-        print("  POST /test/vision-base64")
+        logger.info("  GET  /test/vision, POST /test/vision-base64")
     if AUDIO_ENABLED:
-        print("  POST /test/audio")
-        print("  GET  /test/audio-status")
-    print()
-    print("启动服务器: http://localhost:5001")
-    print("=" * 60)
+        logger.info("  POST /test/audio, GET /test/audio-status")
+    logger.info("启动服务器: http://localhost:5001")
+    logger.info("=" * 60)
 
     app.run(host="0.0.0.0", port=5001, debug=False, threaded=True)

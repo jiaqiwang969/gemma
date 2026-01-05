@@ -9,9 +9,11 @@ AI 多模态聊天服务器
 """
 import os
 import io
+import sys
 import base64
 import uuid
 import json
+import logging
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
@@ -23,8 +25,30 @@ import psutil
 import subprocess
 import platform
 import threading
+import signal
+import atexit
 
 warnings.filterwarnings("ignore")
+
+# ========== 日志配置 ==========
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+LOG_FORMAT = os.environ.get(
+    "LOG_FORMAT",
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format=LOG_FORMAT,
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+logger = logging.getLogger("webui")
+
+# 减少第三方库的日志噪音
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("PIL").setLevel(logging.WARNING)
 
 # PyTorch 是可选依赖 (仅 MPS 模式需要)
 PYTORCH_AVAILABLE = False
@@ -72,6 +96,91 @@ else:
         "http://127.0.0.1:5001",
         "http://127.0.0.1:8080"
     ])
+
+# ========== 请求验证配置 ==========
+# 最大请求体大小 (默认 500MB，用于支持大型音频/图像)
+MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 500 * 1024 * 1024))
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+# 请求速率限制 (每分钟最大请求数)
+RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
+
+# 简单的内存速率限制器
+_rate_limit_cache: dict = {}
+_rate_limit_lock = threading.Lock()
+
+
+def check_rate_limit(client_ip: str) -> bool:
+    """
+    检查请求是否超过速率限制
+
+    Args:
+        client_ip: 客户端 IP 地址
+
+    Returns:
+        True 如果请求被允许，False 如果超过限制
+    """
+    if RATE_LIMIT_PER_MINUTE <= 0:
+        return True  # 禁用速率限制
+
+    current_time = time.time()
+    window_start = current_time - 60  # 1 分钟窗口
+
+    with _rate_limit_lock:
+        if client_ip not in _rate_limit_cache:
+            _rate_limit_cache[client_ip] = []
+
+        # 清理过期的请求记录
+        _rate_limit_cache[client_ip] = [
+            t for t in _rate_limit_cache[client_ip] if t > window_start
+        ]
+
+        # 检查是否超过限制
+        if len(_rate_limit_cache[client_ip]) >= RATE_LIMIT_PER_MINUTE:
+            return False
+
+        # 记录当前请求
+        _rate_limit_cache[client_ip].append(current_time)
+        return True
+
+
+@app.before_request
+def before_request_handler():
+    """请求前处理: 验证和速率限制"""
+    # 跳过健康检查端点
+    if request.path in ["/health", "/api/status"]:
+        return None
+
+    # 跳过静态文件
+    if request.path.startswith("/static/") or request.path in ["/", "/chat", "/docs"]:
+        return None
+
+    # 检查速率限制
+    client_ip = request.remote_addr or "unknown"
+    if not check_rate_limit(client_ip):
+        logger.warning(f"Rate limit exceeded for {client_ip}")
+        return jsonify({
+            "error": "Rate limit exceeded. Please try again later."
+        }), 429
+
+    # 验证 Content-Type (仅对 POST 请求)
+    if request.method == "POST":
+        content_type = request.content_type or ""
+        if not content_type.startswith("application/json"):
+            return jsonify({
+                "error": f"Invalid Content-Type: {content_type}. Expected application/json"
+            }), 415
+
+    return None
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """处理请求体过大错误"""
+    return jsonify({
+        "error": f"Request body too large. Maximum size is {MAX_CONTENT_LENGTH // (1024*1024)}MB"
+    }), 413
+
 
 # 全局变量
 model = None
@@ -134,6 +243,116 @@ llama_server_ready = False
 LLAMA_MMPROJ_SERVER_PORT = int(os.environ.get("LLAMA_MMPROJ_SERVER_PORT", "8082"))
 llama_mmproj_server_process = None
 llama_mmproj_server_ready = False
+
+
+# ========== 线程安全的进程状态管理 ==========
+class ThreadSafeProcessState:
+    """线程安全的进程状态容器"""
+
+    def __init__(self):
+        self._lock = threading.RLock()
+        self._llama_server_process = None
+        self._llama_server_ready = False
+        self._llama_mmproj_server_process = None
+        self._llama_mmproj_server_ready = False
+        self._shutdown_requested = False
+
+    @property
+    def llama_server_process(self):
+        with self._lock:
+            return self._llama_server_process
+
+    @llama_server_process.setter
+    def llama_server_process(self, value):
+        with self._lock:
+            self._llama_server_process = value
+
+    @property
+    def llama_server_ready(self):
+        with self._lock:
+            return self._llama_server_ready
+
+    @llama_server_ready.setter
+    def llama_server_ready(self, value):
+        with self._lock:
+            self._llama_server_ready = value
+
+    @property
+    def llama_mmproj_server_process(self):
+        with self._lock:
+            return self._llama_mmproj_server_process
+
+    @llama_mmproj_server_process.setter
+    def llama_mmproj_server_process(self, value):
+        with self._lock:
+            self._llama_mmproj_server_process = value
+
+    @property
+    def llama_mmproj_server_ready(self):
+        with self._lock:
+            return self._llama_mmproj_server_ready
+
+    @llama_mmproj_server_ready.setter
+    def llama_mmproj_server_ready(self, value):
+        with self._lock:
+            self._llama_mmproj_server_ready = value
+
+    @property
+    def shutdown_requested(self):
+        with self._lock:
+            return self._shutdown_requested
+
+    @shutdown_requested.setter
+    def shutdown_requested(self, value):
+        with self._lock:
+            self._shutdown_requested = value
+
+
+# 全局状态实例
+_process_state = ThreadSafeProcessState()
+
+
+def cleanup_subprocesses():
+    """清理所有 llama-server 子进程"""
+    for proc, name in [
+        (_process_state.llama_server_process, "llama-server"),
+        (_process_state.llama_mmproj_server_process, "llama-mmproj-server"),
+    ]:
+        if proc is not None:
+            logger.info(f"正在关闭 {name} 子进程...")
+            try:
+                proc.terminate()
+                proc.wait(timeout=10)
+                logger.info(f"{name} 子进程已正常关闭")
+            except subprocess.TimeoutExpired:
+                logger.warning(f"{name} 未响应 SIGTERM，强制终止...")
+                proc.kill()
+                proc.wait()
+                logger.info(f"{name} 子进程已强制终止")
+            except OSError as e:
+                logger.error(f"关闭 {name} 时 OS 错误: {e}")
+            except ProcessLookupError:
+                logger.debug(f"{name} 进程已不存在")
+
+    _process_state.llama_server_process = None
+    _process_state.llama_server_ready = False
+    _process_state.llama_mmproj_server_process = None
+    _process_state.llama_mmproj_server_ready = False
+
+
+def signal_handler(signum, frame):
+    """处理终止信号"""
+    sig_name = signal.Signals(signum).name
+    logger.info(f"收到信号 {sig_name}，开始优雅关闭...")
+    _process_state.shutdown_requested = True
+    cleanup_subprocesses()
+    sys.exit(0)
+
+
+# 注册信号处理器和退出钩子
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+atexit.register(cleanup_subprocesses)
 
 # 存储路径 (~/.gemma3n/)
 GEMMA3N_HOME = Path.home() / ".gemma3n"
@@ -200,7 +419,7 @@ def start_cache_cleanup_thread():
             try:
                 cleanup_caches()
             except Exception as e:
-                print(f"[WARN] 缓存清理出错: {e}")
+                logger.warning(f"缓存清理出错: {e}")
 
     thread = threading.Thread(target=cleanup_loop, daemon=True)
     thread.start()
@@ -270,7 +489,7 @@ def init_storage():
     SESSIONS_DIR.mkdir(exist_ok=True)
     if not HISTORY_FILE.exists():
         HISTORY_FILE.touch()
-    print(f"[Storage] 初始化完成: {GEMMA3N_HOME}")
+    logger.info(f"Storage 初始化完成: {GEMMA3N_HOME}")
 
 def get_session_dir():
     """获取当天的会话目录 sessions/YYYY/MM/DD/"""
@@ -359,7 +578,7 @@ def list_all_sessions():
                             "file_path": str(jsonl_file)
                         })
         except Exception as e:
-            print(f"[Warning] 无法读取会话文件 {jsonl_file}: {e}")
+            logger.warning(f" 无法读取会话文件 {jsonl_file}: {e}")
 
     # 按更新时间倒序
     session_list.sort(key=lambda x: x.get("updated_at", 0), reverse=True)
@@ -381,10 +600,7 @@ def request_sudo_permission():
     if platform.system() != "Darwin":
         return False
 
-    print("\n" + "=" * 60)
-    print("🔐 请求硬件监控权限 (用于获取 GPU 温度)")
-    print("   请输入您的 macOS 密码（可选，按 Ctrl+C 跳过）")
-    print("=" * 60)
+    logger.info("请求硬件监控权限 (用于获取 GPU 温度)")
 
     try:
         # 请求 sudo 权限
@@ -394,7 +610,7 @@ def request_sudo_permission():
         )
         if result.returncode == 0:
             sudo_authorized = True
-            print("✅ 权限授权成功！GPU 温度监控已启用")
+            logger.info("权限授权成功！GPU 温度监控已启用")
 
             # 启动后台线程定期刷新 sudo 凭证
             def refresh_sudo():
@@ -411,16 +627,16 @@ def request_sudo_permission():
             sudo_refresh_thread.start()
             return True
         else:
-            print("⚠️  权限未授权，GPU 温度监控将不可用")
+            logger.warning("权限未授权，GPU 温度监控将不可用")
             return False
     except subprocess.TimeoutExpired:
-        print("⚠️  授权超时，GPU 温度监控将不可用")
+        logger.warning("授权超时，GPU 温度监控将不可用")
         return False
     except KeyboardInterrupt:
-        print("\n⚠️  已跳过权限授权，GPU 温度监控将不可用")
+        logger.warning("已跳过权限授权，GPU 温度监控将不可用")
         return False
     except Exception as e:
-        print(f"⚠️  授权失败: {e}")
+        logger.warning(f"授权失败: {e}")
         return False
 
 
@@ -508,7 +724,7 @@ def get_hardware_stats():
                     hw_stats["gpu_temp"] = "未授权"
 
             except Exception as e:
-                print(f"[DEBUG] macOS GPU info error: {e}")
+                logger.debug(f" macOS GPU info error: {e}")
 
         elif system == "Linux":
             # NVIDIA GPU (使用 nvidia-smi)
@@ -545,7 +761,7 @@ def get_hardware_stats():
                 except:
                     pass
             except Exception as e:
-                print(f"[DEBUG] Linux GPU info error: {e}")
+                logger.debug(f" Linux GPU info error: {e}")
 
         elif system == "Windows":
             # Windows NVIDIA GPU
@@ -569,10 +785,10 @@ def get_hardware_stats():
                             hw_stats["vram_usage"] = f"{mem_used/1024:.1f} GB / {mem_total/1024:.1f} GB"
                             hw_stats["gpu_temp"] = f"{temp}°C"
             except Exception as e:
-                print(f"[DEBUG] Windows GPU info error: {e}")
+                logger.debug(f" Windows GPU info error: {e}")
 
     except Exception as e:
-        print(f"[DEBUG] Hardware stats error: {e}")
+        logger.debug(f" Hardware stats error: {e}")
 
     return hw_stats
 
@@ -596,10 +812,8 @@ def load_model():
 
     # mmproj 模式不需要加载 PyTorch 模型
     if DEFAULT_BACKEND == "mmproj":
-        print("=" * 60)
-        print("使用 llama.cpp 多模态后端 (mmproj)")
-        print("跳过 PyTorch 模型加载")
-        print("=" * 60)
+        logger.info("使用 llama.cpp 多模态后端 (mmproj)")
+        logger.info("跳过 PyTorch 模型加载")
         model_info = {
             "name": "Gemma 3N (llama.cpp)",
             "params": "2B",
@@ -616,24 +830,20 @@ def load_model():
 
     # MPS 模式需要 PyTorch
     if not PYTORCH_AVAILABLE:
-        print("=" * 60)
-        print("错误: MPS 模式需要安装 PyTorch")
-        print("请运行: pip install torch transformers librosa")
-        print("或切换到 mmproj 模式: export GEMMA3N_BACKEND=mmproj")
-        print("=" * 60)
+        logger.error("MPS 模式需要安装 PyTorch")
+        logger.error("请运行: pip install torch transformers librosa")
+        logger.error("或切换到 mmproj 模式: export GEMMA3N_BACKEND=mmproj")
         return False
 
-    print("=" * 60)
-    print("加载 AI 多模态模型 (PyTorch MPS)...")
-    print("=" * 60)
+    logger.info("加载 AI 多模态模型 (PyTorch MPS)...")
 
     model_name = "google/gemma-3n-E2B-it"
     load_start = time.time()
 
-    print("[1/2] 加载处理器...")
+    logger.info("[1/2] 加载处理器...")
     processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
 
-    print("[2/2] 加载模型...")
+    logger.info("[2/2] 加载模型...")
     model = Gemma3nForConditionalGeneration.from_pretrained(
         model_name,
         device_map="auto",
@@ -659,26 +869,22 @@ def load_model():
     }
 
     model_loaded = True
-    print("=" * 60)
-    print(f"模型加载完成! 耗时 {load_time:.2f}s")
-    print(f"内存占用: {model_info['memory_gb']} GB")
-    print("=" * 60)
+    logger.info(f"模型加载完成! 耗时 {load_time:.2f}s")
+    logger.info(f"内存占用: {model_info['memory_gb']} GB")
     return True
 
 def start_llama_mmproj_server():
     """启动 llama-server with mmproj 作为持久化多模态推理服务"""
-    global llama_mmproj_server_process, llama_mmproj_server_ready
-
     if not Path(LLAMA_SERVER_BIN).exists():
-        print(f"[llama-mmproj-server] 二进制文件不存在: {LLAMA_SERVER_BIN}")
+        logger.info(f"llama-mmproj-server: 二进制文件不存在: {LLAMA_SERVER_BIN}")
         return False
 
     if not Path(LLAMA_MM_MODEL).exists():
-        print(f"[llama-mmproj-server] 模型文件不存在: {LLAMA_MM_MODEL}")
+        logger.info(f"llama-mmproj-server: 模型文件不存在: {LLAMA_MM_MODEL}")
         return False
 
     if not Path(LLAMA_MM_PROJ_IMAGE).exists():
-        print(f"[llama-mmproj-server] mmproj 文件不存在: {LLAMA_MM_PROJ_IMAGE}")
+        logger.info(f"llama-mmproj-server: mmproj 文件不存在: {LLAMA_MM_PROJ_IMAGE}")
         return False
 
     # 检查是否已在运行
@@ -686,15 +892,15 @@ def start_llama_mmproj_server():
         import requests
         resp = requests.get(f"http://127.0.0.1:{LLAMA_MMPROJ_SERVER_PORT}/health", timeout=2)
         if resp.status_code == 200:
-            print(f"[llama-mmproj-server] 已在端口 {LLAMA_MMPROJ_SERVER_PORT} 运行")
-            llama_mmproj_server_ready = True
+            logger.info(f"llama-mmproj-server: 已在端口 {LLAMA_MMPROJ_SERVER_PORT} 运行")
+            _process_state.llama_mmproj_server_ready = True
             return True
-    except Exception:
+    except requests.exceptions.RequestException:
         pass  # 服务未运行，继续启动
 
-    print(f"[llama-mmproj-server] 启动中... 端口: {LLAMA_MMPROJ_SERVER_PORT}")
-    print(f"[llama-mmproj-server] 模型: {LLAMA_MM_MODEL}")
-    print(f"[llama-mmproj-server] mmproj: {LLAMA_MM_PROJ_IMAGE}")
+    logger.info(f"llama-mmproj-server: 启动中... 端口: {LLAMA_MMPROJ_SERVER_PORT}")
+    logger.info(f"llama-mmproj-server: 模型: {LLAMA_MM_MODEL}")
+    logger.info(f"llama-mmproj-server: mmproj: {LLAMA_MM_PROJ_IMAGE}")
 
     env = os.environ.copy()
     bin_dir = str(Path(LLAMA_SERVER_BIN).parent)
@@ -712,7 +918,7 @@ def start_llama_mmproj_server():
         "--ctx-size", "4096",
     ]
 
-    llama_mmproj_server_process = subprocess.Popen(
+    _process_state.llama_mmproj_server_process = subprocess.Popen(
         cmd,
         env=env,
         stdout=subprocess.DEVNULL,
@@ -725,14 +931,14 @@ def start_llama_mmproj_server():
         try:
             resp = requests.get(f"http://127.0.0.1:{LLAMA_MMPROJ_SERVER_PORT}/health", timeout=1)
             if resp.status_code == 200:
-                print(f"[llama-mmproj-server] 启动成功！")
-                llama_mmproj_server_ready = True
+                logger.info(f"llama-mmproj-server: 启动成功！")
+                _process_state.llama_mmproj_server_ready = True
                 return True
-        except Exception:
+        except requests.exceptions.RequestException:
             pass  # 等待服务启动
         time.sleep(1)
 
-    print("[llama-mmproj-server] 启动超时")
+    logger.info("llama-mmproj-server: 启动超时")
     return False
 
 
@@ -750,8 +956,6 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
         session_id: 会话ID (用于 thought signature)
         has_media: 当前消息是否包含媒体
     """
-    global llama_mmproj_server_ready
-
     # 标准化路径为列表
     image_paths = []
     if image_path:
@@ -778,9 +982,9 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
         return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
     # 尝试使用 server 模式 (单图片情况)
-    if not llama_mmproj_server_ready:
+    if not _process_state.llama_mmproj_server_ready:
         if not start_llama_mmproj_server():
-            print("[mmproj] Server 启动失败，回退到 CLI 模式")
+            logger.info("mmproj: Server 启动失败，回退到 CLI 模式")
             return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
     start = time.time()
@@ -814,7 +1018,7 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
 
         if resp.status_code != 200:
             # 服务器可能出错，回退到 CLI
-            llama_mmproj_server_ready = False
+            _process_state.llama_mmproj_server_ready = False
             return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
         data = resp.json()
@@ -834,10 +1038,17 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
                 "backend": "mmproj-server"
             }
         }
-    except Exception as e:
-        # 服务器可能挂了，标记为不可用并回退到 CLI
-        print(f"[mmproj] Server 请求失败: {e}，回退到 CLI 模式")
-        llama_mmproj_server_ready = False
+    except requests.exceptions.Timeout:
+        logger.info("mmproj: Server 请求超时，回退到 CLI 模式")
+        _process_state.llama_mmproj_server_ready = False
+        return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
+    except requests.exceptions.ConnectionError as e:
+        logger.info(f"mmproj: Server 连接失败: {e}，回退到 CLI 模式")
+        _process_state.llama_mmproj_server_ready = False
+        return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
+    except (json.JSONDecodeError, KeyError, OSError) as e:
+        logger.info(f"mmproj: Server 响应处理失败: {e}，回退到 CLI 模式")
+        _process_state.llama_mmproj_server_ready = False
         return run_llama_mmproj_cli(full_prompt, image_paths, audio_paths)
 
 
@@ -851,7 +1062,7 @@ def _build_mmproj_prompt(prompt, messages_history=None, session_id=None, has_med
     """
     if has_media:
         # 有新媒体时，直接返回原始 prompt
-        print(f"[mmproj] 有新媒体，跳过历史上下文注入")
+        logger.info(f"mmproj: 有新媒体，跳过历史上下文注入")
         return prompt
 
     context_parts = []
@@ -861,7 +1072,7 @@ def _build_mmproj_prompt(prompt, messages_history=None, session_id=None, has_med
         media_context = get_session_media_context(session_id)
         if media_context:
             context_parts.append(f"[Previous Media Understanding]\n{media_context}")
-            print(f"[mmproj] 注入媒体理解上下文: {len(media_context)} 字符")
+            logger.info(f"mmproj: 注入媒体理解上下文: {len(media_context)} 字符")
 
     # 2. 获取历史对话上下文
     if messages_history:
@@ -872,7 +1083,7 @@ def _build_mmproj_prompt(prompt, messages_history=None, session_id=None, has_med
         if history_parts:
             history_context = "\n".join(history_parts)
             context_parts.append(f"[Previous Conversation]\n{history_context}")
-            print(f"[mmproj] 注入历史对话: {len(history_parts)} 条消息")
+            logger.info(f"mmproj: 注入历史对话: {len(history_parts)} 条消息")
 
     # 3. 构建完整 prompt
     if context_parts:
@@ -915,12 +1126,12 @@ def run_llama_mmproj_cli(prompt, image_paths=None, audio_paths=None):
     elif isinstance(audio_paths, str):
         audio_paths = [audio_paths]
 
-    print(f"[DEBUG] mmproj CLI: {len(image_paths)} 张图片, {len(audio_paths)} 个音频")
+    logger.debug(f" mmproj CLI: {len(image_paths)} 张图片, {len(audio_paths)} 个音频")
 
     # llama.cpp 不支持同时加载视觉和音频 projector (Metal bug)
     # 解决方案: 分两次处理
     if image_paths and audio_paths:
-        print("[DEBUG] 同时有图片和音频，分两次处理...")
+        logger.debug("同时有图片和音频，分两次处理...")
 
         # 第一次: 处理图片
         image_result = _run_mmproj_single(prompt + " (Focus on describing the images)", image_paths, None)
@@ -973,7 +1184,7 @@ def _run_mmproj_single(prompt, image_paths=None, audio_paths=None):
         return {"error": "未配置有效的 mmproj 路径"}
 
     mmproj_combined = ",".join(mmproj_list)
-    print(f"[DEBUG] mmproj CLI 使用: {mmproj_combined}")
+    logger.debug(f" mmproj CLI 使用: {mmproj_combined}")
 
     cmd = [
         LLAMA_MTMD_BIN,
@@ -1094,14 +1305,12 @@ def run_llama_run(prompt, history_context=""):
 
 def start_llama_server():
     """启动 llama-server 作为持久化推理服务"""
-    global llama_server_process, llama_server_ready
-
     if not Path(LLAMA_SERVER_BIN).exists():
-        print(f"[llama-server] 二进制文件不存在: {LLAMA_SERVER_BIN}")
+        logger.info(f"llama-server: 二进制文件不存在: {LLAMA_SERVER_BIN}")
         return False
 
     if not LLAMA_RUN_MODEL or not Path(LLAMA_RUN_MODEL).exists():
-        print(f"[llama-server] 模型文件不存在: {LLAMA_RUN_MODEL}")
+        logger.info(f"llama-server: 模型文件不存在: {LLAMA_RUN_MODEL}")
         return False
 
     # 检查是否已在运行
@@ -1109,14 +1318,14 @@ def start_llama_server():
         import requests
         resp = requests.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=2)
         if resp.status_code == 200:
-            print(f"[llama-server] 已在端口 {LLAMA_SERVER_PORT} 运行")
-            llama_server_ready = True
+            logger.info(f"llama-server: 已在端口 {LLAMA_SERVER_PORT} 运行")
+            _process_state.llama_server_ready = True
             return True
-    except Exception:
+    except requests.exceptions.RequestException:
         pass  # 服务未运行，继续启动
 
-    print(f"[llama-server] 启动中... 端口: {LLAMA_SERVER_PORT}")
-    print(f"[llama-server] 模型: {LLAMA_RUN_MODEL}")
+    logger.info(f"llama-server: 启动中... 端口: {LLAMA_SERVER_PORT}")
+    logger.info(f"llama-server: 模型: {LLAMA_RUN_MODEL}")
 
     env = os.environ.copy()
     bin_dir = str(Path(LLAMA_SERVER_BIN).parent)
@@ -1134,7 +1343,7 @@ def start_llama_server():
         "--flash-attn", "on",
     ]
 
-    llama_server_process = subprocess.Popen(
+    _process_state.llama_server_process = subprocess.Popen(
         cmd,
         env=env,
         stdout=subprocess.DEVNULL,
@@ -1147,14 +1356,14 @@ def start_llama_server():
         try:
             resp = requests.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=1)
             if resp.status_code == 200:
-                print(f"[llama-server] 启动成功！")
-                llama_server_ready = True
+                logger.info(f"llama-server: 启动成功！")
+                _process_state.llama_server_ready = True
                 return True
-        except Exception:
+        except requests.exceptions.RequestException:
             pass  # 等待服务启动
         time.sleep(1)
 
-    print("[llama-server] 启动超时")
+    logger.info("llama-server: 启动超时")
     return False
 
 
@@ -1163,9 +1372,7 @@ def query_llama_server(prompt, history_context=""):
     通过 llama-server API 进行推理
     速度更快，因为模型已经预加载
     """
-    global llama_server_ready
-
-    if not llama_server_ready:
+    if not _process_state.llama_server_ready:
         if not start_llama_server():
             # 回退到 llama-run
             return run_llama_run(prompt, history_context)
@@ -1214,10 +1421,15 @@ def query_llama_server(prompt, history_context=""):
                 "backend": "llama-server"
             }
         }
-    except Exception as e:
-        # 服务器可能挂了，尝试重启
-        llama_server_ready = False
-        return {"error": f"llama-server 错误: {str(e)}"}
+    except requests.exceptions.Timeout:
+        _process_state.llama_server_ready = False
+        return {"error": "llama-server 请求超时"}
+    except requests.exceptions.ConnectionError as e:
+        _process_state.llama_server_ready = False
+        return {"error": f"llama-server 连接失败: {e}"}
+    except (json.JSONDecodeError, KeyError) as e:
+        return {"error": f"llama-server 响应解析失败: {e}"}
+
 
 def generate_response(messages_history, current_content, session_id=None, has_media=False, media_type=None):
     """
@@ -1248,9 +1460,9 @@ def generate_response(messages_history, current_content, session_id=None, has_me
         # 只在没有新媒体时才注入历史媒体理解
         media_context = get_session_media_context(session_id)
         if media_context:
-            print(f"[DEBUG] 注入媒体理解上下文: {len(media_context)} 字符")
+            logger.debug(f" 注入媒体理解上下文: {len(media_context)} 字符")
     elif has_media:
-        print(f"[DEBUG] 当前有新{media_type or '媒体'}，跳过历史媒体理解注入")
+        logger.debug(f" 当前有新{media_type or '媒体'}，跳过历史媒体理解注入")
 
     # 方案: 将历史对话合并成上下文文本
     # 这样就只有一条 user 消息，避免批次不一致问题
@@ -1263,7 +1475,7 @@ def generate_response(messages_history, current_content, session_id=None, has_me
             history_parts.append(f"{role}: {msg['text']}")
         history_context = "\n".join(history_parts)
     elif has_media:
-        print(f"[DEBUG] 当前有新媒体，跳过历史对话注入")
+        logger.debug(f" 当前有新媒体，跳过历史对话注入")
 
     # 构建单条消息 (包含历史上下文 + 当前输入)
     messages = []
@@ -1306,7 +1518,7 @@ Please respond to the current message, taking into account the context above."""
 
     messages.append({"role": "user", "content": modified_content})
 
-    print(f"[DEBUG] 消息数量: {len(messages)}, 历史轮次: {history_turns}, 有新媒体: {has_media}")
+    logger.debug(f" 消息数量: {len(messages)}, 历史轮次: {history_turns}, 有新媒体: {has_media}")
 
     # 处理输入
     tokenize_start = time.time()
@@ -1324,7 +1536,7 @@ Please respond to the current message, taking into account the context above."""
     attention_mask = inputs["attention_mask"].to(model.device)
     input_tokens = input_ids.shape[1]
 
-    print(f"[DEBUG] input_tokens: {input_tokens}")
+    logger.debug(f" input_tokens: {input_tokens}")
 
     generate_kwargs = {
         "input_ids": input_ids,
@@ -1388,6 +1600,88 @@ def chat_page():
 @app.route("/docs")
 def docs_page():
     return send_from_directory("static", "docs.html")
+
+
+@app.route("/health")
+def health():
+    """
+    健康检查端点 (用于负载均衡器和监控)
+
+    返回服务器状态、子进程状态、系统资源使用情况等。
+    HTTP 200 表示健康，HTTP 503 表示未就绪。
+    """
+    # 基本状态
+    is_ready = model_loaded
+    status = "ok" if is_ready else "starting"
+
+    # 子进程状态
+    subprocess_status = {}
+
+    # llama-server (纯文本)
+    proc = _process_state.llama_server_process
+    if proc:
+        try:
+            proc_info = psutil.Process(proc.pid)
+            subprocess_status["llama_server"] = {
+                "pid": proc.pid,
+                "status": proc_info.status(),
+                "memory_mb": round(proc_info.memory_info().rss / (1024**2), 2),
+                "ready": _process_state.llama_server_ready
+            }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            subprocess_status["llama_server"] = {"status": "not_found"}
+    else:
+        subprocess_status["llama_server"] = {"status": "not_started"}
+
+    # llama-mmproj-server (多模态)
+    proc = _process_state.llama_mmproj_server_process
+    if proc:
+        try:
+            proc_info = psutil.Process(proc.pid)
+            subprocess_status["llama_mmproj_server"] = {
+                "pid": proc.pid,
+                "status": proc_info.status(),
+                "memory_mb": round(proc_info.memory_info().rss / (1024**2), 2),
+                "ready": _process_state.llama_mmproj_server_ready
+            }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            subprocess_status["llama_mmproj_server"] = {"status": "not_found"}
+    else:
+        subprocess_status["llama_mmproj_server"] = {"status": "not_started"}
+
+    # 系统资源
+    try:
+        memory = psutil.virtual_memory()
+        cpu_percent = psutil.cpu_percent(interval=None)
+        system_info = {
+            "memory_total_gb": round(memory.total / (1024**3), 2),
+            "memory_available_gb": round(memory.available / (1024**3), 2),
+            "memory_percent_used": memory.percent,
+            "cpu_percent": cpu_percent
+        }
+    except (psutil.Error, OSError, AttributeError):
+        system_info = None
+
+    # 缓存统计
+    cache_stats = {
+        "active_sessions": len(sessions),
+        "media_cache_entries": len(media_understanding_cache),
+        "thought_states": len(thought_states)
+    }
+
+    response = {
+        "status": status,
+        "model_loaded": is_ready,
+        "backend": DEFAULT_BACKEND,
+        "subprocesses": subprocess_status,
+        "system": system_info,
+        "cache": cache_stats,
+        "shutdown_requested": _process_state.shutdown_requested
+    }
+
+    # HTTP 状态码: 200 如果就绪，503 如果还在启动
+    http_status = 200 if is_ready else 503
+    return jsonify(response), http_status
 
 @app.route("/api/status")
 def status():
@@ -1607,7 +1901,7 @@ def chat():
 
         import sys
         # 日志中不记录用户输入内容，保护隐私
-        print(f"[API /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, has_text={bool(text)}", flush=True)
+        logger.info(f"API /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, has_text={bool(text)}", flush=True)
         sys.stdout.flush()
 
         # 获取或创建会话
@@ -1682,7 +1976,7 @@ def chat():
                 return jsonify({"error": f"保存音频失败: {e}"}), 500
             except Exception as e:
                 return jsonify({"error": f"处理音频 {idx+1} 失败: {e}"}), 400
-            print(f"[DEBUG] 音频 {idx}: {len(audio_array)/sr:.2f}秒")
+            logger.debug(f" 音频 {idx}: {len(audio_array)/sr:.2f}秒")
 
         # 向后兼容: 单个变量
         image = images[0] if images else None
@@ -1768,7 +2062,7 @@ def chat():
             mm_image_paths = image_paths if image_paths else None
             mm_audio_paths = audio_paths if audio_paths else None
             # 日志中不记录用户输入内容
-            print(f"[API mmproj] images={len(image_paths)}, audios={len(audio_paths)}")
+            logger.info(f"API mmproj] images={len(image_paths)}, audios={len(audio_paths)}")
 
             result = run_llama_mmproj(
                 mm_prompt,
@@ -1792,7 +2086,7 @@ def chat():
                     turn_index=turn_index,
                     understanding=understanding[:500]  # 限制长度，只保存摘要
                 )
-                print(f"[Thought Signature] 存储 {current_media_type} 理解: {media_ref}")
+                logger.debug(f"ThoughtSignature: 存储 {current_media_type} 理解: {media_ref}")
 
             # 保存到历史（只保存文本摘要）
             user_summary = display_text
@@ -1851,21 +2145,20 @@ if __name__ == "__main__":
 
     load_model()
     port = int(os.environ.get("WEBUI_PORT", 5001))
-    print("\n" + "=" * 60)
-    print("🐉 灵空 AI 多模态聊天服务器")
-    print("=" * 60)
-    print(f"  地址: http://localhost:{port}")
-    print(f"  后端: {DEFAULT_BACKEND}")
+    logger.info("=" * 60)
+    logger.info("灵空 AI 多模态聊天服务器")
+    logger.info("=" * 60)
+    logger.info(f"  地址: http://localhost:{port}")
+    logger.info(f"  后端: {DEFAULT_BACKEND}")
     if DEFAULT_BACKEND == "mmproj":
-        print(f"  模型: {LLAMA_MM_MODEL}")
-        print(f"  视觉: {LLAMA_MM_PROJ_IMAGE}")
-        print(f"  音频: {LLAMA_MM_PROJ_AUDIO}")
-    print(f"  存储: {GEMMA3N_HOME}")
-    print("")
+        logger.info(f"  模型: {LLAMA_MM_MODEL}")
+        logger.info(f"  视觉: {LLAMA_MM_PROJ_IMAGE}")
+        logger.info(f"  音频: {LLAMA_MM_PROJ_AUDIO}")
+    logger.info(f"  存储: {GEMMA3N_HOME}")
     if DEFAULT_BACKEND == "mmproj":
-        print("  提示: 使用 llama.cpp 多模态后端，无需 PyTorch")
-        print("  进阶: export GEMMA3N_BACKEND=mps (需要 PyTorch)")
+        logger.info("  提示: 使用 llama.cpp 多模态后端，无需 PyTorch")
+        logger.info("  进阶: export GEMMA3N_BACKEND=mps (需要 PyTorch)")
     if sudo_authorized:
-        print("  GPU 温度监控: ✅ 已启用")
-    print("=" * 60)
+        logger.info("  GPU 温度监控: 已启用")
+    logger.info("=" * 60)
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
