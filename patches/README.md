@@ -2,14 +2,22 @@
 
 This directory contains patches to add **Gemma-3n multimodal (vision + audio)** support to llama.cpp.
 
+## Origin
+
+This patch is based on **PR #18256** by [@simrnsingh](https://github.com/simrnsingh):
+- **PR Link**: https://github.com/ggerganov/llama.cpp/pull/18256
+- **PR Title**: "Add Gemma3n multimodal support with MobileNetV5 vision encoder"
+
+We extended the original vision-only PR to add **audio encoder (Conformer)** support.
+
 ## Target Version
 
 | Item | Value |
 |------|-------|
 | **Base Repository** | https://github.com/ggerganov/llama.cpp |
-| **Base Tag** | `b7499` |
-| **Base Commit** | `fd05c51cec7e233bddf2d2bae85ddf8aa6b0226c` |
-| **Base Date** | 2025-12-21 |
+| **Base PR** | [#18256](https://github.com/ggerganov/llama.cpp/pull/18256) by @simrnsingh |
+| **Merge Base Commit** | `fd05c51cec7e233bddf2d2bae85ddf8aa6b0226c` (master at 2025-12-21) |
+| **Our Branch** | `pr-18256` + audio encoder additions |
 
 ## Patch Contents
 
@@ -48,10 +56,12 @@ tools/mtmd/mtmd.cpp               | +11   (multi-mmproj loading)
 ## How to Apply
 
 ```bash
-# Clone llama.cpp at the correct version
+# Clone llama.cpp
 git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp
-git checkout b7499
+
+# Checkout to the merge base commit
+git checkout fd05c51cec7e233bddf2d2bae85ddf8aa6b0226c
 
 # Apply the patch
 git apply /path/to/gemma3n-multimodal.patch
@@ -105,6 +115,7 @@ These patches are provided under the same license as llama.cpp (MIT License).
 
 ## Credits
 
-- Original llama.cpp: https://github.com/ggerganov/llama.cpp
-- Gemma-3n model: Google DeepMind
-- Patches: LingKong AI Team
+- **Vision encoder (MobileNetV5)**: [@simrnsingh](https://github.com/simrnsingh) - [PR #18256](https://github.com/ggerganov/llama.cpp/pull/18256)
+- **Audio encoder (Conformer)**: LingKong AI Team
+- **Original llama.cpp**: https://github.com/ggerganov/llama.cpp
+- **Gemma-3n model**: Google DeepMind
