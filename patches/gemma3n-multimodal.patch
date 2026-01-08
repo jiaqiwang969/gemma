@@ -1,0 +1,2574 @@
+diff --git a/convert_hf_to_gguf.py b/convert_hf_to_gguf.py
+index 432be599..70c4937d 100755
+--- a/convert_hf_to_gguf.py
++++ b/convert_hf_to_gguf.py
+@@ -520,7 +520,11 @@ class ModelBase:
+         return ()
+ 
+     def prepare_tensors(self):
+-        max_name_len = max(len(s) for _, s in self.tensor_map.mapping.values()) + len(".weight,")
++        # Handle empty tensor_map for models with block_count=0 (like MobileNetV5)
++        if self.tensor_map.mapping:
++            max_name_len = max(len(s) for _, s in self.tensor_map.mapping.values()) + len(".weight,")
++        else:
++            max_name_len = len("vision_encoder.weight,")  # Default reasonable length
+ 
+         for name, data_torch in chain(self.generate_extra_tensors(), self.get_tensors()):
+             # we don't need these
+@@ -5959,8 +5963,284 @@ class Gemma3VisionModel(MmprojModel):
+ 
+         return [] # skip other tensors
+ 
++@ModelBase.register("Gemma3nForConditionalGeneration", "Gemma3nVisionModel")
++class Gemma3nVisionModel(MmprojModel):
++    """Vision encoder converter for Gemma3n using MobileNetV5 architecture"""
++    n_block_keys = []
++
++    # Double indexed mapping for MobileNetV5 blocks
++    block_tensor_mapping = {
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.conv_exp.weight":             "v.blk.{bid}.{sid}.conv_exp.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.bn1.weight":                  "v.blk.{bid}.{sid}.bn1.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.conv_pwl.weight":             "v.blk.{bid}.{sid}.conv_pwl.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.bn2.weight":                  "v.blk.{bid}.{sid}.bn2.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.dw_start.conv.weight":        "v.blk.{bid}.{sid}.dw_start.conv.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.dw_start.bn.weight":          "v.blk.{bid}.{sid}.dw_start.bn.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.dw_mid.conv.weight":          "v.blk.{bid}.{sid}.dw_mid.conv.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.dw_mid.bn.weight":            "v.blk.{bid}.{sid}.dw_mid.bn.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.pw_exp.conv.weight":          "v.blk.{bid}.{sid}.pw_exp.conv.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.pw_exp.bn.weight":            "v.blk.{bid}.{sid}.pw_exp.bn.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.pw_proj.conv.weight":         "v.blk.{bid}.{sid}.pw_proj.conv.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.pw_proj.bn.weight":           "v.blk.{bid}.{sid}.pw_proj.bn.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.layer_scale.gamma":           "v.blk.{bid}.{sid}.layer_scale.gamma",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.query.proj.weight":      "v.blk.{bid}.{sid}.attn.query.proj.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.key.proj.weight":        "v.blk.{bid}.{sid}.attn.key.proj.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.value.proj.weight":      "v.blk.{bid}.{sid}.attn.value.proj.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.output.proj.weight":     "v.blk.{bid}.{sid}.attn.output.proj.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.key.down_conv.weight":   "v.blk.{bid}.{sid}.attn.key.down_conv.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.key.norm.weight":        "v.blk.{bid}.{sid}.attn.key.norm.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.value.down_conv.weight": "v.blk.{bid}.{sid}.attn.value.down_conv.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.attn.value.norm.weight":      "v.blk.{bid}.{sid}.attn.value.norm.weight",
++        "model.vision_tower.timm_model.blocks.{bid}.{sid}.norm.weight":                 "v.blk.{bid}.{sid}.norm.weight",
++    }
++
++    def find_hparam(self, keys: list[str], optional: bool = False) -> Any:
++        """Override to return 0 for block count since MobileNetV5 is CNN-based"""
++        if not keys:  # If n_block_keys is empty (our case)
++            return 0
++        # Otherwise use parent implementation
++        return super().find_hparam(keys, optional)
++
++    def __init__(self, *args, **kwargs):
++        # Parent init will call find_hparam which now returns 0 for empty keys
++        super().__init__(*args, **kwargs)
++
++    def find_vparam(self, keys: list[str], optional: bool = False) -> Any:
++        """Override to provide hardcoded MobileNetV5 parameters that aren't in config"""
++        # Handle empty keys list (n_block_keys) - return 0 for CNN architecture
++        if not keys:
++            return 0
++
++        if "intermediate_size" in keys:
++            # Typical expansion is 4x the embedding dimension
++            hidden_size = self.hparams_vision.get("hidden_size", 2048)
++            return hidden_size * 4
++
++        if "num_attention_heads" in keys or "num_heads" in keys:
++            # Multi-Query Attention with 8 heads
++            return 8
++
++        # For other parameters, use parent implementation
++        return super().find_vparam(keys, optional)
++
++    def set_gguf_parameters(self):
++        # MobileNetV5 does not use normalisation at all
++        self.preprocessor_config["image_mean"] = [0.0 , 0.0 , 0.0 ]
++        self.preprocessor_config["image_std"] = [1.0 , 1.0 , 1.0 ]
++        self.hparams_vision["image_size"] = self.preprocessor_config.get(
++            "size", {"height": 768, "width": 768}
++        )["height"]
++
++        # Image sequence length (256 tokens = 16x16 for Gemma3n)
++        image_seq_length = self.preprocessor_config.get("image_seq_length", 256)
++        image_size = self.hparams_vision["image_size"]
++        self.hparams_vision["patch_size"] = image_size // image_seq_length
++
++        # Now call parent which will use the corrected values
++        super().set_gguf_parameters()
++
++        # Set projector type to GEMMA3N
++        self.gguf_writer.add_clip_projector_type(gguf.VisionProjectorType.GEMMA3N)
++
++        # MobileNetV5 specific parameters
++        self.gguf_writer.add_vision_attention_layernorm_eps(self.hparams.get("layer_norm_eps", 1e-6))
++
++    def tensor_force_quant(self, name, new_name, bid, n_dims):
++        # Force quantization settings for specific tensor types
++        if "input_projection" in name or "input_proj" in name:
++            return gguf.GGMLQuantizationType.F16
++        if ".embeddings." in name or "stem" in name:
++            return gguf.GGMLQuantizationType.F32
++        return super().tensor_force_quant(name, new_name, bid, n_dims)
++
++    def custom_map(self, name: str) -> str:
++        """Parses names like model.vision_tower.timm_model.blocks.1.2.suffix and applies template mapping."""
++        parts = name.split(".")
++        # MobileNet blocks have at least 7 parts: model, vision_tower, timm_model, blocks, bid, sid, and suffix
++        if len(parts) >= 7:
++            bid, sid = parts[4], parts[5]
++            suffix = ".".join(parts[6:])
++            template = f"model.vision_tower.timm_model.blocks.{{bid}}.{{sid}}.{suffix}"
++            if template in self.block_tensor_mapping:
++                return self.block_tensor_mapping[template].format(bid=bid, sid=sid)
++
++        raise ValueError(f"Unknown name: {name}")
+ 
+-@ModelBase.register("Gemma3nForConditionalGeneration")
++    def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
++        del bid  # unused
++
++        # Gemma3n uses
++        # - model.embed_vision.* for projection layers
++        # - model.vision_tower.* for vision encoder
++        # Skip non-vision tensors
++        if not (name.startswith("model.embed_vision.") or
++                name.startswith("model.vision_tower.")):
++            return []
++
++        if name.startswith("model.vision_tower.timm_model.blocks."):
++            # Double-indexed block tensors through custom logic
++            new_name = self.custom_map(name)
++        else:
++            # Route non-repeating (conv_stem, msfa, embedding, etc.) and un-catched through tensor_mapping.py
++            new_name = self.map_tensor_name(name)
++        
++        if new_name.endswith("conv_stem.conv.bias") or new_name.endswith("layer_scale.gamma"):
++            data_torch = data_torch.unsqueeze(0).unsqueeze(-1).unsqueeze(-1) # [1, C, 1, 1]
++
++        yield (new_name, data_torch)
++
++
++@ModelBase.register("Gemma3nForConditionalGeneration:Audio")
++class Gemma3nAudioModel(MmprojModel):
++    """Audio encoder converter for Gemma3n using Conformer architecture"""
++
++    def get_audio_config(self) -> dict:
++        """Get audio config from hparams"""
++        return self.hparams.get("audio_config", {})
++
++    def find_hparam(self, keys: list[str], optional: bool = False) -> Any:
++        """Override to return audio block count"""
++        if not keys:
++            return 0
++        # Check for block count in audio config
++        audio_cfg = self.get_audio_config()
++        if any(k in ("num_hidden_layers", "n_layer") for k in keys):
++            return audio_cfg.get("conf_num_hidden_layers", audio_cfg.get("num_hidden_layers", 12))
++        return super().find_hparam(keys, optional)
++
++    def set_gguf_parameters(self):
++        # Set audio-specific parameters
++        audio_cfg = self.get_audio_config()
++
++        # Audio encoder parameters - use Gemma3n specific config keys
++        self.gguf_writer.add_audio_block_count(audio_cfg.get("conf_num_hidden_layers", 12))
++        self.gguf_writer.add_audio_embedding_length(audio_cfg.get("hidden_size", 1536))
++        self.gguf_writer.add_audio_feed_forward_length(audio_cfg.get("intermediate_size", 6144))
++        self.gguf_writer.add_audio_head_count(audio_cfg.get("conf_num_attention_heads", 8))
++
++        # Projection dimension (from text model's hidden_size for embedding projection)
++        self.gguf_writer.add_audio_projection_dim(self.hparams.get("hidden_size", 2048))
++
++        # Mel spectrogram parameters
++        self.gguf_writer.add_audio_num_mel_bins(audio_cfg.get("num_mel_bins", 128))
++
++        # Layer norm epsilon
++        self.gguf_writer.add_audio_attention_layernorm_eps(audio_cfg.get("layer_norm_eps", 1e-6))
++
++        # Set projector type to GEMMA3NA (audio)
++        self.gguf_writer.add_clip_projector_type(gguf.VisionProjectorType.GEMMA3NA)
++
++        # Has audio encoder
++        self.gguf_writer.add_clip_has_audio_encoder(True)
++        self.gguf_writer.add_clip_has_vision_encoder(False)
++
++    def tensor_force_quant(self, name, new_name, bid, n_dims):
++        # Force specific quantization for audio tensors
++        if "embedding_projection" in name or "input_proj" in name:
++            return gguf.GGMLQuantizationType.F16
++        if "embedding" in name and "projection" not in name:
++            return gguf.GGMLQuantizationType.F32
++        return super().tensor_force_quant(name, new_name, bid, n_dims)
++
++    def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
++        del bid  # unused
++
++        # Only process audio-related tensors
++        # Gemma3n uses:
++        # - model.audio_tower.* for audio encoder
++        # - model.embed_audio.* for audio projection
++        if not (name.startswith("model.audio_tower.") or
++                name.startswith("model.embed_audio.")):
++            return []
++
++        # Direct mapping for Gemma3n audio tensors
++        import re
++
++        new_name = None
++
++        # Subsample conv projection: conv_0, conv_1
++        # C++ expects: a.conv_0.conv.weight, a.conv_0.norm.weight, a.conv_1.conv.weight, etc.
++        if "subsample_conv_projection.conv_" in name:
++            m = re.search(r'conv_(\d+)\.(conv|norm)\.weight', name)
++            if m:
++                idx = m.group(1)
++                layer_type = m.group(2)
++                if layer_type == "conv":
++                    new_name = f"a.conv_{idx}.conv.weight"
++                else:
++                    new_name = f"a.conv_{idx}.norm.weight"
++
++        # Input projection
++        # C++ expects: a.input_proj_linear.weight
++        elif "subsample_conv_projection.input_proj_linear.weight" in name:
++            new_name = "a.input_proj_linear.weight"
++
++        # embed_audio tensors
++        # C++ expects: mm.a.embedding.weight, mm.a.embedding_projection.weight, etc.
++        elif "embed_audio.embedding.weight" in name:
++            new_name = "mm.a.embedding.weight"
++        elif "embed_audio.embedding_projection.weight" in name:
++            new_name = "mm.a.embedding_projection.weight"
++        elif "embed_audio.hard_embedding_norm.weight" in name:
++            new_name = "mm.a.hard_embedding_norm.weight"
++        elif "embed_audio.soft_embedding_norm.weight" in name:
++            new_name = "mm.a.soft_embedding_norm.weight"
++
++        # Conformer layers
++        # C++ expects full path names like: a.blk.0.attention.attn.q_proj.weight
++        elif "conformer." in name:
++            m = re.search(r'conformer\.(\d+)\.(.+)', name)
++            if m:
++                layer_idx = m.group(1)
++                rest = m.group(2)
++
++                # Map to match C++ expected names - shortened to fit 64 char limit
++                mapping = {
++                    # Attention
++                    "attention.attn.q_proj.weight": "attn.q.weight",
++                    "attention.attn.k_proj.weight": "attn.k.weight",
++                    "attention.attn.v_proj.weight": "attn.v.weight",
++                    "attention.post.weight": "attn.out.weight",
++                    "attention.attn.per_dim_scale": "attn.per_dim",
++                    "attention.attn.relative_position_embedding.pos_proj.weight": "attn.rel_pos.weight",
++                    "attention.pre_attn_norm.weight": "attn.pre_norm.weight",
++                    "attention.post_norm.weight": "attn.post_norm.weight",
++
++                    # FFW layer start
++                    "ffw_layer_start.ffw_layer_1.weight": "ffw_s.l1.weight",
++                    "ffw_layer_start.ffw_layer_2.weight": "ffw_s.l2.weight",
++                    "ffw_layer_start.pre_layer_norm.weight": "ffw_s.pre_norm.weight",
++                    "ffw_layer_start.post_layer_norm.weight": "ffw_s.post_norm.weight",
++
++                    # FFW layer end
++                    "ffw_layer_end.ffw_layer_1.weight": "ffw_e.l1.weight",
++                    "ffw_layer_end.ffw_layer_2.weight": "ffw_e.l2.weight",
++                    "ffw_layer_end.pre_layer_norm.weight": "ffw_e.pre_norm.weight",
++                    "ffw_layer_end.post_layer_norm.weight": "ffw_e.post_norm.weight",
++
++                    # LConv1D
++                    "lconv1d.linear_start.weight": "lconv.start.weight",
++                    "lconv1d.depthwise_conv1d.weight": "lconv.dw.weight",
++                    "lconv1d.linear_end.weight": "lconv.end.weight",
++                    "lconv1d.conv_norm.weight": "lconv.norm.weight",
++                    "lconv1d.pre_layer_norm.weight": "lconv.pre_norm.weight",
++
++                    # Block norm
++                    "norm.weight": "norm.weight",
++                }
++
++                if rest in mapping:
++                    new_name = f"a.blk.{layer_idx}.{mapping[rest]}"
++
++        if new_name is None:
++            # Skip unmapped tensors with a warning
++            print(f"WARNING: Skipping unmapped audio tensor: {name}")
++            return []
++
++        yield (new_name, data_torch)
++
++
++@ModelBase.register("Gemma3nForCausalLM", "Gemma3nForConditionalGeneration")
+ class Gemma3NModel(Gemma3Model):
+     model_arch = gguf.MODEL_ARCH.GEMMA3N
+     norm_shift = 0.0 # same value with Gemma3p5RMSNorm scale_shift on python code
+@@ -5983,8 +6263,25 @@ class Gemma3NModel(Gemma3Model):
+         ]
+ 
+     def set_vocab(self):
++        # For Gemma3n multimodal models, we need the FULL vocab_size (262400)
++        # which includes special tokens from 262144-262399 for vision/audio.
++        # The vocab_size_per_layer_input (262144) is only the embedding size per layer.
++        # Temporarily override the hparams lookup order to prioritize vocab_size.
++
++        # Store original vocab_size_per_layer_input if it exists
++        vocab_size_per_layer_input = self.hparams.get("vocab_size_per_layer_input")
++
++        # Temporarily remove vocab_size_per_layer_input to force using vocab_size
++        if vocab_size_per_layer_input is not None:
++            del self.hparams["vocab_size_per_layer_input"]
++
++        # Call parent set_vocab which will now use vocab_size (262400)
+         super().set_vocab()
+ 
++        # Restore vocab_size_per_layer_input for later use
++        if vocab_size_per_layer_input is not None:
++            self.hparams["vocab_size_per_layer_input"] = vocab_size_per_layer_input
++
+     def set_gguf_parameters(self):
+         super().set_gguf_parameters()
+         self.gguf_writer.add_altup_active_idx(self.hparams["altup_active_idx"])
+@@ -6020,8 +6317,32 @@ class Gemma3NModel(Gemma3Model):
+         if "language_model." not in name:
+             return [] # skip non-language model tensors
+ 
++        # Pad token embeddings for vision/audio special tokens (262144-262399)
++        if "embed_tokens.weight" in name or "embed_tokens_per_layer" in name:
++            # Move to CPU to avoid meta device issues during padding
++            data_torch = data_torch.to(device="cpu")
++
++            vocab_size = self.hparams.get("vocab_size", 262400)
++            current_size = data_torch.shape[0]  # First dimension is vocab_size
++
++            if current_size < vocab_size:
++                # Pad with zeros for vision/audio tokens (they get embeddings from vision tower)
++                padding_size = vocab_size - current_size
++                tensor_type = "per-layer embeddings" if "per_layer" in name else "token embeddings"
++                logger.info(f"Padding {tensor_type} shape {list(data_torch.shape)} from {current_size} to {vocab_size} (adding {padding_size} vision/audio token slots)")
++
++                # Create padding with zeros (vision tokens won't use these embeddings)
++                padding = torch.zeros((padding_size, data_torch.shape[1]), dtype=data_torch.dtype, device=data_torch.device)
++                data_torch = torch.cat([data_torch, padding], dim=0)
++
++            # Continue with normal processing
++            name = name.replace("language_model.", "")
++            return [(self.map_tensor_name(name), data_torch)]
++
+         if "altup_unembed_projections" in name:
+             data_torch = data_torch.to(device="cpu")
++            # altup_unembed matrices are [hidden_size, hidden_size], NOT vocab-based
++            # They should NOT be padded
+             if ".0." in name:
+                 self._altup_unembd[0] = data_torch
+             elif ".1." in name:
+@@ -10617,6 +10938,10 @@ def parse_args() -> argparse.Namespace:
+         "--mmproj", action="store_true",
+         help="(Experimental) Export multimodal projector (mmproj) for vision models. This will only work on some vision models. A prefix 'mmproj-' will be added to the output file name.",
+     )
++    parser.add_argument(
++        "--mmproj-type", type=str, default=None, choices=["vision", "audio"],
++        help="(Experimental) Specify type of multimodal projector to export: 'vision' or 'audio'. Use with --mmproj for models that have both encoders.",
++    )
+     parser.add_argument(
+         "--mistral-format", action="store_true",
+         help="Whether the model is stored following the Mistral format.",
+@@ -10751,6 +11076,9 @@ def main() -> None:
+         hparams = ModelBase.load_hparams(dir_model, is_mistral_format)
+         if not is_mistral_format:
+             model_architecture = get_model_architecture(hparams, model_type)
++            # Handle --mmproj-type for models with both vision and audio encoders
++            if args.mmproj and hasattr(args, 'mmproj_type') and args.mmproj_type == "audio":
++                model_architecture = model_architecture + ":Audio"
+             logger.info(f"Model architecture: {model_architecture}")
+             try:
+                 model_class = ModelBase.from_model_architecture(model_architecture, model_type=model_type)
+diff --git a/gguf-py/gguf/constants.py b/gguf-py/gguf/constants.py
+index cab8f290..1575e370 100644
+--- a/gguf-py/gguf/constants.py
++++ b/gguf-py/gguf/constants.py
+@@ -456,6 +456,7 @@ class VISION_PROJECTOR_TYPE(IntEnum):
+     RESAMPLER = auto()
+     GLM_EDGE  = auto()
+     MERGER    = auto()
++    GEMMA3N   = auto()
+     GEMMA3    = auto()
+     QWEN3VL   = auto()
+     COGVLM    = auto()
+@@ -666,6 +667,15 @@ class MODEL_TENSOR(IntEnum):
+     V_MM_INP_NORM        = auto()
+     V_MM_INP_PROJ        = auto() # gemma3
+     V_MM_SOFT_EMB_NORM   = auto() # gemma3
++    V_MM_EMBEDDING       = auto() # gemma3n
++    V_MM_HARD_EMB_NORM   = auto() # gemma3n
++    V_ENC_CONV_STEM       = auto() # gemma3n
++    V_ENC_CONV_STEM_NORM  = auto() # gemma3n
++    V_ENC_MSFA_EXP        = auto() # gemma3n
++    V_ENC_MSFA_EXP_NORM   = auto() # gemma3n
++    V_ENC_MSFA_PROJ       = auto() # gemma3n
++    V_ENC_MSFA_PROJ_NORM  = auto() # gemma3n
++    V_ENC_MSFA_NORM       = auto() # gemma3n
+     V_RESMPL_POS_EMBD_K  = auto() # minicpmv
+     V_RESMPL_ATTN_Q      = auto() # minicpmv
+     V_RESMPL_ATTN_K      = auto() # minicpmv
+@@ -730,6 +740,32 @@ class MODEL_TENSOR(IntEnum):
+     A_ENC_CONV_NORM        = auto() # SSM conv
+     A_ENC_CONV_PW1         = auto()
+     A_ENC_CONV_PW2         = auto()
++    # gemma3n audio encoder (Conformer)
++    A_ENC_CONV_SUBSAMPLE   = auto() # gemma3n subsample conv
++    A_ENC_INPUT_PROJ       = auto() # gemma3n input projection
++    A_ENC_FFW_START_L1     = auto() # gemma3n ffw_layer_start.ffw_layer_1
++    A_ENC_FFW_START_L2     = auto() # gemma3n ffw_layer_start.ffw_layer_2
++    A_ENC_FFW_START_PRE    = auto() # gemma3n ffw_layer_start pre_layer_norm
++    A_ENC_FFW_START_POST   = auto() # gemma3n ffw_layer_start post_layer_norm
++    A_ENC_FFW_END_L1       = auto() # gemma3n ffw_layer_end.ffw_layer_1
++    A_ENC_FFW_END_L2       = auto() # gemma3n ffw_layer_end.ffw_layer_2
++    A_ENC_FFW_END_PRE      = auto() # gemma3n ffw_layer_end pre_layer_norm
++    A_ENC_FFW_END_POST     = auto() # gemma3n ffw_layer_end post_layer_norm
++    A_ENC_ATTN_OUT         = auto() # gemma3n attention.post
++    A_ENC_ATTN_PER_DIM     = auto() # gemma3n per_dim_scale
++    A_ENC_ATTN_REL_POS     = auto() # gemma3n relative_position_embedding
++    A_ENC_ATTN_PRE_NORM    = auto() # gemma3n pre_attn_norm
++    A_ENC_ATTN_POST_NORM   = auto() # gemma3n post_norm
++    A_ENC_LCONV_START      = auto() # gemma3n lconv1d.linear_start
++    A_ENC_LCONV_DW         = auto() # gemma3n lconv1d.depthwise_conv1d
++    A_ENC_LCONV_END        = auto() # gemma3n lconv1d.linear_end
++    A_ENC_LCONV_NORM       = auto() # gemma3n lconv1d.conv_norm
++    A_ENC_LCONV_PRE_NORM   = auto() # gemma3n lconv1d.pre_layer_norm
++    A_ENC_BLK_NORM         = auto() # gemma3n block norm
++    A_MM_EMBEDDING         = auto() # gemma3n mm.a.embedding
++    A_MM_EMBED_PROJ        = auto() # gemma3n mm.a.embedding_projection
++    A_MM_HARD_EMB_NORM     = auto() # gemma3n hard_embedding_norm
++    A_MM_SOFT_EMB_NORM     = auto() # gemma3n soft_embedding_norm
+ 
+ 
+ MODEL_ARCH_NAMES: dict[MODEL_ARCH, str] = {
+@@ -1057,7 +1093,16 @@ TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
+     MODEL_TENSOR.V_MM_POST_NORM:            "mm.post_norm",
+     MODEL_TENSOR.V_MM_INP_PROJ:             "mm.input_projection",
+     MODEL_TENSOR.V_MM_INP_NORM:             "mm.input_norm",
+-    MODEL_TENSOR.V_MM_SOFT_EMB_NORM:        "mm.soft_emb_norm",
++    MODEL_TENSOR.V_MM_SOFT_EMB_NORM:        "mm.soft_emb_norm",             # gemma3n
++    MODEL_TENSOR.V_MM_EMBEDDING:            "mm.embedding",                 # gemma3n
++    MODEL_TENSOR.V_MM_HARD_EMB_NORM:        "mm.hard_emb_norm",             # gemma3n
++    MODEL_TENSOR.V_ENC_CONV_STEM:           "v.conv_stem.conv",         # gemma3n
++    MODEL_TENSOR.V_ENC_CONV_STEM_NORM:      "v.conv_stem.bn",           # gemma3n
++    MODEL_TENSOR.V_ENC_MSFA_EXP:            "v.msfa.ffn.pw_exp.conv",   # gemma3n
++    MODEL_TENSOR.V_ENC_MSFA_EXP_NORM:       "v.msfa.ffn.pw_exp.bn",     # gemma3n
++    MODEL_TENSOR.V_ENC_MSFA_PROJ:           "v.msfa.ffn.pw_proj.conv",  # gemma3n
++    MODEL_TENSOR.V_ENC_MSFA_PROJ_NORM:      "v.msfa.ffn.pw_proj.bn",    # gemma3n
++    MODEL_TENSOR.V_ENC_MSFA_NORM:           "v.msfa.norm",              # gemma3n
+     MODEL_TENSOR.V_RESMPL_POS_EMBD_K:       "resampler.pos_embd_k",
+     MODEL_TENSOR.V_RESMPL_ATTN_Q:           "resampler.attn.q",
+     MODEL_TENSOR.V_RESMPL_ATTN_K:           "resampler.attn.k",
+@@ -1116,6 +1161,32 @@ TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
+     MODEL_TENSOR.A_ENC_CONV_NORM:           "a.blk.{bid}.conv_norm",
+     MODEL_TENSOR.A_ENC_CONV_PW1:            "a.blk.{bid}.conv_pw1",
+     MODEL_TENSOR.A_ENC_CONV_PW2:            "a.blk.{bid}.conv_pw2",
++    # gemma3n audio encoder (Conformer)
++    MODEL_TENSOR.A_ENC_CONV_SUBSAMPLE:      "a.conv_{bid}.conv",
++    MODEL_TENSOR.A_ENC_INPUT_PROJ:          "a.input_proj_linear",
++    MODEL_TENSOR.A_ENC_FFW_START_L1:        "a.blk.{bid}.ffw_layer_start.ffw_layer_1",
++    MODEL_TENSOR.A_ENC_FFW_START_L2:        "a.blk.{bid}.ffw_layer_start.ffw_layer_2",
++    MODEL_TENSOR.A_ENC_FFW_START_PRE:       "a.blk.{bid}.ffw_layer_start.pre_layer_norm",
++    MODEL_TENSOR.A_ENC_FFW_START_POST:      "a.blk.{bid}.ffw_layer_start.post_layer_norm",
++    MODEL_TENSOR.A_ENC_FFW_END_L1:          "a.blk.{bid}.ffw_layer_end.ffw_layer_1",
++    MODEL_TENSOR.A_ENC_FFW_END_L2:          "a.blk.{bid}.ffw_layer_end.ffw_layer_2",
++    MODEL_TENSOR.A_ENC_FFW_END_PRE:         "a.blk.{bid}.ffw_layer_end.pre_layer_norm",
++    MODEL_TENSOR.A_ENC_FFW_END_POST:        "a.blk.{bid}.ffw_layer_end.post_layer_norm",
++    MODEL_TENSOR.A_ENC_ATTN_OUT:            "a.blk.{bid}.attention.post",
++    MODEL_TENSOR.A_ENC_ATTN_PER_DIM:        "a.blk.{bid}.attention.attn.per_dim_scale",
++    MODEL_TENSOR.A_ENC_ATTN_REL_POS:        "a.blk.{bid}.attention.attn.relative_position_embedding.pos_proj",
++    MODEL_TENSOR.A_ENC_ATTN_PRE_NORM:       "a.blk.{bid}.attention.pre_attn_norm",
++    MODEL_TENSOR.A_ENC_ATTN_POST_NORM:      "a.blk.{bid}.attention.post_norm",
++    MODEL_TENSOR.A_ENC_LCONV_START:         "a.blk.{bid}.lconv1d.linear_start",
++    MODEL_TENSOR.A_ENC_LCONV_DW:            "a.blk.{bid}.lconv1d.depthwise_conv1d",
++    MODEL_TENSOR.A_ENC_LCONV_END:           "a.blk.{bid}.lconv1d.linear_end",
++    MODEL_TENSOR.A_ENC_LCONV_NORM:          "a.blk.{bid}.lconv1d.conv_norm",
++    MODEL_TENSOR.A_ENC_LCONV_PRE_NORM:      "a.blk.{bid}.lconv1d.pre_layer_norm",
++    MODEL_TENSOR.A_ENC_BLK_NORM:            "a.blk.{bid}.norm",
++    MODEL_TENSOR.A_MM_EMBEDDING:            "mm.a.embedding",
++    MODEL_TENSOR.A_MM_EMBED_PROJ:           "mm.a.embedding_projection",
++    MODEL_TENSOR.A_MM_HARD_EMB_NORM:        "mm.a.hard_embedding_norm",
++    MODEL_TENSOR.A_MM_SOFT_EMB_NORM:        "mm.a.soft_embedding_norm",
+     # NextN/MTP
+     MODEL_TENSOR.NEXTN_EH_PROJ:             "blk.{bid}.nextn.eh_proj",
+     MODEL_TENSOR.NEXTN_EMBED_TOKENS:        "blk.{bid}.nextn.embed_tokens",
+@@ -1156,6 +1227,15 @@ MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
+         MODEL_TENSOR.V_MM_INP_PROJ,
+         MODEL_TENSOR.V_MM_INP_NORM,
+         MODEL_TENSOR.V_MM_SOFT_EMB_NORM,
++        MODEL_TENSOR.V_MM_EMBEDDING,
++        MODEL_TENSOR.V_MM_HARD_EMB_NORM,
++        MODEL_TENSOR.V_ENC_CONV_STEM,
++        MODEL_TENSOR.V_ENC_CONV_STEM_NORM,
++        MODEL_TENSOR.V_ENC_MSFA_EXP,
++        MODEL_TENSOR.V_ENC_MSFA_EXP_NORM,
++        MODEL_TENSOR.V_ENC_MSFA_PROJ,
++        MODEL_TENSOR.V_ENC_MSFA_PROJ_NORM,
++        MODEL_TENSOR.V_ENC_MSFA_NORM,
+         MODEL_TENSOR.V_RESMPL_POS_EMBD_K,
+         MODEL_TENSOR.V_RESMPL_ATTN_Q,
+         MODEL_TENSOR.V_RESMPL_ATTN_K,
+@@ -1212,6 +1292,32 @@ MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
+         MODEL_TENSOR.A_ENC_CONV_NORM,
+         MODEL_TENSOR.A_ENC_CONV_PW1,
+         MODEL_TENSOR.A_ENC_CONV_PW2,
++        # gemma3n audio
++        MODEL_TENSOR.A_ENC_CONV_SUBSAMPLE,
++        MODEL_TENSOR.A_ENC_INPUT_PROJ,
++        MODEL_TENSOR.A_ENC_FFW_START_L1,
++        MODEL_TENSOR.A_ENC_FFW_START_L2,
++        MODEL_TENSOR.A_ENC_FFW_START_PRE,
++        MODEL_TENSOR.A_ENC_FFW_START_POST,
++        MODEL_TENSOR.A_ENC_FFW_END_L1,
++        MODEL_TENSOR.A_ENC_FFW_END_L2,
++        MODEL_TENSOR.A_ENC_FFW_END_PRE,
++        MODEL_TENSOR.A_ENC_FFW_END_POST,
++        MODEL_TENSOR.A_ENC_ATTN_OUT,
++        MODEL_TENSOR.A_ENC_ATTN_PER_DIM,
++        MODEL_TENSOR.A_ENC_ATTN_REL_POS,
++        MODEL_TENSOR.A_ENC_ATTN_PRE_NORM,
++        MODEL_TENSOR.A_ENC_ATTN_POST_NORM,
++        MODEL_TENSOR.A_ENC_LCONV_START,
++        MODEL_TENSOR.A_ENC_LCONV_DW,
++        MODEL_TENSOR.A_ENC_LCONV_END,
++        MODEL_TENSOR.A_ENC_LCONV_NORM,
++        MODEL_TENSOR.A_ENC_LCONV_PRE_NORM,
++        MODEL_TENSOR.A_ENC_BLK_NORM,
++        MODEL_TENSOR.A_MM_EMBEDDING,
++        MODEL_TENSOR.A_MM_EMBED_PROJ,
++        MODEL_TENSOR.A_MM_HARD_EMB_NORM,
++        MODEL_TENSOR.A_MM_SOFT_EMB_NORM,
+     ],
+     MODEL_ARCH.LLAMA: [
+         MODEL_TENSOR.TOKEN_EMBD,
+@@ -3397,6 +3503,8 @@ class GGUFValueType(IntEnum):
+ 
+ class VisionProjectorType:
+     GEMMA3 = "gemma3"
++    GEMMA3N = "gemma3n"
++    GEMMA3NA = "gemma3na"  # Gemma 3n audio encoder
+     IDEFICS3 = "idefics3"
+     PIXTRAL = "pixtral"
+     LLAMA4 = "llama4"
+diff --git a/gguf-py/gguf/tensor_mapping.py b/gguf-py/gguf/tensor_mapping.py
+index 301aafa9..06772ba9 100644
+--- a/gguf-py/gguf/tensor_mapping.py
++++ b/gguf-py/gguf/tensor_mapping.py
+@@ -119,6 +119,40 @@ class TensorNameMap:
+         MODEL_TENSOR.CONV1D: (
+             "backbone.embed", # roberta
+         ),
++
++        MODEL_TENSOR.V_MM_EMBEDDING: (
++            "model.embed_vision.embedding", # gemma3n
++        ),
++        MODEL_TENSOR.V_MM_HARD_EMB_NORM: (
++            "model.embed_vision.hard_embedding_norm", # gemma3n
++        ),
++        MODEL_TENSOR.V_MM_INP_PROJ: (
++            "model.embed_vision.embedding_projection", # gemma3n
++        ),
++        MODEL_TENSOR.V_MM_SOFT_EMB_NORM: (
++            "model.embed_vision.soft_embedding_norm", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_CONV_STEM: (
++            "model.vision_tower.timm_model.conv_stem.conv", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_CONV_STEM_NORM: (
++            "model.vision_tower.timm_model.conv_stem.bn", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_MSFA_EXP: (
++            "model.vision_tower.timm_model.msfa.ffn.pw_exp.conv", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_MSFA_EXP_NORM: (
++            "model.vision_tower.timm_model.msfa.ffn.pw_exp.bn", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_MSFA_PROJ: (
++            "model.vision_tower.timm_model.msfa.ffn.pw_proj.conv", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_MSFA_PROJ_NORM: (
++            "model.vision_tower.timm_model.msfa.ffn.pw_proj.bn", # gemma3n
++        ),
++        MODEL_TENSOR.V_ENC_MSFA_NORM: (
++            "model.vision_tower.timm_model.msfa.norm", # gemma3n
++        ),
+     }
+ 
+     block_mappings_cfg: dict[MODEL_TENSOR, tuple[str, ...]] = {
+@@ -1561,16 +1595,19 @@ class TensorNameMap:
+         MODEL_TENSOR.A_ENC_ATTN_Q: (
+             "audio_tower.layers.{bid}.self_attn.q_proj", # ultravox
+             "conformer.layers.{bid}.self_attn.linear_q", # lfm2
++            "model.audio_tower.conformer_layers.{bid}.attention.attn.q_proj", # gemma3n
+         ),
+ 
+         MODEL_TENSOR.A_ENC_ATTN_K: (
+             "audio_tower.layers.{bid}.self_attn.k_proj", # ultravox
+             "conformer.layers.{bid}.self_attn.linear_k", # lfm2
++            "model.audio_tower.conformer_layers.{bid}.attention.attn.k_proj", # gemma3n
+         ),
+ 
+         MODEL_TENSOR.A_ENC_ATTN_V: (
+             "audio_tower.layers.{bid}.self_attn.v_proj", # ultravox
+             "conformer.layers.{bid}.self_attn.linear_v", # lfm2
++            "model.audio_tower.conformer_layers.{bid}.attention.attn.v_proj", # gemma3n
+         ),
+ 
+         MODEL_TENSOR.A_ENC_INPUT_NORM: (
+@@ -1673,6 +1710,107 @@ class TensorNameMap:
+             "conformer.layers.{bid}.norm_conv", # lfm2
+         ),
+ 
++        # gemma3n audio encoder (Conformer) tensors
++        MODEL_TENSOR.A_ENC_CONV_SUBSAMPLE: (
++            "model.audio_tower.subsample_conv_projection.conv_{bid}.conv", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_INPUT_PROJ: (
++            "model.audio_tower.subsample_conv_projection.input_proj_linear", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_START_L1: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_start.ffw_layer_1", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_START_L2: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_start.ffw_layer_2", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_START_PRE: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_start.pre_layer_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_START_POST: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_start.post_layer_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_END_L1: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_end.ffw_layer_1", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_END_L2: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_end.ffw_layer_2", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_END_PRE: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_end.pre_layer_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_FFW_END_POST: (
++            "model.audio_tower.conformer_layers.{bid}.ffw_layer_end.post_layer_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_ATTN_OUT: (
++            "model.audio_tower.conformer_layers.{bid}.attention.post", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_ATTN_PER_DIM: (
++            "model.audio_tower.conformer_layers.{bid}.attention.attn.per_dim_scale", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_ATTN_REL_POS: (
++            "model.audio_tower.conformer_layers.{bid}.attention.attn.relative_position_embedding.pos_proj", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_ATTN_PRE_NORM: (
++            "model.audio_tower.conformer_layers.{bid}.attention.pre_attn_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_ATTN_POST_NORM: (
++            "model.audio_tower.conformer_layers.{bid}.attention.post_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_LCONV_START: (
++            "model.audio_tower.conformer_layers.{bid}.lconv1d.linear_start", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_LCONV_DW: (
++            "model.audio_tower.conformer_layers.{bid}.lconv1d.depthwise_conv1d", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_LCONV_END: (
++            "model.audio_tower.conformer_layers.{bid}.lconv1d.linear_end", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_LCONV_NORM: (
++            "model.audio_tower.conformer_layers.{bid}.lconv1d.conv_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_LCONV_PRE_NORM: (
++            "model.audio_tower.conformer_layers.{bid}.lconv1d.pre_layer_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_ENC_BLK_NORM: (
++            "model.audio_tower.conformer_layers.{bid}.norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_MM_EMBEDDING: (
++            "model.embed_audio.embedding", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_MM_EMBED_PROJ: (
++            "model.embed_audio.embedding_projection", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_MM_HARD_EMB_NORM: (
++            "model.embed_audio.hard_embedding_norm", # gemma3n
++        ),
++
++        MODEL_TENSOR.A_MM_SOFT_EMB_NORM: (
++            "model.embed_audio.soft_embedding_norm", # gemma3n
++        ),
++
+         # NextN/MTP tensors for GLM4_MOE
+         MODEL_TENSOR.NEXTN_EH_PROJ: (
+             "model.layers.{bid}.eh_proj",
+diff --git a/src/models/gemma3n-iswa.cpp b/src/models/gemma3n-iswa.cpp
+index a0bdd6a1..39633dc3 100644
+--- a/src/models/gemma3n-iswa.cpp
++++ b/src/models/gemma3n-iswa.cpp
+@@ -248,9 +248,9 @@ ggml_tensor * llm_build_gemma3n_iswa::view_2d_slice(ggml_tensor * x, int idx) {
+ // equivalent to get_per_layer_inputs() in python code
+ // output shape: [n_embd_altup, n_layer, n_tokens]
+ ggml_tensor * llm_build_gemma3n_iswa::get_per_layer_inputs() {
+-    auto          inp = std::make_unique<llm_graph_input_embd>();
+     ggml_tensor * inp_per_layer;
+     if (ubatch.token) {
++        auto inp = std::make_unique<llm_graph_input_embd>();
+         inp->tokens = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, ubatch.n_tokens);
+         ggml_set_input(inp->tokens);
+         res->t_tokens = inp->tokens;
+@@ -258,10 +258,20 @@ ggml_tensor * llm_build_gemma3n_iswa::get_per_layer_inputs() {
+         inp_per_layer = ggml_reshape_3d(ctx0, inp_per_layer, n_embd_altup, n_layer, n_tokens);
+         inp_per_layer = ggml_scale(ctx0, inp_per_layer, sqrtf((float) n_embd_altup));
+         cb(inp_per_layer, "inp_per_layer_selected", -1);
++        res->add_input(std::move(inp));
+     } else {
+-        GGML_ABORT("TODO: support embd input");
++        // Vision embedding path: use padding token (ID=0) embedding
++        const int64_t embd_size = model.tok_embd_per_layer->ne[0];  // n_embd_altup * n_layer
++
++        // Extract and dequantize padding token embedding (column 0)
++        ggml_tensor * padding_q = ggml_view_1d(ctx0, model.tok_embd_per_layer, embd_size, 0);
++        ggml_tensor * padding_f32 = ggml_new_tensor_1d(ctx0, GGML_TYPE_F32, embd_size);
++        inp_per_layer = ggml_cpy(ctx0, padding_q, padding_f32);
++
++        // Reshape to [n_embd_altup, n_layer, 1]
++        inp_per_layer = ggml_reshape_3d(ctx0, inp_per_layer, n_embd_altup, n_layer, 1);
++        cb(inp_per_layer, "inp_per_layer_vision", -1);
+     }
+-    res->add_input(std::move(inp));
+     return inp_per_layer;
+ }
+ 
+@@ -279,7 +289,7 @@ ggml_tensor * llm_build_gemma3n_iswa::project_per_layer_inputs(ggml_tensor * inp
+                                               -1);  // [n_embd_altup, n_layer, n_tokens]
+     cb(per_layer_proj, "per_layer_proj", -1);
+ 
+-    inp_per_layer = ggml_add(ctx0, inp_per_layer, per_layer_proj);
++    inp_per_layer = ggml_add(ctx0, per_layer_proj, inp_per_layer);
+     inp_per_layer = ggml_scale(ctx0, inp_per_layer, per_layer_input_scale);
+     cb(inp_per_layer, "inp_per_layer", -1);
+ 
+diff --git a/tools/mtmd/CMakeLists.txt b/tools/mtmd/CMakeLists.txt
+index 317d5f19..765d1b75 100644
+--- a/tools/mtmd/CMakeLists.txt
++++ b/tools/mtmd/CMakeLists.txt
+@@ -16,6 +16,7 @@ add_library(mtmd
+             models/models.h
+             models/cogvlm.cpp
+             models/conformer.cpp
++            models/gemma3na.cpp
+             models/glm4v.cpp
+             models/internvl.cpp
+             models/kimivl.cpp
+@@ -27,6 +28,7 @@ add_library(mtmd
+             models/qwen3vl.cpp
+             models/siglip.cpp
+             models/whisper-enc.cpp
++            models/mobilenetv5.cpp
+             )
+ 
+ set_target_properties(mtmd PROPERTIES
+diff --git a/tools/mtmd/clip-impl.h b/tools/mtmd/clip-impl.h
+index a0939865..d5010fbe 100644
+--- a/tools/mtmd/clip-impl.h
++++ b/tools/mtmd/clip-impl.h
+@@ -153,6 +153,84 @@
+ #define TN_CONV_PW1        "%s.blk.%d.conv_pw1.%s"
+ #define TN_CONV_PW2        "%s.blk.%d.conv_pw2.%s"
+ 
++// mobilenetv5 (gemma3n) definitions
++#define TN_MNV5_STEM_CONV        "v.conv_stem.conv.weight"
++#define TN_MNV5_STEM_BIAS        "v.conv_stem.conv.bias"
++#define TN_MNV5_STEM_BN          "v.conv_stem.bn.weight"
++
++// Stage 0 Block (Edge Residual)
++#define TN_MNV5_BLK_S0_EXP_W     "v.blk.%d.%d.conv_exp.weight"
++#define TN_MNV5_BLK_S0_BN1_W     "v.blk.%d.%d.bn1.weight"
++#define TN_MNV5_BLK_S0_PWL_W     "v.blk.%d.%d.conv_pwl.weight"
++#define TN_MNV5_BLK_S0_BN2_W     "v.blk.%d.%d.bn2.weight"
++
++// Stage 1+ Block (Universal Inverted Residual)
++#define TN_MNV5_BLK_DW_START_W   "v.blk.%d.%d.dw_start.conv.weight"
++#define TN_MNV5_BLK_DW_START_BN  "v.blk.%d.%d.dw_start.bn.weight"
++#define TN_MNV5_BLK_DW_MID_W     "v.blk.%d.%d.dw_mid.conv.weight"
++#define TN_MNV5_BLK_DW_MID_BN    "v.blk.%d.%d.dw_mid.bn.weight"
++#define TN_MNV5_BLK_PW_EXP_W     "v.blk.%d.%d.pw_exp.conv.weight"
++#define TN_MNV5_BLK_PW_EXP_BN    "v.blk.%d.%d.pw_exp.bn.weight"
++#define TN_MNV5_BLK_PW_PROJ_W    "v.blk.%d.%d.pw_proj.conv.weight"
++#define TN_MNV5_BLK_PW_PROJ_BN   "v.blk.%d.%d.pw_proj.bn.weight"
++#define TN_MNV5_BLK_LAYER_SCALE  "v.blk.%d.%d.layer_scale.gamma"
++
++// Attention Components
++#define TN_MNV5_ATTN_Q_W         "v.blk.%d.%d.attn.query.proj.weight"
++#define TN_MNV5_ATTN_K_W         "v.blk.%d.%d.attn.key.proj.weight"
++#define TN_MNV5_ATTN_V_W         "v.blk.%d.%d.attn.value.proj.weight"
++#define TN_MNV5_ATTN_O_W         "v.blk.%d.%d.attn.output.proj.weight"
++#define TN_MNV5_ATTN_K_DW        "v.blk.%d.%d.attn.key.down_conv.weight"
++#define TN_MNV5_ATTN_K_NORM      "v.blk.%d.%d.attn.key.norm.weight"
++#define TN_MNV5_ATTN_V_DW        "v.blk.%d.%d.attn.value.down_conv.weight"
++#define TN_MNV5_ATTN_V_NORM      "v.blk.%d.%d.attn.value.norm.weight"
++#define TN_MNV5_ATTN_NORM        "v.blk.%d.%d.norm.weight" // Block norm used in attn blocks
++
++// MSFA
++#define TN_MNV5_MSFA_FFN_EXP_W   "v.msfa.ffn.pw_exp.conv.weight"
++#define TN_MNV5_MSFA_FFN_EXP_BN  "v.msfa.ffn.pw_exp.bn.weight"
++#define TN_MNV5_MSFA_FFN_PROJ_W  "v.msfa.ffn.pw_proj.conv.weight"
++#define TN_MNV5_MSFA_FFN_PROJ_BN "v.msfa.ffn.pw_proj.bn.weight"
++#define TN_MNV5_MSFA_NORM        "v.msfa.norm.weight"
++
++// gemma3n audio encoder (Conformer) definitions
++#define TN_G3NA_CONV0_W          "a.conv_0.conv.weight"
++#define TN_G3NA_CONV0_NORM       "a.conv_0.norm.weight"
++#define TN_G3NA_CONV1_W          "a.conv_1.conv.weight"
++#define TN_G3NA_CONV1_NORM       "a.conv_1.norm.weight"
++#define TN_G3NA_INPUT_PROJ       "a.input_proj_linear.weight"
++
++// Conformer block components - shortened names to fit 64 char limit
++#define TN_G3NA_FFW_START_L1     "a.blk.%d.ffw_s.l1.weight"
++#define TN_G3NA_FFW_START_L2     "a.blk.%d.ffw_s.l2.weight"
++#define TN_G3NA_FFW_START_PRE    "a.blk.%d.ffw_s.pre_norm.weight"
++#define TN_G3NA_FFW_START_POST   "a.blk.%d.ffw_s.post_norm.weight"
++#define TN_G3NA_ATTN_Q           "a.blk.%d.attn.q.weight"
++#define TN_G3NA_ATTN_K           "a.blk.%d.attn.k.weight"
++#define TN_G3NA_ATTN_V           "a.blk.%d.attn.v.weight"
++#define TN_G3NA_ATTN_POST        "a.blk.%d.attn.out.weight"
++#define TN_G3NA_ATTN_PER_DIM     "a.blk.%d.attn.per_dim"
++#define TN_G3NA_ATTN_REL_POS     "a.blk.%d.attn.rel_pos.weight"
++#define TN_G3NA_ATTN_PRE_NORM    "a.blk.%d.attn.pre_norm.weight"
++#define TN_G3NA_ATTN_POST_NORM   "a.blk.%d.attn.post_norm.weight"
++#define TN_G3NA_LCONV_START      "a.blk.%d.lconv.start.weight"
++#define TN_G3NA_LCONV_DW         "a.blk.%d.lconv.dw.weight"
++#define TN_G3NA_LCONV_END        "a.blk.%d.lconv.end.weight"
++#define TN_G3NA_LCONV_NORM       "a.blk.%d.lconv.norm.weight"
++#define TN_G3NA_LCONV_PRE_NORM   "a.blk.%d.lconv.pre_norm.weight"
++#define TN_G3NA_FFW_END_L1       "a.blk.%d.ffw_e.l1.weight"
++#define TN_G3NA_FFW_END_L2       "a.blk.%d.ffw_e.l2.weight"
++#define TN_G3NA_FFW_END_PRE      "a.blk.%d.ffw_e.pre_norm.weight"
++#define TN_G3NA_FFW_END_POST     "a.blk.%d.ffw_e.post_norm.weight"
++#define TN_G3NA_BLK_NORM         "a.blk.%d.norm.weight"
++
++// Audio embedding/projection
++#define TN_G3NA_EMBED_W          "mm.a.embedding.weight"
++#define TN_G3NA_EMBED_PROJ       "mm.a.embedding_projection.weight"
++#define TN_G3NA_HARD_EMB_NORM    "mm.a.hard_embedding_norm.weight"
++#define TN_G3NA_SOFT_EMB_NORM    "mm.a.soft_embedding_norm.weight"
++
++
+ // align x to upper multiple of n
+ #define CLIP_ALIGN(x, n) ((((x) + (n) - 1) / (n)) * (n))
+ 
+@@ -170,6 +248,8 @@ enum projector_type {
+     PROJECTOR_TYPE_QWEN2VL,
+     PROJECTOR_TYPE_QWEN3VL,
+     PROJECTOR_TYPE_GEMMA3,
++    PROJECTOR_TYPE_GEMMA3N,
++    PROJECTOR_TYPE_GEMMA3NA,  // Gemma 3n audio (Conformer)
+     PROJECTOR_TYPE_IDEFICS3,
+     PROJECTOR_TYPE_PIXTRAL,
+     PROJECTOR_TYPE_QWEN25VL,
+@@ -200,6 +280,8 @@ static std::map<projector_type, std::string> PROJECTOR_TYPE_NAMES = {
+     { PROJECTOR_TYPE_QWEN25VL,  "qwen2.5vl_merger"},
+     { PROJECTOR_TYPE_QWEN3VL,   "qwen3vl_merger"},
+     { PROJECTOR_TYPE_GEMMA3,    "gemma3"},
++    { PROJECTOR_TYPE_GEMMA3N,   "gemma3n"},
++    { PROJECTOR_TYPE_GEMMA3NA,  "gemma3na"},
+     { PROJECTOR_TYPE_IDEFICS3,  "idefics3"},
+     { PROJECTOR_TYPE_PIXTRAL,   "pixtral"},
+     { PROJECTOR_TYPE_ULTRAVOX,  "ultravox"},
+diff --git a/tools/mtmd/clip-model.h b/tools/mtmd/clip-model.h
+index b4c31cdd..be168b97 100644
+--- a/tools/mtmd/clip-model.h
++++ b/tools/mtmd/clip-model.h
+@@ -172,6 +172,45 @@ struct clip_layer {
+     }
+ };
+ 
++// Expanded MobileNetV5 block structure for Gemma3n vision encoder
++struct mobilenetv5_block {
++    // Stage 0 (Edge Residual)
++    ggml_tensor * s0_conv_exp_w = nullptr;
++    ggml_tensor * s0_bn1_w      = nullptr;
++    ggml_tensor * s0_conv_pwl_w = nullptr;
++    ggml_tensor * s0_bn2_w      = nullptr;
++
++    // Stage 1+ (Universal Inverted Residual)
++    ggml_tensor * dw_start_w    = nullptr;
++    ggml_tensor * dw_start_bn_w = nullptr;
++    
++    ggml_tensor * pw_exp_w      = nullptr;
++    ggml_tensor * pw_exp_bn_w   = nullptr;
++
++    ggml_tensor * dw_mid_w      = nullptr;
++    ggml_tensor * dw_mid_bn_w   = nullptr;
++
++    ggml_tensor * pw_proj_w     = nullptr;
++    ggml_tensor * pw_proj_bn_w  = nullptr;
++
++    ggml_tensor * layer_scale_w = nullptr;
++
++    // Attention (MQA) components
++    ggml_tensor * attn_q_w = nullptr;
++    ggml_tensor * attn_k_w = nullptr;
++    ggml_tensor * attn_v_w = nullptr;
++    ggml_tensor * attn_o_w = nullptr;
++    
++    // Optional downsampling/norm in attention
++    ggml_tensor * attn_k_dw_w   = nullptr;
++    ggml_tensor * attn_k_norm_w = nullptr;
++    ggml_tensor * attn_v_dw_w   = nullptr;
++    ggml_tensor * attn_v_norm_w = nullptr;
++    
++    // Block norm (often present in attention blocks)
++    ggml_tensor * attn_norm_w   = nullptr;
++};
++
+ struct clip_model {
+     clip_modality modality = CLIP_MODALITY_VISION;
+     projector_type proj_type = PROJECTOR_TYPE_MLP;
+@@ -288,6 +327,23 @@ struct clip_model {
+     ggml_tensor * mm_input_proj_w = nullptr;
+     ggml_tensor * mm_soft_emb_norm_w = nullptr;
+ 
++    // mobilenetv5 for gemma3n
++    std::vector<mobilenetv5_block> mobilenet_blocks;
++    std::vector<int> mobilenet_stage_ends;
++    ggml_tensor * mobilenet_stem_conv_w = nullptr;
++    ggml_tensor * mobilenet_stem_conv_b = nullptr;
++    ggml_tensor * mobilenet_stem_norm_w = nullptr;
++    ggml_tensor * mm_post_proj_norm_w = nullptr;
++
++    // Multi-Scale Fusion Adapter (MSFA) components
++    ggml_tensor * msfa_concat_conv_w = nullptr;
++    ggml_tensor * msfa_concat_norm_w = nullptr;
++    ggml_tensor * msfa_ffn_expand_w = nullptr;
++    ggml_tensor * msfa_ffn_project_w = nullptr;
++    ggml_tensor * msfa_ffn_expand_bn = nullptr;
++    ggml_tensor * msfa_ffn_project_bn = nullptr; 
++
++
+     // pixtral, glm4v
+     ggml_tensor * token_embd_img_break = nullptr;
+     ggml_tensor * mm_patch_merger_w = nullptr;
+diff --git a/tools/mtmd/clip.cpp b/tools/mtmd/clip.cpp
+index 3ba0823d..928c2e63 100644
+--- a/tools/mtmd/clip.cpp
++++ b/tools/mtmd/clip.cpp
+@@ -788,6 +788,10 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
+             {
+                 builder = std::make_unique<clip_graph_siglip>(ctx, img);
+             } break;
++        case PROJECTOR_TYPE_GEMMA3N:
++            {
++                builder = std::make_unique<clip_graph_mobilenetv5>(ctx, img);
++            } break;
+         case PROJECTOR_TYPE_PIXTRAL:
+         case PROJECTOR_TYPE_LIGHTONOCR:
+             {
+@@ -841,6 +845,10 @@ static ggml_cgraph * clip_image_build_graph(clip_ctx * ctx, const clip_image_f32
+             {
+                 builder = std::make_unique<clip_graph_conformer>(ctx, img);
+             } break;
++        case PROJECTOR_TYPE_GEMMA3NA:
++            {
++                builder = std::make_unique<clip_graph_gemma3na>(ctx, img);
++            } break;
+         case PROJECTOR_TYPE_GLM4V:
+             {
+                 builder = std::make_unique<clip_graph_glm4v>(ctx, img);
+@@ -1141,6 +1149,14 @@ struct clip_model_loader {
+                         // test model (tinygemma3) has a different value, we optionally read it
+                         get_u32(KEY_PROJ_SCALE_FACTOR, hparams.n_merge, false);
+                     } break;
++
++                case PROJECTOR_TYPE_GEMMA3N:
++                    {
++                        // Gemma3n uses MobileNetV5 which produces 256 tokens (16x16)
++                        // Similar configuration to Gemma3
++                        hparams.n_merge = 1;  // MobileNetV5 handles resizing internally
++                        get_u32(KEY_PROJ_SCALE_FACTOR, hparams.n_merge, false);
++                    } break;
+                 case PROJECTOR_TYPE_QWEN2VL:
+                 case PROJECTOR_TYPE_QWEN25VL:
+                 case PROJECTOR_TYPE_QWEN3VL:
+@@ -1200,6 +1216,20 @@ struct clip_model_loader {
+                         hparams.audio_window_len       = 400;
+                         hparams.audio_hop_len          = 160;
+                     } break;
++                case PROJECTOR_TYPE_GEMMA3NA:
++                    {
++                        // Gemma 3n audio (Conformer) preprocessing params
++                        hparams.ffn_op = FFN_GELU;
++                        log_ffn_op = "gelu";
++                        // audio preprocessing params - from Gemma3nAudioFeatureExtractor
++                        // frame_length=512 (32ms), hop_length=160 (10ms), fft_overdrive=True
++                        // fft_length = 2^ceil(log2(512)) * 2 = 1024
++                        hparams.audio_chunk_len        = 30; // in seconds, max_length=480000 samples
++                        hparams.audio_sample_rate      = 16000;
++                        hparams.audio_n_fft            = 1024;  // fft_overdrive: 512 -> 1024
++                        hparams.audio_window_len       = 512;   // frame_length_ms=32 -> 512 samples
++                        hparams.audio_hop_len          = 160;   // hop_length_ms=10 -> 160 samples
++                    } break;
+                 default:
+                     break;
+             }
+@@ -1314,7 +1344,7 @@ struct clip_model_loader {
+             layer.k_w    = get_tensor(string_format(TN_ATTN_K,      prefix, il, "weight"), false);
+             layer.q_w    = get_tensor(string_format(TN_ATTN_Q,      prefix, il, "weight"), false);
+             layer.v_w    = get_tensor(string_format(TN_ATTN_V,      prefix, il, "weight"), false);
+-            layer.o_w    = get_tensor(string_format(TN_ATTN_OUTPUT, prefix, il, "weight"));
++            layer.o_w    = get_tensor(string_format(TN_ATTN_OUTPUT, prefix, il, "weight"), false);
+             layer.qkv_w  = get_tensor(string_format(TN_ATTN_QKV,    prefix, il, "weight"), false);
+             layer.k_norm = get_tensor(string_format(TN_ATTN_K_NORM, prefix, il, "weight"), false);
+             layer.q_norm = get_tensor(string_format(TN_ATTN_Q_NORM, prefix, il, "weight"), false);
+@@ -1332,11 +1362,11 @@ struct clip_model_loader {
+             layer.ln_2_b = get_tensor(string_format(TN_LN_2,        prefix, il, "bias"), false);
+ 
+             // ffn
+-            layer.ff_up_w   = get_tensor(string_format(TN_FFN_UP,   prefix, il, "weight"));
++            layer.ff_up_w   = get_tensor(string_format(TN_FFN_UP,   prefix, il, "weight"), false);
+             layer.ff_up_b   = get_tensor(string_format(TN_FFN_UP,   prefix, il, "bias"),   false);
+             layer.ff_gate_w = get_tensor(string_format(TN_FFN_GATE, prefix, il, "weight"), false);
+             layer.ff_gate_b = get_tensor(string_format(TN_FFN_GATE, prefix, il, "bias"),   false);
+-            layer.ff_down_w = get_tensor(string_format(TN_FFN_DOWN, prefix, il, "weight"));
++            layer.ff_down_w = get_tensor(string_format(TN_FFN_DOWN, prefix, il, "weight"), false);
+             layer.ff_down_b = get_tensor(string_format(TN_FFN_DOWN, prefix, il, "bias"),   false);
+ 
+ 
+@@ -1381,6 +1411,7 @@ struct clip_model_loader {
+             }
+         }
+ 
++
+         switch (model.proj_type) {
+             case PROJECTOR_TYPE_MLP:
+             case PROJECTOR_TYPE_MLP_NORM:
+@@ -1512,6 +1543,99 @@ struct clip_model_loader {
+                     model.mm_input_proj_w = get_tensor(TN_MM_INP_PROJ);
+                     model.mm_soft_emb_norm_w = get_tensor(TN_MM_SOFT_EMB_N);
+                 } break;
++            case PROJECTOR_TYPE_GEMMA3N:
++                {
++                    model.mobilenet_stem_conv_w = get_tensor(TN_MNV5_STEM_CONV, false);
++                    model.mobilenet_stem_conv_b = get_tensor(TN_MNV5_STEM_BIAS, false);
++                    model.mobilenet_stem_norm_w = get_tensor(TN_MNV5_STEM_BN, false);
++
++                    model.msfa_ffn_expand_w  = get_tensor(TN_MNV5_MSFA_FFN_EXP_W, false);
++                    model.msfa_ffn_expand_bn = get_tensor(TN_MNV5_MSFA_FFN_EXP_BN, false); // Consume BN if present but likely folded
++                    model.msfa_ffn_project_w = get_tensor(TN_MNV5_MSFA_FFN_PROJ_W, false);
++                    model.msfa_ffn_project_bn = get_tensor(TN_MNV5_MSFA_FFN_PROJ_BN, false);
++                    
++                    model.msfa_concat_norm_w = get_tensor(TN_MNV5_MSFA_NORM, false);
++
++                    // Dynamically load blocks stage by stage
++                    for (int stage = 0; stage < 4; ++stage) {
++                        int blocks_found_in_stage = 0;
++                        
++                        for (int blk_idx = 0; ; ++blk_idx) {
++                            bool found_block = false;
++                            mobilenetv5_block block;
++
++                            // 1. Check for Edge Residual (S0)
++                            block.s0_conv_exp_w = get_tensor(string_format(TN_MNV5_BLK_S0_EXP_W, stage, blk_idx), false);
++                            if (block.s0_conv_exp_w) {
++                                found_block = true;
++                                block.s0_bn1_w      = get_tensor(string_format(TN_MNV5_BLK_S0_BN1_W, stage, blk_idx), false);
++                                block.s0_conv_pwl_w = get_tensor(string_format(TN_MNV5_BLK_S0_PWL_W, stage, blk_idx), false);
++                                block.s0_bn2_w      = get_tensor(string_format(TN_MNV5_BLK_S0_BN2_W, stage, blk_idx), false);
++                            } 
++                            // 2. Check for UIR (Universal Inverted Residual)
++                            else {
++                                // Check for dw_start OR pw_exp (some UIR blocks skip dw_start)
++                                block.dw_start_w = get_tensor(string_format(TN_MNV5_BLK_DW_START_W, stage, blk_idx), false);
++                                block.pw_exp_w   = get_tensor(string_format(TN_MNV5_BLK_PW_EXP_W, stage, blk_idx), false);
++
++                                if (block.dw_start_w || block.pw_exp_w) {
++                                    found_block = true;
++                                    if (block.dw_start_w) {
++                                        block.dw_start_bn_w = get_tensor(string_format(TN_MNV5_BLK_DW_START_BN, stage, blk_idx), false);
++                                    }
++                                    if (block.pw_exp_w) {
++                                        block.pw_exp_bn_w   = get_tensor(string_format(TN_MNV5_BLK_PW_EXP_BN, stage, blk_idx), false);
++                                    }
++                                    block.dw_mid_w      = get_tensor(string_format(TN_MNV5_BLK_DW_MID_W, stage, blk_idx), false);
++                                    if (block.dw_mid_w) {
++                                        block.dw_mid_bn_w   = get_tensor(string_format(TN_MNV5_BLK_DW_MID_BN, stage, blk_idx), false);
++                                    }
++                                    block.pw_proj_w     = get_tensor(string_format(TN_MNV5_BLK_PW_PROJ_W, stage, blk_idx), false);
++                                    if (block.pw_proj_w) {
++                                        block.pw_proj_bn_w  = get_tensor(string_format(TN_MNV5_BLK_PW_PROJ_BN, stage, blk_idx), false);
++                                    }
++                                    block.layer_scale_w = get_tensor(string_format(TN_MNV5_BLK_LAYER_SCALE, stage, blk_idx), false);
++                                }
++                            }
++
++                            // 3. Check for Attention (MQA)
++                            // Even if UIR/Edge check failed, this might be a pure attention block
++                            ggml_tensor* attn_q_check = get_tensor(string_format(TN_MNV5_ATTN_Q_W, stage, blk_idx), false);
++                            if (attn_q_check) {
++                                found_block = true;
++                                block.attn_q_w = attn_q_check;
++                                block.attn_k_w = get_tensor(string_format(TN_MNV5_ATTN_K_W, stage, blk_idx), false);
++                                block.attn_v_w = get_tensor(string_format(TN_MNV5_ATTN_V_W, stage, blk_idx), false);
++                                block.attn_o_w = get_tensor(string_format(TN_MNV5_ATTN_O_W, stage, blk_idx), false);
++                                block.attn_k_dw_w   = get_tensor(string_format(TN_MNV5_ATTN_K_DW, stage, blk_idx), false);
++                                block.attn_k_norm_w = get_tensor(string_format(TN_MNV5_ATTN_K_NORM, stage, blk_idx), false);
++                                block.attn_v_dw_w   = get_tensor(string_format(TN_MNV5_ATTN_V_DW, stage, blk_idx), false);
++                                block.attn_v_norm_w = get_tensor(string_format(TN_MNV5_ATTN_V_NORM, stage, blk_idx), false);
++                                block.attn_norm_w   = get_tensor(string_format(TN_MNV5_ATTN_NORM, stage, blk_idx), false);
++                                // Note: Attention blocks also have layer_scale, load it if not already loaded by UIR check
++                                if (!block.layer_scale_w) {
++                                    block.layer_scale_w = get_tensor(string_format(TN_MNV5_BLK_LAYER_SCALE, stage, blk_idx), false);
++                                }
++                            }
++
++                            if (found_block) {
++                                model.mobilenet_blocks.push_back(block);
++                                blocks_found_in_stage++;
++                            } else {
++                                // End of blocks for this stage
++                                break;
++                            }
++                        }
++                        
++                        // Track where this stage ends in the flat vector
++                        if (blocks_found_in_stage > 0) {
++                            model.mobilenet_stage_ends.push_back(model.mobilenet_blocks.size() - 1);
++                            LOG_INF("%s: Stage %d ended at global block index %zu\n", __func__, stage, model.mobilenet_blocks.size() - 1);
++                        }
++                    }
++                    model.mm_input_proj_w = get_tensor(TN_MM_INP_PROJ);
++                    model.mm_soft_emb_norm_w = get_tensor(TN_MM_SOFT_EMB_N);
++                } break;
+             case PROJECTOR_TYPE_IDEFICS3:
+                 {
+                     model.projection = get_tensor(TN_MM_PROJECTOR);
+@@ -1670,6 +1794,61 @@ struct clip_model_loader {
+                         layer.conv_pw2_b   = get_tensor(string_format(TN_CONV_PW2,  prefix, il, "bias"));
+                     }
+                 } break;
++            case PROJECTOR_TYPE_GEMMA3NA:
++                {
++                    // Gemma 3n audio encoder (Conformer)
++                    // Subsample conv projection
++                    model.pre_encode_conv_X_w[0] = get_tensor(TN_G3NA_CONV0_W);
++                    model.pre_encode_conv_X_b[0] = get_tensor(TN_G3NA_CONV0_NORM); // using norm weight as bias placeholder
++                    model.pre_encode_conv_X_w[1] = get_tensor(TN_G3NA_CONV1_W);
++                    model.pre_encode_conv_X_b[1] = get_tensor(TN_G3NA_CONV1_NORM);
++                    model.pre_encode_out_w = get_tensor(TN_G3NA_INPUT_PROJ);
++
++                    // Audio embedding/projection
++                    model.mm_input_proj_w    = get_tensor(TN_G3NA_EMBED_W);
++                    model.mm_0_w             = get_tensor(TN_G3NA_EMBED_PROJ);
++                    model.mm_input_norm_w    = get_tensor(TN_G3NA_HARD_EMB_NORM);
++                    model.mm_soft_emb_norm_w = get_tensor(TN_G3NA_SOFT_EMB_NORM);
++
++                    // Conformer layers
++                    for (int il = 0; il < hparams.n_layer; ++il) {
++                        auto & layer = model.layers[il];
++
++                        // FFW layer start
++                        layer.ff_up_w    = get_tensor(string_format(TN_G3NA_FFW_START_L1, il));
++                        layer.ff_down_w  = get_tensor(string_format(TN_G3NA_FFW_START_L2, il));
++                        layer.ff_norm_w  = get_tensor(string_format(TN_G3NA_FFW_START_PRE, il));
++                        layer.ln_1_w     = get_tensor(string_format(TN_G3NA_FFW_START_POST, il));
++
++                        // Attention
++                        layer.q_w = get_tensor(string_format(TN_G3NA_ATTN_Q, il));
++                        layer.k_w = get_tensor(string_format(TN_G3NA_ATTN_K, il));
++                        layer.v_w = get_tensor(string_format(TN_G3NA_ATTN_V, il));
++                        layer.o_w = get_tensor(string_format(TN_G3NA_ATTN_POST, il));
++
++                        // Attention norms and scaling
++                        layer.q_norm     = get_tensor(string_format(TN_G3NA_ATTN_PER_DIM, il), false);
++                        layer.k_norm     = get_tensor(string_format(TN_G3NA_ATTN_REL_POS, il), false);
++                        layer.norm_conv_w = get_tensor(string_format(TN_G3NA_ATTN_PRE_NORM, il));
++                        layer.norm_conv_b = get_tensor(string_format(TN_G3NA_ATTN_POST_NORM, il));
++
++                        // LConv1D
++                        layer.conv_pw1_w = get_tensor(string_format(TN_G3NA_LCONV_START, il));
++                        layer.conv_dw_w  = get_tensor(string_format(TN_G3NA_LCONV_DW, il));
++                        layer.conv_pw2_w = get_tensor(string_format(TN_G3NA_LCONV_END, il));
++                        layer.conv_norm_w = get_tensor(string_format(TN_G3NA_LCONV_NORM, il));
++                        layer.linear_pos_w = get_tensor(string_format(TN_G3NA_LCONV_PRE_NORM, il));
++
++                        // FFW layer end
++                        layer.ff_up_1_w   = get_tensor(string_format(TN_G3NA_FFW_END_L1, il));
++                        layer.ff_down_1_w = get_tensor(string_format(TN_G3NA_FFW_END_L2, il));
++                        layer.ff_norm_1_w = get_tensor(string_format(TN_G3NA_FFW_END_PRE, il));
++                        layer.ln_2_w      = get_tensor(string_format(TN_G3NA_FFW_END_POST, il));
++
++                        // Block norm
++                        layer.ls_1_w = get_tensor(string_format(TN_G3NA_BLK_NORM, il));
++                    }
++                } break;
+             default:
+                 GGML_ASSERT(false && "unknown projector type");
+         }
+@@ -2747,6 +2926,16 @@ bool clip_image_preprocess(struct clip_ctx * ctx, const clip_image_u8 * img, str
+                 res_imgs->entries.push_back(std::move(img_f32));
+             } break;
+ 
++        case PROJECTOR_TYPE_GEMMA3N:
++            {
++                clip_image_u8 resized_image;
++                int sz = params.image_size;
++                img_tool::resize(*img, resized_image, {sz, sz}, img_tool::RESIZE_ALGO_BILINEAR, false);
++                clip_image_f32_ptr img_f32(clip_image_f32_init());
++                normalize_image_u8_to_f32(resized_image, *img_f32, params.image_mean, params.image_std);
++                res_imgs->entries.push_back(std::move(img_f32));
++            } break;
++
+         case PROJECTOR_TYPE_JANUS_PRO:
+             {
+                 // Janus Pro preprocessing: pad to square with gray(127), resize to 384x384
+@@ -3006,6 +3195,12 @@ int clip_n_output_tokens(const struct clip_ctx * ctx, struct clip_image_f32 * im
+                 int scale_factor = ctx->model.hparams.n_merge;
+                 n_patches /= (scale_factor * scale_factor);
+             } break;
++        case PROJECTOR_TYPE_GEMMA3N:
++            {
++                // MobileNetV5 MSFA adapter always outputs fixed 16x16 resolution
++                // regardless of input size (see architecture description)
++                n_patches = ctx->model.hparams.image_size / ctx->model.hparams.patch_size;
++            } break;
+         case PROJECTOR_TYPE_LFM2:
+         case PROJECTOR_TYPE_KIMIVL:
+             {
+@@ -3067,6 +3262,19 @@ int clip_n_output_tokens(const struct clip_ctx * ctx, struct clip_image_f32 * im
+             {
+                 n_patches = ((((img->nx + 1) / 2) + 1) / 2 + 1) / 2;
+             } break;
++        case PROJECTOR_TYPE_GEMMA3NA:
++            {
++                // Gemma 3n audio Conformer downsamples via 2 conv layers with stride 2, kernel 3, padding 1
++                // Conv formula: output = (input + 2*padding - kernel) / stride + 1 = (input - 1) / 2 + 1
++                // Two convolutions: first (nx-1)/2+1, then ((nx-1)/2)/2+1
++                int after_conv0 = (img->nx - 1) / 2 + 1;
++                int after_conv1 = (after_conv0 - 1) / 2 + 1;
++                // Gemma 3n audio applies an extra temporal reduction after the conformer stack.
++                // In HF this is `audio_encodings = audio_encodings[:, ::conf_reduction_factor]` with default 4,
++                // which is also what the processor's `audio_soft_tokens_per_image` (188) is sized for.
++                const int conf_reduction_factor = 4;
++                n_patches = (after_conv1 + conf_reduction_factor - 1) / conf_reduction_factor;
++            } break;
+         default:
+             GGML_ABORT("unsupported projector type");
+     }
+@@ -3396,6 +3604,8 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
+                 set_input_i32("patches", patches);
+             } break;
+         case PROJECTOR_TYPE_GEMMA3:
++        case PROJECTOR_TYPE_GEMMA3N:
++        case PROJECTOR_TYPE_GEMMA3NA:
+         case PROJECTOR_TYPE_IDEFICS3:
+         case PROJECTOR_TYPE_INTERNVL:
+         case PROJECTOR_TYPE_QWEN2A:
+@@ -3521,7 +3731,10 @@ int clip_n_mmproj_embd(const struct clip_ctx * ctx) {
+             // main path + deepstack paths
+             return ctx->model.mm_1_b->ne[0] * (1 + ctx->model.n_deepstack_layers);
+         case PROJECTOR_TYPE_GEMMA3:
++        case PROJECTOR_TYPE_GEMMA3N:
+             return ctx->model.mm_input_proj_w->ne[0];
++        case PROJECTOR_TYPE_GEMMA3NA:
++            return ctx->model.mm_0_w->ne[1];  // embedding_projection output dim (2048)
+         case PROJECTOR_TYPE_IDEFICS3:
+             return ctx->model.projection->ne[1];
+         case PROJECTOR_TYPE_ULTRAVOX:
+diff --git a/tools/mtmd/models/gemma3na.cpp b/tools/mtmd/models/gemma3na.cpp
+new file mode 100644
+index 00000000..6d40e304
+--- /dev/null
++++ b/tools/mtmd/models/gemma3na.cpp
+@@ -0,0 +1,716 @@
++#include "models.h"
++
++// Gemma 3n Audio Conformer graph builder
++// Architecture: Subsample Conv -> Conformer layers -> Audio Embedding Projection
++//
++// Tensor format: [features, time] throughout (column-major for ggml_mul_mat)
++// Input: mel spectrogram [n_frames, n_mel] = [T, 128]
++// Conv subsampling reduces to [1024, T/4]
++// Input projection: [1024, T/4] -> [1536, T/4]
++// 12 Conformer blocks
++// Audio embedding projection: [1536, T/4] -> [2048, T/4], then temporal reduction -> ~188 tokens
++
++// Relative position encoding constants
++static constexpr int G3NA_MAX_SPAN = 13;  // max_backward + 1 = 12 + 1
++static constexpr int G3NA_N_CHANNELS = 1536;
++static constexpr int G3NA_AUDIO_SOFT_TOKENS = 188;
++static constexpr int G3NA_AUDIO_TOKENS_OUT = G3NA_AUDIO_SOFT_TOKENS; // only the 188 soft tokens; <end_of_audio> is a normal vocab token
++
++// NOTE: Gemma3n uses CumulativeGroupNorm in the conv blocks which computes
++// cumulative mean and variance over the time dimension. This is different from
++// a simple per-position normalization. The CumulativeGroupNorm algorithm:
++// 1. cum_mean[t] = sum(x[0:t+1]) / count[0:t+1]
++// 2. cum_var[t] = sum((x[0:t+1] - cum_mean[t])^2) / count[0:t+1]
++// 3. normalized = (x - cum_mean) / sqrt(cum_var + eps) * scale
++//
++// Current implementation uses layer norm (mean + variance) as an approximation
++// since it computes mean/variance like CumulativeGroupNorm, but over all positions
++// rather than cumulatively. This is closer than RMS norm but not exact.
++// TODO: Implement true CumulativeGroupNorm with cumulative sum operations for
++// potentially better audio transcription accuracy.
++
++// Gemma3nAudioCumulativeGroupNorm (HF reference):
++// - Input:  x [B, T, F, C] (after conv output is permuted)
++// - Reduce: sum over (F, C), then cumulative mean/variance over T
++// - Output: normalized_x * weight[C] (no bias), returned in original dtype
++//
++// In this graph we keep conv tensors as [T, F, C, B] (time-major). This helper
++// implements the same math for the common B=1 case.
++static ggml_tensor * gemma3na_cumulative_group_norm(
++        ggml_context * ctx0,
++        ggml_tensor  * x_ftc1,   // [F, T, C, 1] (freq, time, channel, batch)
++        ggml_tensor  * w_c,      // [C]
++        const float    eps,
++        ggml_tensor ** out_mean = nullptr, // [T] (optional)
++        ggml_tensor ** out_var  = nullptr  // [T] (optional)
++) {
++    GGML_ASSERT(x_ftc1);
++    GGML_ASSERT(w_c);
++    GGML_ASSERT(x_ftc1->ne[3] == 1);
++    GGML_ASSERT(w_c->ne[0] == x_ftc1->ne[2]);
++
++    const int64_t F = x_ftc1->ne[0];
++    const int64_t T = x_ftc1->ne[1];
++    const int64_t C = x_ftc1->ne[2];
++    const float group_size = (float) (F*C);
++
++    // HF computes stats in fp32 for numerical stability.
++    ggml_tensor * x = x_ftc1;
++    if (x->type != GGML_TYPE_F32) {
++        x = ggml_cast(ctx0, x, GGML_TYPE_F32);
++    }
++
++    ggml_tensor * w = w_c;
++    if (w->type != GGML_TYPE_F32) {
++        w = ggml_cast(ctx0, w, GGML_TYPE_F32);
++    }
++
++    // Flatten (F, C) -> (F*C) while keeping T as the 2nd dim:
++    //   x: [F, T, C, 1] -> [F, C, T, 1] -> [F*C, T]
++    //
++    // NOTE: ggml_permute() params specify where each *input* axis lands in the output:
++    //   axis0 = new index for old axis 0, axis1 = new index for old axis 1, ...
++    // To get [F, C, T, 1] (old0, old2, old1, old3) from [F, T, C, 1] we need:
++    //   old0(F)->new0, old1(T)->new2, old2(C)->new1, old3->new3 => (0, 2, 1, 3).
++    ggml_tensor * x_fct = ggml_cont(ctx0, ggml_permute(ctx0, x, 0, 2, 1, 3)); // [F, C, T, 1]
++    ggml_tensor * a = ggml_reshape_2d(ctx0, x_fct, F*C, T);                   // [F*C, T]
++
++    // sum_values_at_t: sum over (F, C) for each time step.
++    // ggml_sum_rows returns shape [1, T]; view it as a length-T vector so ggml_cumsum runs over time (ne0).
++    ggml_tensor * sum_at_t = ggml_sum_rows(ctx0, a);                  // [1, T]
++    ggml_tensor * sum_vec  = ggml_reshape_1d(ctx0, sum_at_t, T);      // [T]
++    ggml_tensor * cum_sum  = ggml_cumsum(ctx0, sum_vec);              // [T]
++
++    // cum_count_elements: (t+1) * (F*C)
++    ggml_tensor * count = ggml_arange(ctx0, 1.0f, (float) (T + 1), 1.0f); // [T]
++    count = ggml_scale(ctx0, count, group_size);                          // [T]
++
++    // cum_mean: [T]
++    ggml_tensor * mean = ggml_div(ctx0, cum_sum, count);
++
++    // squared diffs at each time step (uses the *cumulative mean at that time step*, matching HF):
++    //   diff: [F*C, T]
++    ggml_tensor * mean_rep = ggml_repeat(ctx0, ggml_reshape_2d(ctx0, mean, 1, T), a);
++    ggml_tensor * diff     = ggml_sub(ctx0, a, mean_rep);
++
++    // sum_sq_diff_at_t: [1, T] -> [T], then cumulative sum over time.
++    ggml_tensor * sq_sum_at_t = ggml_sum_rows(ctx0, ggml_mul(ctx0, diff, diff)); // [1, T]
++    ggml_tensor * sq_sum_vec  = ggml_reshape_1d(ctx0, sq_sum_at_t, T);           // [T]
++    ggml_tensor * cum_sq_sum  = ggml_cumsum(ctx0, sq_sum_vec);                   // [T]
++
++    // cum_variance: [T]
++    ggml_tensor * var = ggml_div(ctx0, cum_sq_sum, count);
++
++    if (out_mean) {
++        *out_mean = mean;
++    }
++    if (out_var) {
++        *out_var = var;
++    }
++
++    // Normalize: (x - mean) / sqrt(var + eps)
++    // Construct a scalar eps without requiring tensor data allocation (ctx0 is no_alloc).
++    ggml_tensor * eps_scalar = ggml_arange(ctx0, eps, eps + 1.0f, 1.0f); // [1] (scalar)
++    ggml_tensor * var_eps = ggml_add1(ctx0, var, eps_scalar);            // [T]
++    ggml_tensor * denom   = ggml_sqrt(ctx0, ggml_repeat(ctx0, ggml_reshape_2d(ctx0, var_eps, 1, T), a)); // [F*C, T]
++    ggml_tensor * norm_a  = ggml_div(ctx0, diff, denom); // [F*C, T]
++
++    // Reshape back to [T, F, C, 1] and apply per-channel scale.
++    ggml_tensor * norm_fct = ggml_reshape_4d(ctx0, norm_a, F, C, T, 1); // [F, C, T, 1]
++    ggml_tensor * norm_cft = ggml_cont(ctx0, ggml_permute(ctx0, norm_fct, 1, 0, 2, 3)); // [C, F, T, 1]
++    ggml_tensor * scaled   = ggml_mul(ctx0, norm_cft, w); // [C, F, T, 1]
++
++    // Back to original layout [F, T, C, 1]
++    return ggml_cont(ctx0, ggml_permute(ctx0, scaled, 2, 0, 1, 3)); // [F, T, C, 1]
++}
++
++static ggml_tensor * gemma3na_build_audio_hard_embedding(
++        ggml_context * ctx0,
++        const clip_model & model,
++        const float eps,
++        const int64_t tok_idx
++) {
++    // embed_audio (hard tokens) = post_norm( projection( hard_norm( embedding(token_id) ) ) )
++    GGML_ASSERT(model.mm_input_proj_w); // mm.a.embedding.weight
++    GGML_ASSERT(model.mm_input_norm_w); // mm.a.hard_embedding_norm.weight
++    GGML_ASSERT(model.mm_0_w);          // mm.a.embedding_projection.weight
++
++    ggml_tensor * emb_w = model.mm_input_proj_w;
++    GGML_ASSERT(emb_w->ne[0] == G3NA_N_CHANNELS);
++    GGML_ASSERT(emb_w->ne[1] > 0);
++    GGML_ASSERT(tok_idx >= 0);
++    GGML_ASSERT(tok_idx < emb_w->ne[1]);
++
++    ggml_tensor * tok_emb = ggml_view_1d(ctx0, emb_w, emb_w->ne[0], tok_idx * emb_w->nb[1]); // [1536]
++    tok_emb = ggml_reshape_2d(ctx0, tok_emb, tok_emb->ne[0], 1); // [1536, 1]
++
++    // hard_embedding_norm
++    tok_emb = ggml_rms_norm(ctx0, tok_emb, eps);
++    tok_emb = ggml_mul(ctx0, tok_emb, model.mm_input_norm_w); // [1536]
++
++    // embedding_projection
++    tok_emb = ggml_mul_mat(ctx0, model.mm_0_w, tok_emb); // [2048, 1]
++
++    // embedding_post_projection_norm (with_scale=false => RMS norm only)
++    tok_emb = ggml_rms_norm(ctx0, tok_emb, eps);
++
++    return tok_emb; // [2048, 1]
++}
++
++ggml_cgraph * clip_graph_gemma3na::build() {
++    ggml_tensor * inp = build_inp_raw(1);
++    cb(inp, "input", -1);
++
++    // Create position embedding input for relative position attention
++    // Shape: [G3NA_MAX_SPAN, G3NA_N_CHANNELS] = [13, 1536]
++    // This will be filled with sinusoidal embeddings at runtime
++    ggml_tensor * pos_emb = ggml_new_tensor_2d(ctx0, GGML_TYPE_F32, G3NA_N_CHANNELS, G3NA_MAX_SPAN);
++    ggml_set_name(pos_emb, "pos_emb");
++    ggml_set_input(pos_emb);
++    ggml_build_forward_expand(gf, pos_emb);
++
++    // Input `inp_raw` is shaped as [F=128, T, 1] (freq-major).
++    // Reshape for conv2d: [width, height, channels, batch] = [F, T, 1, 1]
++    auto * cur = ggml_reshape_4d(ctx0, inp, inp->ne[0], inp->ne[1], inp->ne[2], 1);
++    cb(cur, "input_4d", -1);
++
++    // Subsample conv projection
++    // PyTorch uses manual padding before each conv:
++    //   manual_padding = (pad_F_left, pad_F_right, pad_T_top, pad_T_bottom) = (1, 1, 0, 2)
++    // F.pad(x, (1, 1, 0, 2)) pads: last dim (F=mel) by (1,1), second-to-last (T=time) by (0,2)
++    // ggml_pad_ext: lp0, rp0 for dim0; lp1, rp1 for dim1, etc.
++    // Our tensor is [F, T, C, B], so:
++    //   dim0 = F: pad (1, 1) - left/right on freq
++    //   dim1 = T: pad (0, 2) - top/bottom on time
++
++    // Conv0: weight [3, 3, 1, 128] - 1 input channel, 128 output channels
++    // PyTorch: Conv2d(1, 128, kernel_size=(3, 3), stride=(2, 2), bias=False) with manual_padding
++    // PyTorch manual_padding = (pad_F_left, pad_F_right, pad_T_top, pad_T_bottom) = (1, 1, 0, 2)
++    // F.pad applies: last dim (F=mel) gets (1,1), second-to-last (T=time) gets (0,2)
++    // ggml tensor is [time, mel, channel, batch], so:
++    //   dim0 (time) needs (0, 2) - F.pad's (top, bottom) on T
++    //   dim1 (mel) needs (1, 1)  - F.pad's (left, right) on F
++    if (model.pre_encode_conv_X_w[0]) {
++        cur = ggml_pad_ext(ctx0, cur, 1, 1, 0, 2, 0, 0, 0, 0);
++        cb(cur, "conv0_padded", -1);
++
++        cur = ggml_conv_2d(ctx0, model.pre_encode_conv_X_w[0], cur, 2, 2, 0, 0, 1, 1);
++        cb(cur, "conv0_out", -1);
++        // Output: [(128+2-3)/2+1, (T+2-3)/2+1, 128, 1] = [64, (T+1)/2, 128, 1]
++
++        if (model.pre_encode_conv_X_b[0]) {
++            // True Gemma3nAudioCumulativeGroupNorm (cumulative over time, reduce over freq+channels).
++            ggml_tensor * conv0_cum_mean = nullptr;
++            ggml_tensor * conv0_cum_var  = nullptr;
++            cur = gemma3na_cumulative_group_norm(ctx0, cur, model.pre_encode_conv_X_b[0], 1e-3f, &conv0_cum_mean, &conv0_cum_var);
++            cb(conv0_cum_mean, "conv0_cum_mean", -1);
++            cb(conv0_cum_var,  "conv0_cum_var",  -1);
++            cb(cur, "conv0_norm", -1);
++        }
++        cur = ggml_relu(ctx0, cur);
++        cb(cur, "conv0_norm_relu", -1);
++    }
++
++    // Conv1: weight [3, 3, 128, 32] - 128 input channels, 32 output channels
++    // PyTorch: Conv2d(128, 32, kernel_size=(3, 3), stride=(2, 2), bias=False) with manual_padding
++    // Same padding logic as conv0: dim0 (freq) = (1,1), dim1 (time) = (0,2)
++    if (model.pre_encode_conv_X_w[1]) {
++        cur = ggml_pad_ext(ctx0, cur, 1, 1, 0, 2, 0, 0, 0, 0);
++        cb(cur, "conv1_padded", -1);
++
++        cur = ggml_conv_2d(ctx0, model.pre_encode_conv_X_w[1], cur, 2, 2, 0, 0, 1, 1);
++        cb(cur, "conv1_out", -1);
++        // Output: [(64+2-3)/2+1, (T'+2-3)/2+1, 32, 1] = [32, (T'+1)/2, 32, 1]
++
++        if (model.pre_encode_conv_X_b[1]) {
++            cur = gemma3na_cumulative_group_norm(ctx0, cur, model.pre_encode_conv_X_b[1], 1e-3f);
++            cb(cur, "conv1_norm", -1);
++        }
++        cur = ggml_relu(ctx0, cur);
++        cb(cur, "conv1_norm_relu", -1);
++    }
++
++    // Flatten: After conv2d output is [F=32, T'', C=32, 1]
++    // where T'' ≈ (T+1)/4 after two stride-2 convs
++    // We want [features, time] = [32*32, T''] = [1024, T'']
++    //
++    // PyTorch: after conv_1 shape is [B, C, T, F] = [1, 32, 325, 32]
++    // PyTorch flatten: permute(0,2,3,1) -> [B, T, F, C] -> reshape [B, T, F*C]
++    // In row-major flatten of [F, C]: element [f, c] is at index i = f * C + c
++    // So: f = i // C = i // 32, c = i % C = i % 32  (c varies fastest)
++    //
++    // ggml after conv2d: [F, T, C, B] = [32, 325, 32, 1]
++    // To match PyTorch order (c varies fastest), we need:
++    //   permute(2, 0, 1, 3): [F, T, C, B] -> [C, F, T, B]
++    // After reshape [C*F, T], in column-major: element [c, f] at index i = c + f * C
++    // So: c = i % C = i % 32, f = i // C = i // 32  (c varies fastest - matches PyTorch!)
++    {
++        int64_t f_dim = cur->ne[0];  // freq after conv = 32
++        int64_t t_dim = cur->ne[1];  // time after conv = 325
++        int64_t c_dim = cur->ne[2];  // channels = 32
++
++        // Permute [F, T, C, 1] -> [C, F, T, 1] to match PyTorch flatten order
++        cur = ggml_cont(ctx0, ggml_permute(ctx0, cur, 1, 2, 0, 3));  // [C, F, T, 1]
++        cur = ggml_reshape_2d(ctx0, cur, c_dim * f_dim, t_dim);  // [1024, T'']
++        cb(cur, "flattened", -1);
++    }
++
++    // Input projection: weight [1024, 1536]
++    // ggml_mul_mat computes w^T @ x, so [1024, 1536]^T @ [1024, T/4] = [1536, T/4]
++    if (model.pre_encode_out_w) {
++        cur = ggml_mul_mat(ctx0, model.pre_encode_out_w, cur);
++        cb(cur, "input_proj", -1);
++    }
++    // cur shape: [1536, T/4]
++
++    // Conformer layers
++    // All operations maintain [hidden, time] = [1536, T/4] format
++    for (int il = 0; il < hparams.n_layer; il++) {
++        const auto & layer = model.layers[il];
++        auto * residual = cur;
++
++        cb(cur, "layer_input", il);
++
++        // FFW layer start (first half-step FFN)
++        // cur: [1536, T/4]
++        {
++            ggml_tensor * ffn_inp = cur;
++
++            // Pre-norm: RMS norm along feature dimension (dim 0)
++            if (layer.ff_norm_w) {
++                ffn_inp = ggml_rms_norm(ctx0, ffn_inp, eps);
++                ffn_inp = ggml_mul(ctx0, ffn_inp, layer.ff_norm_w);  // [1536] broadcast
++                cb(ffn_inp, "ffw_start_pre_norm", il);
++            }
++
++            // FFN up: weight [1536, 6144], input [1536, T/4] -> [6144, T/4]
++            if (layer.ff_up_w) {
++                ffn_inp = ggml_mul_mat(ctx0, layer.ff_up_w, ffn_inp);
++                ffn_inp = ggml_silu(ctx0, ffn_inp);
++                cb(ffn_inp, "ffw_start_up", il);
++            }
++
++            // FFN down: weight [6144, 1536], input [6144, T/4] -> [1536, T/4]
++            if (layer.ff_down_w) {
++                ffn_inp = ggml_mul_mat(ctx0, layer.ff_down_w, ffn_inp);
++                cb(ffn_inp, "ffw_start_down", il);
++            }
++
++            // Post-norm
++            if (layer.ln_1_w) {
++                ffn_inp = ggml_rms_norm(ctx0, ffn_inp, eps);
++                ffn_inp = ggml_mul(ctx0, ffn_inp, layer.ln_1_w);
++                cb(ffn_inp, "ffw_start_post_norm", il);
++            }
++
++            // Residual with factor 0.5
++            residual = ggml_add(ctx0, residual, ggml_scale(ctx0, ffn_inp, 0.5f));
++        }
++
++        // Self-attention with relative position encoding
++        // cur: [1536, T/4]
++        {
++            cur = residual;
++
++            // Pre-norm
++            if (layer.norm_conv_w) {
++                cur = ggml_rms_norm(ctx0, cur, eps);
++                cur = ggml_mul(ctx0, cur, layer.norm_conv_w);
++                cb(cur, "attn_pre_norm", il);
++            }
++
++            // Q, K, V projections: weight [1536, 1536], input [1536, T/4] -> [1536, T/4]
++            ggml_tensor * Qcur = ggml_mul_mat(ctx0, layer.q_w, cur);
++            ggml_tensor * Kcur = ggml_mul_mat(ctx0, layer.k_w, cur);
++            ggml_tensor * Vcur = ggml_mul_mat(ctx0, layer.v_w, cur);
++
++            // Per-dim scale for Q
++            // PyTorch: per_dim_scale_sp = softplus(self.per_dim_scale)
++            //          query_states = query_states * self.q_scale * per_dim_scale_sp
++            // where q_scale = head_dim^(-0.5) / softplus(0) = 1/sqrt(192) / ln(2) ≈ 0.104
++            if (layer.q_norm) {
++                // q_norm stores the raw per_dim_scale values, need to apply softplus
++                ggml_tensor * per_dim_scale_sp = ggml_softplus(ctx0, layer.q_norm);
++
++                // q_scale = 1/sqrt(head_dim) / ln(2) = 1/sqrt(192) / 0.6931 ≈ 0.1042
++                const float q_scale = 1.0f / (sqrtf((float)d_head) * logf(2.0f));
++                per_dim_scale_sp = ggml_scale(ctx0, per_dim_scale_sp, q_scale);
++
++                Qcur = ggml_mul(ctx0, Qcur, per_dim_scale_sp);
++                cb(Qcur, "q_per_dim_scale", il);
++            }
++
++            // cur shape: [1536, T/4] = [n_head * d_head, n_tokens]
++            const int64_t n_tokens = cur->ne[1];
++
++            // Reshape for multi-head attention
++            // [1536, T/4] -> [d_head, n_head, T/4] = [192, 8, T/4]
++            ggml_tensor * Q = ggml_reshape_3d(ctx0, Qcur, d_head, n_head, n_tokens);
++            ggml_tensor * K = ggml_reshape_3d(ctx0, Kcur, d_head, n_head, n_tokens);
++            ggml_tensor * V = ggml_reshape_3d(ctx0, Vcur, d_head, n_head, n_tokens);
++
++            // Permute for batched attention
++            // Q, K: [d_head, n_head, n_tokens] -> [d_head, n_tokens, n_head]
++            Qcur = ggml_cont(ctx0, ggml_permute(ctx0, Q, 0, 2, 1, 3));
++            Kcur = ggml_cont(ctx0, ggml_permute(ctx0, K, 0, 2, 1, 3));
++            // V: [d_head, n_head, n_tokens] -> [n_tokens, d_head, n_head]
++            Vcur = ggml_cont(ctx0, ggml_permute(ctx0, V, 1, 2, 0, 3));
++
++            // term_ac: Q @ K^T (content-based attention)
++            // Kcur: [d_head, n_tokens, n_head]
++            // Qcur: [d_head, n_tokens, n_head]
++            // KQ = Kcur^T @ Qcur = [n_tokens, n_tokens, n_head]
++            ggml_tensor * term_ac = ggml_mul_mat(ctx0, Kcur, Qcur);
++            cb(term_ac, "term_ac", il);
++
++            // Relative position encoding (term_bd)
++            // pos_emb: [1536, 13] (sinusoidal embeddings for positions [12, 11, ..., 0])
++            // Project through pos_proj (layer.k_norm): [1536, 1536]^T @ [1536, 13] = [1536, 13]
++            // Then reshape to [d_head, n_head, 13] and compute Q @ sin_emb^T
++            ggml_tensor * term_bd = nullptr;
++            if (layer.k_norm) {
++                // Project position embeddings through pos_proj
++                // pos_emb: [1536, 13] -> projected: [1536, 13]
++                ggml_tensor * proj_pos = ggml_mul_mat(ctx0, layer.k_norm, pos_emb);
++                cb(proj_pos, "proj_pos_emb", il);
++
++                // Reshape for multi-head: [1536, 13] -> [d_head, n_head, 13] = [192, 8, 13]
++                proj_pos = ggml_reshape_3d(ctx0, proj_pos, d_head, n_head, G3NA_MAX_SPAN);
++
++                // Permute: [d_head, n_head, 13] -> [d_head, 13, n_head]
++                proj_pos = ggml_cont(ctx0, ggml_permute(ctx0, proj_pos, 0, 2, 1, 3));
++                cb(proj_pos, "proj_pos_reshaped", il);
++
++                // Compute term_bd = Q @ sin_emb^T
++                // Qcur: [d_head, n_tokens, n_head]
++                // proj_pos: [d_head, 13, n_head]
++                // Result: [13, n_tokens, n_head]
++                term_bd = ggml_mul_mat(ctx0, proj_pos, Qcur);
++                cb(term_bd, "term_bd_raw", il);
++
++                // Apply relative shift to convert term_bd to attention bias matrix
++                // term_bd shape: [13, n_tokens, n_head] = [pos_len, q_len, h]
++                // pos_idx 0 -> relative position 12
++                // pos_idx 12 -> relative position 0
++                //
++                // For attention[q, k], we need term_bd[12-(q-k)] when 0 <= q-k <= 12
++                // Since Gemma3n has max_forward=0, positions k > q get no bias
++                //
++                // Apply relative shift following conformer.cpp pattern
++                // The goal is to create a Toeplitz matrix where:
++                // result[k, q, h] = term_bd[12 - (q - k), q, h] for valid positions
++                {
++                    // term_bd: [13, n_tokens, n_head] = [pos_len, q_len, h]
++                    const int64_t pos_len = term_bd->ne[0];  // 13
++                    const int64_t q_len = term_bd->ne[1];    // n_tokens
++                    const int64_t h = term_bd->ne[2];        // n_head
++
++                    // Step 1: Pad on dim 0 (pos dimension) by 1 on the right
++                    term_bd = ggml_pad(ctx0, term_bd, 1, 0, 0, 0);
++                    cb(term_bd, "term_bd_padded", il);
++                    // term_bd: [14, n_tokens, n_head]
++
++                    // Step 2: Roll by 1 on dim 0 to shift positions
++                    term_bd = ggml_roll(ctx0, term_bd, 1, 0, 0, 0);
++                    cb(term_bd, "term_bd_rolled", il);
++
++                    // Step 3: Reshape to [q_len, pos_len+1, h] to prepare for diagonal extraction
++                    term_bd = ggml_reshape_3d(ctx0, term_bd, q_len, pos_len + 1, h);
++                    cb(term_bd, "term_bd_reshaped", il);
++
++                    // Step 4: View to extract the diagonal structure
++                    // Skip the first row and take min(pos_len, q_len) rows
++                    int64_t take_len = (pos_len < q_len) ? pos_len : q_len;
++                    term_bd = ggml_view_3d(ctx0, term_bd,
++                                           q_len, take_len, h,
++                                           term_bd->nb[1], term_bd->nb[2],
++                                           term_bd->nb[0] * q_len);  // skip first q_len elements (one row)
++                    term_bd = ggml_cont_3d(ctx0, term_bd, take_len, q_len, h);
++                    cb(term_bd, "term_bd_shifted", il);
++                    // term_bd: [take_len, q_len, h] = [min(13, n_tokens), n_tokens, h]
++
++                    // Step 5: If take_len < n_tokens, we need to pad for the remaining positions
++                    // These are the forward-looking positions (k > q) which get zero bias
++                    if (take_len < q_len) {
++                        // Pad on dim 0 to extend to n_tokens
++                        int64_t pad_amount = q_len - take_len;
++                        term_bd = ggml_pad(ctx0, term_bd, pad_amount, 0, 0, 0);
++                        // Now we need to roll the zeros to the front (for k > q)
++                        // Actually, looking at the attention matrix [n_tokens, n_tokens],
++                        // the upper triangle (k > q) should get zero bias
++                        // After reshape, dim 0 corresponds to key positions
++                        // We want zeros at the end (large key positions for each query)
++                        // which is what pad gives us, so no roll needed
++                        cb(term_bd, "term_bd_pad_forward", il);
++                    }
++                    // term_bd: [n_tokens, n_tokens, n_head]
++                }
++
++                cb(term_bd, "term_bd_final", il);
++            }
++
++            // Combine term_ac and term_bd
++            ggml_tensor * KQ = term_ac;
++            if (term_bd) {
++                KQ = ggml_add(ctx0, term_ac, term_bd);
++            }
++            cb(KQ, "attn_logits", il);
++
++            // Apply attention logit softcap (50.0)
++            const float softcap = 50.0f;
++            KQ = ggml_scale(ctx0, KQ, 1.0f / softcap);
++            KQ = ggml_tanh(ctx0, KQ);
++            KQ = ggml_scale(ctx0, KQ, softcap);
++            cb(KQ, "attn_logits_softcap", il);
++
++            // Apply Gemma3n local causal attention mask.
++            //
++            // HF reference (Gemma3nAudioAttention):
++            //   - conf_attention_chunk_size = 12
++            //   - conf_attention_context_left = 13  -> max_past_horizon = 12
++            //   - conf_attention_context_right = 0
++            //
++            // This results in a fixed local causal window of length 13:
++            //   allow keys k in [q - 12, q] for each query q.
++            //
++            // In ggml KQ layout, dim0 = key index (k), dim1 = query index (q).
++            {
++                const int max_past_horizon = G3NA_MAX_SPAN - 1; // 12
++
++                // Mask future keys (k > q)
++                KQ = ggml_diag_mask_inf(ctx0, KQ, /*n_past*/ 0);
++
++                // Mask keys too far in the past (k < q - max_past_horizon) by transposing,
++                // applying the same diag mask, then transposing back.
++                ggml_tensor * KQ_t = ggml_cont(ctx0, ggml_permute(ctx0, KQ, 1, 0, 2, 3));
++                KQ_t = ggml_diag_mask_inf(ctx0, KQ_t, /*n_past*/ max_past_horizon);
++                KQ = ggml_cont(ctx0, ggml_permute(ctx0, KQ_t, 1, 0, 2, 3));
++
++                cb(KQ, "attn_logits_masked", il);
++            }
++
++            // Softmax
++            KQ = ggml_soft_max(ctx0, KQ);
++            cb(KQ, "attn_weights", il);
++
++            // Attention output: attn @ V
++            // Vcur: [n_tokens, d_head, n_head]
++            // KQ:   [n_tokens, n_tokens, n_head] (keys, queries, head)
++            // KQV = Vcur^T @ KQ -> [d_head, n_tokens, n_head]
++            ggml_tensor * KQV = ggml_mul_mat(ctx0, Vcur, KQ);
++            KQV = ggml_permute(ctx0, KQV, 0, 2, 1, 3);                     // [d_head, n_head, n_tokens]
++            KQV = ggml_cont_2d(ctx0, KQV, d_head * n_head, n_tokens);        // [1536, T/4]
++
++            // Output projection: weight [1536, 1536]
++            cur = ggml_mul_mat(ctx0, layer.o_w, KQV);
++            cb(cur, "attn_output", il);
++
++            // Post-norm
++            if (layer.norm_conv_b) {
++                cur = ggml_rms_norm(ctx0, cur, eps);
++                cur = ggml_mul(ctx0, cur, layer.norm_conv_b);
++                cb(cur, "attn_post_norm", il);
++            }
++
++            residual = ggml_add(ctx0, residual, cur);
++        }
++
++        // LConv1D (Lightweight Convolution)
++        // cur: [1536, T/4]
++        {
++            cur = residual;
++
++            // Pre-norm
++            if (layer.linear_pos_w) {
++                cur = ggml_rms_norm(ctx0, cur, eps);
++                cur = ggml_mul(ctx0, cur, layer.linear_pos_w);
++                cb(cur, "lconv_pre_norm", il);
++            }
++
++            // Linear start with GLU: weight [1536, 3072]
++            // [1536, 3072]^T @ [1536, T/4] = [3072, T/4]
++            if (layer.conv_pw1_w) {
++                cur = ggml_mul_mat(ctx0, layer.conv_pw1_w, cur);
++                // GLU: split [3072, T/4] into [1536, T/4] and [1536, T/4]
++                int64_t d = cur->ne[0] / 2;  // 1536
++                int64_t n_tok = cur->ne[1];
++                // First half: values, second half: gates
++                ggml_tensor * val = ggml_view_2d(ctx0, cur, d, n_tok, cur->nb[1], 0);
++                ggml_tensor * gate = ggml_view_2d(ctx0, cur, d, n_tok, cur->nb[1], d * ggml_element_size(cur));
++                gate = ggml_sigmoid(ctx0, gate);
++                cur = ggml_mul(ctx0, val, gate);
++                // Make contiguous and transpose for conv: [1536, T/4] -> [T/4, 1536]
++                cur = ggml_cont(ctx0, ggml_transpose(ctx0, cur));
++                cb(cur, "lconv_glu", il);
++            }
++            // cur: [T/4, 1536] after transpose
++
++            // Depthwise conv1d: weight [5, 1, 1536]
++            // ssm_conv expects:
++            //   input sx: 3D [n_t + d_conv - 1, d_inner, n_s]
++            //   kernel c: 2D [d_conv, d_inner]
++            //   output: 3D [d_inner, n_t, n_s]
++            if (layer.conv_dw_w) {
++                // Reshape kernel from [5, 1, 1536] to [5, 1536]
++                ggml_tensor * conv_w = ggml_reshape_2d(ctx0, layer.conv_dw_w,
++                                                       layer.conv_dw_w->ne[0],  // 5
++                                                       layer.conv_dw_w->ne[2]); // 1536
++                // Metal ssm_conv requires F32 kernel
++                conv_w = ggml_cast(ctx0, conv_w, GGML_TYPE_F32);
++
++                // Save original time dimension for later
++                int64_t orig_time = cur->ne[0];
++
++                // Add batch dimension: [T/4, 1536] -> [T/4, 1536, 1]
++                cur = ggml_reshape_3d(ctx0, cur, cur->ne[0], cur->ne[1], 1);
++
++                // Pad for causal conv with kernel 5
++                cur = ggml_pad(ctx0, cur, 4, 0, 0, 0);
++                cur = ggml_roll(ctx0, cur, 4, 0, 0, 0);
++                cur = ggml_pad(ctx0, cur, 4, 0, 0, 0);
++
++                cur = ggml_ssm_conv(ctx0, cur, conv_w);
++                // Output: [d_inner, n_t, n_s] = [1536, T/4 + 4, 1]
++                cb(cur, "lconv_dw", il);
++
++                // Remove batch dimension: [1536, T+4, 1] -> [1536, T+4]
++                cur = ggml_reshape_2d(ctx0, cur, cur->ne[0], cur->ne[1]);
++
++                // Truncate to original time dimension: take first orig_time frames
++                cur = ggml_view_2d(ctx0, cur, cur->ne[0], orig_time, cur->nb[1], 0);
++                cur = ggml_cont(ctx0, cur);
++            }
++            // cur: [1536, T/4]
++
++            // Conv norm + SiLU
++            if (layer.conv_norm_w) {
++                cur = ggml_rms_norm(ctx0, cur, eps);
++                cur = ggml_mul(ctx0, cur, layer.conv_norm_w);
++            }
++            cur = ggml_silu(ctx0, cur);
++            // cur: [1536, T/4]
++
++            // Linear end: weight [1536, 1536]
++            if (layer.conv_pw2_w) {
++                cur = ggml_mul_mat(ctx0, layer.conv_pw2_w, cur);
++                cb(cur, "lconv_end", il);
++            }
++
++            residual = ggml_add(ctx0, residual, cur);
++        }
++
++        // FFW layer end (second half-step FFN)
++        // cur: [1536, T/4]
++        {
++            cur = residual;
++
++            // Pre-norm
++            if (layer.ff_norm_1_w) {
++                cur = ggml_rms_norm(ctx0, cur, eps);
++                cur = ggml_mul(ctx0, cur, layer.ff_norm_1_w);
++                cb(cur, "ffw_end_pre_norm", il);
++            }
++
++            // FFN up: weight [1536, 6144]
++            if (layer.ff_up_1_w) {
++                cur = ggml_mul_mat(ctx0, layer.ff_up_1_w, cur);
++                cur = ggml_silu(ctx0, cur);
++                cb(cur, "ffw_end_up", il);
++            }
++
++            // FFN down: weight [6144, 1536]
++            if (layer.ff_down_1_w) {
++                cur = ggml_mul_mat(ctx0, layer.ff_down_1_w, cur);
++                cb(cur, "ffw_end_down", il);
++            }
++
++            // Post-norm
++            if (layer.ln_2_w) {
++                cur = ggml_rms_norm(ctx0, cur, eps);
++                cur = ggml_mul(ctx0, cur, layer.ln_2_w);
++                cb(cur, "ffw_end_post_norm", il);
++            }
++
++            // Residual with factor 0.5
++            residual = ggml_add(ctx0, residual, ggml_scale(ctx0, cur, 0.5f));
++        }
++
++        // Block norm
++        if (layer.ls_1_w) {
++            residual = ggml_rms_norm(ctx0, residual, eps);
++            residual = ggml_mul(ctx0, residual, layer.ls_1_w);
++            cb(residual, "block_norm", il);
++        }
++
++        cur = residual;
++    }
++
++    // Temporal reduction (HF: `audio_encodings = audio_encodings[:, ::4]`)
++    // HF applies this reduction inside the audio encoder (before embed_audio).
++    {
++        const int conf_reduction_factor = 4;
++        const int64_t n_tokens_in  = cur->ne[1];
++        const int64_t n_tokens_out = (n_tokens_in + conf_reduction_factor - 1) / conf_reduction_factor;
++        cur = ggml_view_2d(ctx0, cur, cur->ne[0], n_tokens_out, cur->nb[1] * conf_reduction_factor, 0);
++        cur = ggml_cont(ctx0, cur);
++        cb(cur, "temporal_reduction", -1);
++    }
++
++    // Audio embedding projection (Gemma3nMultimodalEmbedder.forward for soft tokens)
++    // cur: [1536, T/16] after temporal reduction
++    //
++    // PyTorch flow for inputs_embeds (soft tokens = audio features):
++    // 1. soft_embedding_norm(inputs_embeds) - RMS norm with [1536] weight
++    // 2. embedding_projection(emb_norm) - Linear [1536 -> 2048]
++    // 3. embedding_post_projection_norm(emb_norm_proj) - scalar norm (weight=1.0)
++    //
++    // Note: hard_embedding_norm is only used for token IDs, not soft tokens!
++
++    // Step 1: Soft embedding norm (for soft tokens / audio features)
++    if (model.mm_soft_emb_norm_w) {
++        cur = ggml_rms_norm(ctx0, cur, eps);
++        cur = ggml_mul(ctx0, cur, model.mm_soft_emb_norm_w);  // [1536]
++        cb(cur, "soft_embedding_norm", -1);
++    }
++
++    // Step 2: Embedding projection: [1536, 2048]^T @ [1536, T] = [2048, T]
++    if (model.mm_0_w) {
++        cur = ggml_mul_mat(ctx0, model.mm_0_w, cur);
++        cb(cur, "embedding_projection", -1);
++    }
++    // cur: [2048, T/4]
++
++    // Step 3: Post projection norm (embedding_post_projection_norm, weight=1.0 scalar)
++    // Since the weight is just 1.0, this is effectively just an RMS norm
++    cur = ggml_rms_norm(ctx0, cur, eps);
++    cb(cur, "embedding_post_projection_norm", -1);
++
++    // HF pads audio features to a fixed 188 soft tokens (30s chunk) using the last embed_audio vocab embedding.
++    // <end_of_audio> itself is injected as a normal vocab token, not via the audio encoder output.
++    {
++        const int64_t n_tokens = cur->ne[1];
++        if (n_tokens < G3NA_AUDIO_SOFT_TOKENS) {
++            // audio_padding_embs = embed_audio(input_ids=vocab_size-1)
++            ggml_tensor * pad_emb = gemma3na_build_audio_hard_embedding(ctx0, model, eps, model.mm_input_proj_w->ne[1] - 1); // [2048, 1]
++            cb(pad_emb, "audio_padding_embedding", -1);
++
++            const int64_t n_extra = G3NA_AUDIO_SOFT_TOKENS - n_tokens;
++            ggml_tensor * shape = ggml_new_tensor_2d(ctx0, pad_emb->type, pad_emb->ne[0], n_extra);
++            ggml_tensor * extra = ggml_repeat(ctx0, pad_emb, shape); // [2048, n_extra]
++
++            cur = ggml_concat(ctx0, cur, extra, 1);
++            cur = ggml_cont(ctx0, cur);
++            cb(cur, "output_padded", -1);
++        } else if (n_tokens > G3NA_AUDIO_SOFT_TOKENS) {
++            cur = ggml_view_2d(ctx0, cur, cur->ne[0], G3NA_AUDIO_SOFT_TOKENS, cur->nb[1], 0);
++            cur = ggml_cont(ctx0, cur);
++            cb(cur, "output_truncated", -1);
++        }
++        GGML_ASSERT(cur->ne[1] == G3NA_AUDIO_TOKENS_OUT);
++    }
++
++    cb(cur, "output", -1);
++    ggml_build_forward_expand(gf, cur);
++
++    return gf;
++}
+diff --git a/tools/mtmd/models/mobilenetv5.cpp b/tools/mtmd/models/mobilenetv5.cpp
+new file mode 100644
+index 00000000..1a5c61fb
+--- /dev/null
++++ b/tools/mtmd/models/mobilenetv5.cpp
+@@ -0,0 +1,453 @@
++#include "models.h"
++
++// Helpers for MobileNetV5 Blocks
++// RMS Norm 2D - normalizes over channels for each spatial position
++ggml_tensor * clip_graph_mobilenetv5::rms_norm_2d(ggml_tensor * inp, ggml_tensor * weight, float eps) {
++    // inp: [W, H, C, B]
++
++    ggml_tensor * cur = ggml_permute(ctx0, inp, 2, 1, 0, 3);
++    cur = ggml_cont(ctx0, cur);
++    cur = ggml_rms_norm(ctx0, cur, eps);
++ 
++    if (weight) {
++        cur = ggml_mul(ctx0, cur, weight);
++    }
++
++    cur = ggml_permute(ctx0, cur, 2, 1, 0, 3);
++    cur = ggml_cont(ctx0, cur);
++
++    return cur;
++}
++
++// Conv2dSame padding - asymmetric SAME padding like PyTorch/TF
++ggml_tensor* clip_graph_mobilenetv5::pad_same_2d(ggml_tensor* inp, int kernel_h, int kernel_w, int stride_h, int stride_w, int dilation_h, int dilation_w) {
++    const int64_t ih = inp->ne[1];  // height
++    const int64_t iw = inp->ne[0];  // width
++
++    // Calculate output size (ceil division)
++    const int64_t oh = (ih + stride_h - 1) / stride_h;
++    const int64_t ow = (iw + stride_w - 1) / stride_w;
++
++    // Calculate padding needed
++    const int64_t pad_h = std::max((int64_t)0, (oh - 1) * stride_h + (kernel_h - 1) * dilation_h + 1 - ih);
++    const int64_t pad_w = std::max((int64_t)0, (ow - 1) * stride_w + (kernel_w - 1) * dilation_w + 1 - iw);
++
++    // Split padding asymmetrically
++    const int pad_h_top = pad_h / 2;
++    const int pad_h_bottom = pad_h - pad_h_top;
++    const int pad_w_left = pad_w / 2;
++    const int pad_w_right = pad_w - pad_w_left;
++
++    // Apply padding if needed
++    // ggml_pad_ext: (ctx, tensor, lp0, rp0, lp1, rp1, lp2, rp2, lp3, rp3)
++    // For [W, H, C, B]: p0=width, p1=height, p2=channels, p3=batch
++    if (pad_h > 0 || pad_w > 0) {
++        inp = ggml_pad_ext(ctx0, inp,
++            pad_w_left, pad_w_right,     // width padding (dim 0)
++            pad_h_top, pad_h_bottom,      // height padding (dim 1)
++            0, 0,                         // no channel padding (dim 2)
++            0, 0);                        // no batch padding (dim 3)
++    }
++
++    return inp;
++}
++
++
++// Edge Residual Block (Stage 0)
++ggml_tensor * clip_graph_mobilenetv5::build_edge_residual(ggml_tensor * inp, const mobilenetv5_block & block, int stride) {
++    ggml_tensor * cur = inp;
++
++    // 1. Expansion Conv (3x3)
++    if (stride == 2) {
++        // Case: Downsampling (Block 0)
++        // Replicates Conv2dSame(kernel=3, stride=2)
++        cur = pad_same_2d(cur, 3, 3, stride, stride); 
++        cur = ggml_conv_2d_direct(ctx0, block.s0_conv_exp_w, cur, stride, stride, 0, 0, 1, 1);
++    } else {
++        // Case: Normal 3x3 Block (Block 1, 2)
++        // Replicates Conv2d(kernel=3, stride=1, padding=1)
++        cur = ggml_conv_2d_direct(ctx0, block.s0_conv_exp_w, cur, stride, stride, 1, 1, 1, 1);
++    }
++
++    // BN + Activation
++    if (block.s0_bn1_w) cur = rms_norm_2d(cur, block.s0_bn1_w);
++    cur = ggml_gelu(ctx0, cur);
++
++    // 2. Pointwise Linear Conv (1x1)
++    // 1x1 Convs usually have padding=0 and stride=1
++    cur = ggml_conv_2d_direct(ctx0, block.s0_conv_pwl_w, cur, 1, 1, 0, 0, 1, 1);
++    if (block.s0_bn2_w) cur = rms_norm_2d(cur, block.s0_bn2_w);
++
++    // 3. Residual Connection
++    // Only apply residual if spatial dimensions and channels match (stride 1)
++    if (stride == 1 && inp->ne[2] == cur->ne[2] && inp->ne[0] == cur->ne[0]) {
++        cur = ggml_add(ctx0, cur, inp);
++    }
++
++    return cur;
++}
++
++// Universal Inverted Residual Block (Stage 1+)
++ggml_tensor * clip_graph_mobilenetv5::build_inverted_residual(ggml_tensor * inp, const mobilenetv5_block & block, int stride) {
++    ggml_tensor * cur = inp;
++
++    // 1. Depthwise Start (Optional)
++    // NOTE: dw_start always has stride=1 (no downsampling here)
++    if (block.dw_start_w) {
++        int k = block.dw_start_w->ne[0]; // 3 or 5
++        int p = k / 2;
++        cur = ggml_conv_2d_dw(ctx0, block.dw_start_w, cur, 1, 1, p, p, 1, 1);
++        if (block.dw_start_bn_w) cur = rms_norm_2d(cur, block.dw_start_bn_w);
++    }
++
++    // 2. Pointwise Expansion (1x1)
++    if (block.pw_exp_w) {
++        // Standard 1x1 conv, pad=0, stride=1
++        cur = ggml_conv_2d_direct(ctx0, block.pw_exp_w, cur, 1, 1, 0, 0, 1, 1);
++        if (block.pw_exp_bn_w) cur = rms_norm_2d(cur, block.pw_exp_bn_w);
++        cur = ggml_gelu(ctx0, cur);
++    }
++
++    // 3. Depthwise Mid (Optional)
++    // NOTE: dw_mid is where downsampling happens (stride=2 for first block of stage)
++    if (block.dw_mid_w) {
++        int k = block.dw_mid_w->ne[0]; // 3 or 5
++        
++        if (stride > 1) {
++            // Case: Stride 2 (Downsample) -> Use Asymmetric "Same" Padding
++            cur = pad_same_2d(cur, k, k, stride, stride);
++            cur = ggml_conv_2d_dw(ctx0, block.dw_mid_w, cur, stride, stride, 0, 0, 1, 1); // pad=0
++        } else {
++            // Case: Stride 1 -> Use Standard Symmetric Padding
++            int p = k / 2;
++            cur = ggml_conv_2d_dw(ctx0, block.dw_mid_w, cur, stride, stride, p, p, 1, 1);
++        }
++
++        if (block.dw_mid_bn_w) cur = rms_norm_2d(cur, block.dw_mid_bn_w);
++        cur = ggml_gelu(ctx0, cur);
++    }
++
++    // 4. Pointwise Projection (1x1)
++    if (block.pw_proj_w) {
++        cur = ggml_conv_2d_direct(ctx0, block.pw_proj_w, cur, 1, 1, 0, 0, 1, 1);
++        if (block.pw_proj_bn_w) cur = rms_norm_2d(cur, block.pw_proj_bn_w);
++    }
++
++    // Apply Layer Scaling if present
++    if (block.layer_scale_w) {        
++        cur = ggml_mul(ctx0, cur, block.layer_scale_w);
++    }
++
++    // 5. Residual Connection
++    bool same_spatial = (inp->ne[0] == cur->ne[0]) && (inp->ne[1] == cur->ne[1]);
++    bool same_channel = (inp->ne[2] == cur->ne[2]);
++    if (same_spatial && same_channel) {
++        cur = ggml_add(ctx0, cur, inp);
++    }
++
++    return cur;
++}
++
++// Attention Block (MQA) 
++ggml_tensor * clip_graph_mobilenetv5::build_mobilenet_attn(ggml_tensor * inp, const mobilenetv5_block & block) {
++    ggml_tensor * cur = inp;
++
++    // Norm
++    if (block.attn_norm_w) {
++        cur = rms_norm_2d(cur, block.attn_norm_w, 1e-6f);
++    }
++
++    // 1. Q Calculation
++    ggml_tensor * q = ggml_conv_2d_direct(ctx0, block.attn_q_w, cur, 1, 1, 0, 0, 1, 1);
++
++    // 2. K Calculation (Downsampled)
++    // Uses Conv2dSame(640, 640, kernel_size=(3, 3), stride=(2, 2), groups=640)
++    ggml_tensor * k_inp = cur;
++    if (block.attn_k_dw_w) {
++        int k_size = block.attn_k_dw_w->ne[0];  // Usually 3
++        k_inp = pad_same_2d(cur, k_size, k_size, 2, 2);  // Apply SAME padding
++        k_inp = ggml_conv_2d_dw(ctx0, block.attn_k_dw_w, k_inp, 2, 2, 0, 0, 1, 1);  // padding=0
++        if (block.attn_k_norm_w) {
++            k_inp = rms_norm_2d(k_inp, block.attn_k_norm_w, 1e-6f);
++        }
++    }
++    ggml_tensor * k = ggml_conv_2d_direct(ctx0, block.attn_k_w, k_inp, 1, 1, 0, 0, 1, 1);
++
++    // 3. V Calculation (Downsampled)
++    // Uses Conv2dSame(640, 640, kernel_size=(3, 3), stride=(2, 2), groups=640)
++    ggml_tensor * v_inp = cur;
++    if (block.attn_v_dw_w) {
++        int v_size = block.attn_v_dw_w->ne[0];  // Usually 3
++        v_inp = pad_same_2d(cur, v_size, v_size, 2, 2);  // Apply SAME padding
++        v_inp = ggml_conv_2d_dw(ctx0, block.attn_v_dw_w, v_inp, 2, 2, 0, 0, 1, 1);  // padding=0
++        if (block.attn_v_norm_w) {
++            v_inp = rms_norm_2d(v_inp, block.attn_v_norm_w, 1e-6f);
++        }
++    }
++    ggml_tensor * v = ggml_conv_2d_direct(ctx0, block.attn_v_w, v_inp, 1, 1, 0, 0, 1, 1);
++
++    const int W = cur->ne[0]; const int H = cur->ne[1]; const int B = cur->ne[3];
++    const int D = k->ne[2]; // Head dimension
++    const int n_head = q->ne[2] / D;
++    const int N = W * H;
++
++    // Process Q: [W, H, D*n_head, B] -> [D, N, n_head, B]
++    q = ggml_reshape_3d(ctx0, q, N, D*n_head, B);
++    q = ggml_reshape_4d(ctx0, q, N, D, n_head, B);
++    q = ggml_permute(ctx0, q, 1, 0, 2, 3); // [D, N, n_head, B]
++    q = ggml_cont(ctx0, q);
++
++    const int Wk = k->ne[0]; const int Hk = k->ne[1];
++    const int M = Wk * Hk; 
++
++    // Process K: [Wk, Hk, D, B] -> [D, M, 1, B]
++    k = ggml_reshape_3d(ctx0, k, M, D, B);
++    k = ggml_reshape_4d(ctx0, k, M, D, 1, B);
++    k = ggml_permute(ctx0, k, 1, 0, 2, 3); // [D, M, 1, B]
++    k = ggml_cont(ctx0, k);
++
++    // Process V: [Wk, Hk, D, B] -> [M, D, 1, B]
++    v = ggml_reshape_3d(ctx0, v, M, D, B);
++    v = ggml_reshape_4d(ctx0, v, M, D, 1, B);
++    v = ggml_cont(ctx0, v); // [M, D, 1, B]
++
++    // Multi-Query Attention
++    float scale = 1.0f / sqrtf((float)D);
++
++    // Step 1: Compute Q @ K.T
++    ggml_tensor * scores = ggml_mul_mat(ctx0, k, q);
++
++    scores = ggml_scale(ctx0, scores, scale);
++
++    scores = ggml_soft_max(ctx0, scores);
++
++    ggml_tensor * kqv = ggml_mul_mat(ctx0, v, scores);
++
++    kqv = ggml_permute(ctx0, kqv, 1, 0, 2, 3);
++    kqv = ggml_cont(ctx0, kqv);
++    
++
++    kqv = ggml_reshape_3d(ctx0, kqv, N, D * n_head, B);
++    kqv = ggml_reshape_4d(ctx0, kqv, W, H, D * n_head, B);
++    kqv = ggml_cont(ctx0, kqv);
++
++    // Output projection
++    cur = ggml_conv_2d_direct(ctx0, block.attn_o_w, kqv, 1, 1, 0, 0, 1, 1);
++
++    // Residual & Layer Scale
++    if (inp->ne[0] == cur->ne[0] && inp->ne[2] == cur->ne[2]) {
++        if (block.layer_scale_w) {
++            cur = ggml_mul(ctx0, cur, block.layer_scale_w);
++        }
++        cur = ggml_add(ctx0, cur, inp);
++    }
++
++    return cur;
++}
++
++ggml_cgraph * clip_graph_mobilenetv5::build() {
++    ggml_tensor * inp = build_inp_raw();
++
++    // 1. Stem - Conv2dSame(3, 64, kernel_size=(3, 3), stride=(2, 2))
++    ggml_tensor * cur = pad_same_2d(inp, 3, 3, 2, 2);  // Apply SAME padding
++
++    cur = ggml_conv_2d_direct(ctx0, model.mobilenet_stem_conv_w, cur, 2, 2, 0, 0, 1, 1);  // padding=0
++    if (model.mobilenet_stem_conv_b) {
++        cur = ggml_add(ctx0, cur, model.mobilenet_stem_conv_b);
++    }
++    if (model.mobilenet_stem_norm_w) cur = rms_norm_2d(cur, model.mobilenet_stem_norm_w);
++    cur = ggml_gelu(ctx0, cur);
++
++
++    // 2. Blocks
++    std::vector<ggml_tensor*> intermediate_features;
++    const int total_blocks = model.mobilenet_blocks.size();
++    
++    auto is_stage_start = [&](int i) {
++        if (i == 0) return true;
++        for (int end_idx : model.mobilenet_stage_ends) {
++            if (i == end_idx + 1) return true;
++        }
++        return false;
++    };
++
++    auto is_fusion_point = [&](int i) {
++        if (model.mobilenet_stage_ends.size() >= 4) {
++                if (i == model.mobilenet_stage_ends[2]) return true; // End of Stage 2
++                if (i == model.mobilenet_stage_ends[3]) return true; // End of Stage 3
++        } else {
++            if (i == total_blocks - 1) return true;
++        }
++        return false;
++    };
++
++    for (int i = 0; i < total_blocks; i++) {
++        const auto & block = model.mobilenet_blocks[i];
++        int stride = is_stage_start(i) ? 2 : 1;
++
++        if (block.s0_conv_exp_w)      cur = build_edge_residual(cur, block, stride);
++        else if (block.attn_q_w)      cur = build_mobilenet_attn(cur, block);
++        else                          cur = build_inverted_residual(cur, block, stride);
++
++        if (is_fusion_point(i)) {
++
++            intermediate_features.push_back(cur);
++        }
++    }
++
++    // 3. Multi-Scale Fusion Adapter (MSFA)
++    if (!intermediate_features.empty()) {
++        
++        // A. Reference Resolution: PyTorch implementation uses inputs[0]
++        // We assume intermediate_features[0] is the "High Resolution" target.
++        // In MobileNet designs, this is typically the feature map with the smallest stride (e.g. 32x32).
++        ggml_tensor* target_feat = intermediate_features[0];
++        int high_res_w = target_feat->ne[0];
++        int high_res_h = target_feat->ne[1];
++
++        std::vector<ggml_tensor*> resized_feats;
++
++        // B. Resize inputs to match inputs[0] (High Resolution)
++        for (auto feat : intermediate_features) {
++            int feat_w = feat->ne[0];
++            int feat_h = feat->ne[1];
++
++            // PyTorch: if feat_size < high_resolution: interpolate
++            if (feat_w < high_res_w || feat_h < high_res_h) {
++                // Calculate scale factor. 
++                // Note: PyTorch 'nearest' works on arbitrary float scales. 
++                // ggml_upscale generally takes integer factors or target sizes depending on helper.
++                // Assuming standard power-of-2 scaling (e.g. 16 -> 32 means scale=2).
++                int scale_w = high_res_w / feat_w;
++                // int scale_h = high_res_h / feat_h;
++                
++                // Safety check for non-integer scaling if strictly replicating
++                if (high_res_w % feat_w != 0) { 
++                    LOG_WRN("%s: non-integer scaling detected\n", __func__);
++                }
++
++                // Upsample (Nearest Neighbor)
++                // 2 is the scale factor
++                feat = ggml_upscale(ctx0, feat, scale_w, ggml_scale_mode::GGML_SCALE_MODE_NEAREST); 
++            }
++            resized_feats.push_back(feat);
++        }
++
++        // C. Concatenate at High Resolution (Channel Dim = 2 in ggml)
++        cur = resized_feats[0];
++        for (size_t k = 1; k < resized_feats.size(); ++k) {
++            cur = ggml_concat(ctx0, cur, resized_feats[k], 2);
++        }
++
++        // D. FFN (UniversalInvertedResidual)
++        // Structure: Expand Conv -> Norm -> GELU -> Project Conv -> Norm
++        
++        // 1. Expansion
++        if (model.msfa_ffn_expand_w) {
++            // 1x1 Conv
++            cur = ggml_conv_2d_direct(ctx0, model.msfa_ffn_expand_w, cur, 1, 1, 0, 0, 1, 1);
++            
++            if (model.msfa_ffn_expand_bn) {
++                cur = rms_norm_2d(cur, model.msfa_ffn_expand_bn);
++            }
++            
++            cur = ggml_gelu(ctx0, cur);
++
++        }
++
++        // 2. Projection (No DW because kernel_size=0)
++        if (model.msfa_ffn_project_w) {
++            // 1x1 Conv
++            cur = ggml_conv_2d_direct(ctx0, model.msfa_ffn_project_w, cur, 1, 1, 0, 0, 1, 1);
++            
++            // UniversalInvertedResidual typically has a norm after projection
++            if (model.msfa_ffn_project_bn) {
++                cur = rms_norm_2d(cur, model.msfa_ffn_project_bn);
++            }
++
++        }
++
++        // E. Final Downsample to Target Resolution (Output Resolution)
++        // PyTorch: matches self.output_resolution (e.g. 16x16)
++        const int target_out_res = 16; 
++        int current_w = cur->ne[0];
++
++        if (current_w > target_out_res) {
++            int s = current_w / target_out_res;
++
++            if (current_w % target_out_res == 0) {
++                // Avg Pool: Kernel=s, Stride=s
++                cur = ggml_pool_2d(ctx0, cur, GGML_OP_POOL_AVG, s, s, s, s, 0, 0);
++            } else {
++                LOG_ERR("%s: irregular downsampling stride required\n", __func__);
++            }
++
++        }
++
++        // F. Final Norm
++        if (model.msfa_concat_norm_w) {
++            cur = rms_norm_2d(cur, model.msfa_concat_norm_w);
++
++        }
++    }
++
++    // 4. Gemma 3n Multimodal Projection (Embedder)
++    // Input: 'cur' is [Width, Height, Channels, Batch]
++    int W = cur->ne[0];
++    int H = cur->ne[1];
++    int C = cur->ne[2]; // Should be 2048
++    int B = cur->ne[3];
++
++    // 1. Permute and Flatten to [Channels, Tokens, Batch]
++    // PyTorch expects (Batch, Seq, Hidden), GGML usually processes (Hidden, Seq, Batch)
++    cur = ggml_permute(ctx0, cur, 2, 1, 0, 3); // -> [C, H, W, B]
++    cur = ggml_permute(ctx0, cur, 0, 2, 1, 3); // -> [C, W, H, B]
++    cur = ggml_cont(ctx0, cur);
++    cur = ggml_reshape_3d(ctx0, cur, C, W*H, B);
++    cur = ggml_cont(ctx0, cur);
++
++
++    // 2. FEATURE SCALING
++    // PyTorch: vision_outputs *= self.config.vision_config.hidden_size**0.5
++    const float scale_factor = sqrtf((float)C);
++    cur = ggml_scale(ctx0, cur, scale_factor);
++
++
++    // 3. SOFT EMBEDDING NORM
++    // PyTorch: self._norm(x) * self.weight
++    // We must normalize regardless, then multiply if weight exists.
++    {
++        const float eps = 1e-6f; // Gemma3n uses 1e-6
++        cur = ggml_rms_norm(ctx0, cur, eps); 
++        
++        if (model.mm_soft_emb_norm_w) {
++            // Weight shape is (2048,) -> Element-wise broadcast multiply
++            cur = ggml_mul(ctx0, cur, model.mm_soft_emb_norm_w);
++        }
++
++    }
++
++    // 4. PROJECTION
++    // PyTorch: embedding_projection = nn.Linear(vision_hidden, text_hidden, bias=False)
++    // Weight stored as [out_features, in_features] = [text_hidden_size, vision_hidden_size]
++    if (model.mm_input_proj_w) {
++        cur = ggml_mul_mat(ctx0, model.mm_input_proj_w, cur);         
++    }
++
++    // 5. POST PROJECTION NORM
++    // PyTorch: embedding_post_projection_norm = Gemma3nRMSNorm(..., with_scale=False)
++    // with_scale=False means weight is registered as buffer with value 1.0
++    // So output = rms_norm(x) * 1.0 = rms_norm(x), magnitude ~1
++    {
++        const float eps = 1e-6f;
++        cur = ggml_rms_norm(ctx0, cur, eps);
++
++        if (model.mm_post_proj_norm_w) {
++            // If weight is loaded, multiply (should be ~1.0 anyway)
++            cur = ggml_mul(ctx0, cur, model.mm_post_proj_norm_w);
++        }
++    }
++
++    ggml_build_forward_expand(gf, cur);
++    return gf;
++}
+\ No newline at end of file
+diff --git a/tools/mtmd/models/models.h b/tools/mtmd/models/models.h
+index 8d6d4ef6..9f686ceb 100644
+--- a/tools/mtmd/models/models.h
++++ b/tools/mtmd/models/models.h
+@@ -62,7 +62,45 @@ struct clip_graph_conformer : clip_graph {
+     ggml_cgraph * build() override;
+ };
+ 
++struct clip_graph_gemma3na : clip_graph {
++    clip_graph_gemma3na(clip_ctx * ctx, const clip_image_f32 & img) : clip_graph(ctx, img) {}
++    ggml_cgraph * build() override;
++};
++
+ struct clip_graph_glm4v : clip_graph {
+     clip_graph_glm4v(clip_ctx * ctx, const clip_image_f32 & img) : clip_graph(ctx, img) {}
+     ggml_cgraph * build() override;
+ };
++
++struct clip_graph_mobilenetv5 : clip_graph {
++    clip_graph_mobilenetv5(clip_ctx * ctx, const clip_image_f32 & img) : clip_graph(ctx, img) {}
++    ggml_cgraph * build() override;
++
++    ggml_tensor * rms_norm_2d(
++        ggml_tensor * inp, 
++        ggml_tensor * weight, 
++        float eps = 1e-6f);
++    
++    ggml_tensor* pad_same_2d(
++        ggml_tensor* inp, 
++        int kernel_h, 
++        int kernel_w, 
++        int stride_h, 
++        int stride_w, 
++        int dilation_h = 1, 
++        int dilation_w = 1);
++        
++    ggml_tensor * build_edge_residual(
++        ggml_tensor * inp,
++        const mobilenetv5_block & block,
++        int stride);
++
++    ggml_tensor * build_inverted_residual(
++        ggml_tensor * inp, 
++        const mobilenetv5_block & block, 
++        int stride);
++
++    ggml_tensor * build_mobilenet_attn(
++        ggml_tensor * inp, 
++        const mobilenetv5_block & block);
++};
+diff --git a/tools/mtmd/mtmd.cpp b/tools/mtmd/mtmd.cpp
+index b9c4fa90..e8a40c80 100644
+--- a/tools/mtmd/mtmd.cpp
++++ b/tools/mtmd/mtmd.cpp
+@@ -266,7 +266,7 @@ struct mtmd_context {
+         }
+ 
+         // set boi/eoi
+-        if (proj == PROJECTOR_TYPE_GEMMA3) {
++        if (proj == PROJECTOR_TYPE_GEMMA3 || proj == PROJECTOR_TYPE_GEMMA3N) {
+             // <start_of_image> ... (image embeddings) ... <end_of_image>
+             img_beg = "<start_of_image>";
+             img_end = "<end_of_image>";
+@@ -333,6 +333,7 @@ struct mtmd_context {
+                 audio_preproc = std::make_unique<mtmd_audio_preprocessor_whisper>(ctx_a);
+                 break;
+             case PROJECTOR_TYPE_LFM2A:
++            case PROJECTOR_TYPE_GEMMA3NA:
+                 audio_preproc = std::make_unique<mtmd_audio_preprocessor_conformer>(ctx_a);
+                 break;
+             default:
+@@ -352,6 +353,11 @@ struct mtmd_context {
+             // [BEGIN_AUDIO] ... (embeddings) ...
+             aud_beg = "[BEGIN_AUDIO]";
+ 
++        } else if (proj == PROJECTOR_TYPE_GEMMA3NA) {
++            // <start_of_audio> ... (embeddings) ... <end_of_audio>
++            aud_beg = "<start_of_audio>";
++            aud_end = "<end_of_audio>";
++
+         }
+     }
+ 
+@@ -858,7 +864,8 @@ float * mtmd_get_output_embd(mtmd_context * ctx) {
+ }
+ 
+ bool mtmd_decode_use_non_causal(mtmd_context * ctx) {
+-    if (ctx->ctx_v && clip_get_projector_type(ctx->ctx_v) == PROJECTOR_TYPE_GEMMA3) {
++    if (ctx->ctx_v && 
++        (clip_get_projector_type(ctx->ctx_v) == PROJECTOR_TYPE_GEMMA3 || clip_get_projector_type(ctx->ctx_v) == PROJECTOR_TYPE_GEMMA3N)) {
+         return true;
+     }
+     return false;
