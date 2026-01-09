@@ -1901,7 +1901,7 @@ def chat():
 
         import sys
         # 日志中不记录用户输入内容，保护隐私
-        logger.info(f"API /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, has_text={bool(text)}", flush=True)
+        logger.info(f"[API /api/chat] backend={backend}, images={len(images_data)}, audios={len(audios_data)}, has_text={bool(text)}")
         sys.stdout.flush()
 
         # 获取或创建会话
