@@ -20,7 +20,7 @@
 <p align="center">
   <a href="https://github.com/jiaqiwang969/gemma/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://huggingface.co/nicepkg/gemma-3n-gguf"><img src="https://img.shields.io/badge/🤗-Models-yellow.svg" alt="HuggingFace"></a>
-  <a href="http://115.159.223.227"><img src="https://img.shields.io/badge/demo-live-brightgreen.svg" alt="Demo"></a>
+  <a href="https://lingkong.xyz"><img src="https://img.shields.io/badge/demo-live-brightgreen.svg" alt="Demo"></a>
 </p>
 
 ---
@@ -28,7 +28,7 @@
 ## ⚡ 一键安装
 
 ```bash
-curl -fsSL http://115.159.223.227/install.sh | bash
+curl -fsSL https://lingkong.xyz/install.sh | bash
 ```
 
 安装完成后：
@@ -83,11 +83,11 @@ lingkong-download all     # 全部模型 (~5GB)
 
 | 页面 | 地址 | 说明 |
 |------|------|------|
-| 🏠 项目主页 | [115.159.223.227](http://115.159.223.227) | 功能介绍、快速开始 |
-| 💬 聊天界面 | [/static/index.html](http://115.159.223.227/static/index.html) | 多模态对话体验 |
-| 📚 API 文档 | [/static/docs.html](http://115.159.223.227/static/docs.html) | Gemini 兼容 API |
-| 🛠️ Playground | [/static/playground.html](http://115.159.223.227/static/playground.html) | 交互式 API 测试 |
-| 📊 商业计划书 | [/static/pitch.html](http://115.159.223.227/static/pitch.html) | 愿景与商业模式 |
+| 🏠 项目主页 | [lingkong.xyz](https://lingkong.xyz) | 功能介绍、快速开始 |
+| 💬 聊天界面 | [/static/index.html](https://lingkong.xyz/static/index.html) | 多模态对话体验 |
+| 📚 API 文档 | [/static/docs.html](https://lingkong.xyz/static/docs.html) | Gemini 兼容 API |
+| 🛠️ Playground | [/static/playground.html](https://lingkong.xyz/static/playground.html) | 交互式 API 测试 |
+| 📊 商业计划书 | [/static/pitch.html](https://lingkong.xyz/static/pitch.html) | 愿景与商业模式 |
 
 ---
 
@@ -121,7 +121,7 @@ lingkong-download all     # 全部模型 (~5GB)
 
 ```bash
 # 安装
-curl -fsSL http://115.159.223.227/install.sh | bash
+curl -fsSL https://lingkong.xyz/install.sh | bash
 
 # 下载模型 + 启动
 lingkong-download && lingkong-start
@@ -211,11 +211,11 @@ gemma/
 
 ## 🔗 链接
 
-- 🌐 **官网**: [115.159.223.227](http://115.159.223.227)
-- 📚 **API 文档**: [115.159.223.227/static/docs.html](http://115.159.223.227/static/docs.html)
-- 🛠️ **Playground**: [115.159.223.227/static/playground.html](http://115.159.223.227/static/playground.html)
+- 🌐 **官网**: [lingkong.xyz](https://lingkong.xyz)
+- 📚 **API 文档**: [lingkong.xyz/static/docs.html](https://lingkong.xyz/static/docs.html)
+- 🛠️ **Playground**: [lingkong.xyz/static/playground.html](https://lingkong.xyz/static/playground.html)
 - 🤗 **模型**: [huggingface.co/jiaqiwang969/gemma3n-gguf](https://huggingface.co/jiaqiwang969/gemma3n-gguf)
-- 📊 **商业计划**: [115.159.223.227/static/pitch.html](http://115.159.223.227/static/pitch.html)
+- 📊 **商业计划**: [lingkong.xyz/static/pitch.html](https://lingkong.xyz/static/pitch.html)
 
 ---
 

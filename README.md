@@ -20,7 +20,7 @@
 <p align="center">
   <a href="https://github.com/jiaqiwang969/gemma/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://huggingface.co/nicepkg/gemma-3n-gguf"><img src="https://img.shields.io/badge/🤗-Models-yellow.svg" alt="HuggingFace"></a>
-  <a href="http://115.159.223.227"><img src="https://img.shields.io/badge/demo-live-brightgreen.svg" alt="Demo"></a>
+  <a href="https://lingkong.xyz"><img src="https://img.shields.io/badge/demo-live-brightgreen.svg" alt="Demo"></a>
 </p>
 
 ---
@@ -28,7 +28,7 @@
 ## ⚡ Quick Install
 
 ```bash
-curl -fsSL http://115.159.223.227/install.sh | bash
+curl -fsSL https://lingkong.xyz/install.sh | bash
 ```
 
 After installation:
@@ -83,11 +83,11 @@ lingkong-download all     # All models (~5GB)
 
 | Page | URL | Description |
 |------|-----|-------------|
-| 🏠 Home | [115.159.223.227](http://115.159.223.227) | Features & quick start |
-| 💬 Chat | [/static/index.html](http://115.159.223.227/static/index.html) | Multimodal chat |
-| 📚 API Docs | [/static/docs.html](http://115.159.223.227/static/docs.html) | Gemini-compatible API |
-| 🛠️ Playground | [/static/playground.html](http://115.159.223.227/static/playground.html) | Interactive API testing |
-| 📊 Pitch Deck | [/static/pitch.html](http://115.159.223.227/static/pitch.html) | Vision & business model |
+| 🏠 Home | [lingkong.xyz](https://lingkong.xyz) | Features & quick start |
+| 💬 Chat | [/static/index.html](https://lingkong.xyz/static/index.html) | Multimodal chat |
+| 📚 API Docs | [/static/docs.html](https://lingkong.xyz/static/docs.html) | Gemini-compatible API |
+| 🛠️ Playground | [/static/playground.html](https://lingkong.xyz/static/playground.html) | Interactive API testing |
+| 📊 Pitch Deck | [/static/pitch.html](https://lingkong.xyz/static/pitch.html) | Vision & business model |
 
 ---
 
@@ -121,7 +121,7 @@ lingkong-download all     # All models (~5GB)
 
 ```bash
 # Install
-curl -fsSL http://115.159.223.227/install.sh | bash
+curl -fsSL https://lingkong.xyz/install.sh | bash
 
 # Download models + start
 lingkong-download && lingkong-start
@@ -211,11 +211,11 @@ gemma/
 
 ## 🔗 Links
 
-- 🌐 **Website**: [115.159.223.227](http://115.159.223.227)
-- 📚 **API Docs**: [115.159.223.227/static/docs.html](http://115.159.223.227/static/docs.html)
-- 🛠️ **Playground**: [115.159.223.227/static/playground.html](http://115.159.223.227/static/playground.html)
+- 🌐 **Website**: [lingkong.xyz](https://lingkong.xyz)
+- 📚 **API Docs**: [lingkong.xyz/static/docs.html](https://lingkong.xyz/static/docs.html)
+- 🛠️ **Playground**: [lingkong.xyz/static/playground.html](https://lingkong.xyz/static/playground.html)
 - 🤗 **Models**: [huggingface.co/nicepkg/gemma-3n-gguf](https://huggingface.co/nicepkg/gemma-3n-gguf)
-- 📊 **Pitch Deck**: [115.159.223.227/static/pitch.html](http://115.159.223.227/static/pitch.html)
+- 📊 **Pitch Deck**: [lingkong.xyz/static/pitch.html](https://lingkong.xyz/static/pitch.html)
 
 ---
 

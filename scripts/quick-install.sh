@@ -3,8 +3,8 @@
 # 灵空 AI - 一键安装脚本 (Sandbox 版)
 # =============================================================================
 # 使用方法:
-#   curl -fsSL http://115.159.223.227/install.sh | bash           # 默认模式
-#   curl -fsSL http://115.159.223.227/install.sh | bash -s sandbox # Sandbox 模式
+#   curl -fsSL https://lingkong.xyz/install.sh | bash           # 默认模式
+#   curl -fsSL https://lingkong.xyz/install.sh | bash -s sandbox # Sandbox 模式
 # =============================================================================
 
 set -e
@@ -26,7 +26,7 @@ MODELS_DIR="$LINGKONG_HOME/models"
 SANDBOX_DIR="$LINGKONG_HOME/sandbox"
 
 # 下载地址 (支持环境变量覆盖)
-LINGKONG_SERVER="${LINGKONG_SERVER:-http://115.159.223.227}"
+LINGKONG_SERVER="${LINGKONG_SERVER:-https://lingkong.xyz}"
 BASE_URL="$LINGKONG_SERVER"
 BINARY_URL_MACOS="$BASE_URL/bin/llama-lingkong-macos-arm64.tar.gz"
 BINARY_URL_LINUX_CUDA="$BASE_URL/bin/llama-lingkong-linux-x86_64-cuda.tar.gz"
