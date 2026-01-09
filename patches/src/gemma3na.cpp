@@ -161,6 +161,12 @@ ggml_cgraph * clip_graph_gemma3na::build() {
     ggml_tensor * inp = build_inp_raw(1);
     cb(inp, "input", -1);
 
+    // Input from build_inp_raw is [T, F, 1] (time-major, where T=nx, F=ny=128)
+    // But our code expects [F, T, 1] (freq-major)
+    // Transpose dim0 and dim1 to get [F, T, 1]
+    inp = ggml_cont(ctx0, ggml_permute(ctx0, inp, 1, 0, 2, 3));
+    cb(inp, "input_transposed", -1);
+
     // Create position embedding input for relative position attention
     // Shape: [G3NA_MAX_SPAN, G3NA_N_CHANNELS] = [13, 1536]
     // This will be filled with sinusoidal embeddings at runtime
@@ -169,7 +175,7 @@ ggml_cgraph * clip_graph_gemma3na::build() {
     ggml_set_input(pos_emb);
     ggml_build_forward_expand(gf, pos_emb);
 
-    // Input `inp_raw` is shaped as [F=128, T, 1] (freq-major).
+    // Input `inp` is now shaped as [F=128, T, 1] (freq-major).
     // Reshape for conv2d: [width, height, channels, batch] = [F, T, 1, 1]
     auto * cur = ggml_reshape_4d(ctx0, inp, inp->ne[0], inp->ne[1], inp->ne[2], 1);
     cb(cur, "input_4d", -1);
