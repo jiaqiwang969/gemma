@@ -1,12 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-title-key="pageTitle.home">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LingKong AI - Your AI. Your data. Your control.</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         :root {
             --bg-primary: #0a0a0f;
@@ -20,7 +26,7 @@
             --accent-secondary: #6366f1;
             --accent-green: #22c55e;
             --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
-            --border-color: rgba(255,255,255,0.1);
+            --border-color: rgba(255, 255, 255, 0.1);
         }
 
         body {
@@ -30,85 +36,7 @@
             line-height: 1.6;
         }
 
-        /* Minimal Navbar */
-        .navbar {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 1000;
-            background: rgba(10, 10, 15, 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-        }
 
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: var(--text-primary);
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .logo-icon { font-size: 1.5rem; }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover { color: var(--text-primary); }
-
-        /* Language Switch */
-        .lang-switch {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-left: 1rem;
-            padding-left: 1rem;
-            border-left: 1px solid var(--border-color);
-        }
-
-        .lang-btn {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .lang-btn:hover {
-            border-color: var(--accent-primary);
-            color: var(--text-primary);
-        }
-
-        .lang-btn.active {
-            background: var(--accent-primary);
-            border-color: var(--accent-primary);
-            color: white;
-        }
 
         /* Hero - Homebrew Style */
         .hero {
@@ -131,8 +59,15 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
         }
 
         .hero h1 {
@@ -161,11 +96,11 @@
             width: 100%;
             margin-bottom: 2rem;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         }
 
         .install-header {
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             padding: 0.75rem 1rem;
             display: flex;
             justify-content: space-between;
@@ -204,8 +139,13 @@
             white-space: nowrap;
         }
 
-        .install-command .comment { color: #666; }
-        .install-command .prompt { color: var(--accent-primary); }
+        .install-command .comment {
+            color: #666;
+        }
+
+        .install-command .prompt {
+            color: var(--accent-primary);
+        }
 
         /* Quick Links */
         .quick-links {
@@ -250,12 +190,16 @@
             width: 100%;
         }
 
-        .stat { text-align: center; }
+        .stat {
+            text-align: center;
+        }
+
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--accent-primary);
         }
+
         .stat-label {
             font-size: 0.8rem;
             color: var(--text-muted);
@@ -278,7 +222,9 @@
             margin-bottom: 0.5rem;
         }
 
-        .section-header p { color: var(--text-secondary); }
+        .section-header p {
+            color: var(--text-secondary);
+        }
 
         .steps-container {
             max-width: 900px;
@@ -330,7 +276,9 @@
         }
 
         /* Features Grid */
-        .features { padding: 80px 2rem; }
+        .features {
+            padding: 80px 2rem;
+        }
 
         .features-grid {
             max-width: 1000px;
@@ -427,37 +375,130 @@
             text-decoration: none;
         }
 
-        /* Mobile */
+        /* Mobile Responsive */
         @media (max-width: 768px) {
-            .nav-links { display: none; }
-            .stats-row { gap: 1.5rem; }
-            .step { flex-direction: column; gap: 1rem; }
-            .lang-switch { margin-left: 0; padding-left: 0; border-left: none; }
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 80px 1rem 40px;
+            }
+
+            .hero-icon {
+                font-size: 3.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero-tagline {
+                font-size: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .install-box {
+                margin-bottom: 1.5rem;
+            }
+
+            .install-command {
+                font-size: 0.85rem;
+                padding: 1rem;
+            }
+
+            .quick-links {
+                gap: 0.75rem;
+                margin-bottom: 2rem;
+            }
+
+            .quick-link {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .stats-row {
+                flex-wrap: wrap;
+                gap: 1.5rem;
+                padding-top: 1.5rem;
+            }
+
+            .stat {
+                flex: 1 1 40%;
+                min-width: 120px;
+            }
+
+            .stat-value {
+                font-size: 1.2rem;
+            }
+
+            .stat-label {
+                font-size: 0.75rem;
+            }
+
+            .step {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .lang-switch {
+                margin-left: 0;
+                padding-left: 0;
+                border-left: none;
+            }
+
+            .features {
+                padding: 3rem 1rem;
+            }
+
+            .features h2 {
+                font-size: 1.75rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .feature-card {
+                padding: 1.25rem;
+            }
+
+            .footer {
+                padding: 2rem 1rem;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 400px) {
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .install-command {
+                font-size: 0.75rem;
+            }
+
+            .stat {
+                flex: 1 1 100%;
+            }
+
+            .quick-links {
+                flex-direction: column;
+            }
+
+            .quick-link {
+                width: 100%;
+                text-align: center;
+            }
         }
     </style>
 </head>
+
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="logo">
-                <span class="logo-icon">🐉</span>
-                <span data-i18n="common.brand">LingKong AI</span>
-            </a>
-            <ul class="nav-links">
-                <li><a href="#features" data-i18n="nav.features">Features</a></li>
-                <li><a href="#how-it-works" data-i18n="nav.installation">Installation</a></li>
-                <li><a href="/static/downloads.html" data-i18n="nav.downloads">Downloads</a></li>
-                <li><a href="/static/docs.html" data-i18n="nav.apiDocs">API Docs</a></li>
-                <li><a href="/static/playground.html" data-i18n="nav.playground">Playground</a></li>
-                <li><a href="/static/tinybox/index.html" data-i18n="nav.tinybox">TinyBox DIY</a></li>
-                <li><a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></li>
-                <li class="lang-switch">
-                    <button class="lang-btn" data-lang="en" onclick="switchLang('en')">EN</button>
-                    <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')">中</button>
-                </li>
-            </ul>
-        </div>
-    </nav>
+    <!-- i18n must load before unified-nav.js -->
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
 
     <!-- Hero Section -->
     <section class="hero">
@@ -472,23 +513,32 @@
                 <button class="copy-btn" onclick="copyInstall()" data-i18n="common.copy">Copy</button>
             </div>
             <div class="install-command">
-                <span class="comment"># Install LingKong AI</span><br>
+                <span class="comment" data-i18n="home.install.comment"># Install LingKong AI</span><br>
                 <span class="prompt">$</span> curl -fsSL https://lingkong.xyz/install.sh | bash
             </div>
-            <div style="padding: 12px 16px; background: rgba(255,255,255,0.03); border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-muted);">
-                <div style="margin-bottom: 6px; color: var(--text-secondary);">✅ Tested Platforms (2025-01):</div>
+            <div
+                style="padding: 12px 16px; background: rgba(255,255,255,0.03); border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-muted);">
+                <div style="margin-bottom: 6px; color: var(--text-secondary);">✅ <span data-i18n="home.install.testedPlatforms">Tested Platforms (2025-01):</span></div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <span style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; padding: 3px 10px; border-radius: 4px;">🍎 macOS 15 + Apple M4 Max (Metal)</span>
-                    <span style="background: rgba(34, 197, 94, 0.15); color: #86efac; padding: 3px 10px; border-radius: 4px;">🐧 Ubuntu 22.04 + RTX 4090 (CUDA 12)</span>
+                    <span
+                        style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; padding: 3px 10px; border-radius: 4px;">🍎
+                        <span data-i18n="home.install.platformMac">macOS 15 + Apple M4 Max (Metal)</span></span>
+                    <span
+                        style="background: rgba(34, 197, 94, 0.15); color: #86efac; padding: 3px 10px; border-radius: 4px;">🐧
+                        <span data-i18n="home.install.platformUbuntu">Ubuntu 22.04 + RTX 4090 (CUDA 12)</span></span>
                 </div>
-                <div style="margin-top: 6px; font-size: 0.75rem;">Text + Vision + Audio (Speech-to-Text) fully working on both platforms</div>
+                <div style="margin-top: 6px; font-size: 0.75rem;" data-i18n="home.install.platformNote">Text + Vision + Audio (Speech-to-Text) fully working
+                    on both platforms</div>
             </div>
         </div>
 
         <div class="quick-links">
-            <a href="/static/index.html" class="quick-link primary">💬 <span data-i18n="home.quickLinks.tryOnline">Try Online</span></a>
-            <a href="/static/downloads.html" class="quick-link">📥 <span data-i18n="home.quickLinks.downloadCenter">Downloads</span></a>
-            <a href="/static/docs.html" class="quick-link">📚 <span data-i18n="home.quickLinks.apiDocs">API Docs</span></a>
+            <a href="/static/index.html" class="quick-link primary">💬 <span data-i18n="home.quickLinks.tryOnline">Try
+                    Online</span></a>
+            <a href="/static/downloads.html" class="quick-link">📥 <span
+                    data-i18n="home.quickLinks.downloadCenter">Downloads</span></a>
+            <a href="/static/docs.html" class="quick-link">📚 <span data-i18n="home.quickLinks.apiDocs">API
+                    Docs</span></a>
             <a href="https://github.com/jiaqiwang969/gemma" class="quick-link" target="_blank">⭐ GitHub</a>
         </div>
 
@@ -512,9 +562,15 @@
         </div>
 
         <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <span style="background: rgba(139, 92, 246, 0.2); color: #a5b4fc; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">🍎 macOS (Apple Silicon)</span>
-            <span style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">🐧 Ubuntu x86_64 (CUDA)</span>
-            <span style="background: rgba(255, 255, 255, 0.1); color: #a0a0b0; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">💻 Linux x86_64 (CPU)</span>
+            <span
+                style="background: rgba(139, 92, 246, 0.2); color: #a5b4fc; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">🍎
+                <span data-i18n="home.platforms.macos">macOS (Apple Silicon)</span></span>
+            <span
+                style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">🐧
+                <span data-i18n="home.platforms.ubuntu">Ubuntu x86_64 (CUDA)</span></span>
+            <span
+                style="background: rgba(255, 255, 255, 0.1); color: #a0a0b0; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">💻
+                <span data-i18n="home.platforms.linux">Linux x86_64 (CPU)</span></span>
         </div>
     </section>
 
@@ -522,7 +578,8 @@
     <section class="how-it-works" id="how-it-works">
         <div class="section-header">
             <h2 data-i18n="home.install.title">Quick Install</h2>
-            <p data-i18n="home.install.noPython">No Python required. No complex setup. Three steps to your private AI!</p>
+            <p data-i18n="home.install.noPython">No Python required. No complex setup. Three steps to your private AI!
+            </p>
         </div>
 
         <div class="steps-container">
@@ -555,22 +612,26 @@
             <div class="feature-card">
                 <div class="feature-icon">🔐</div>
                 <h3 data-i18n="home.features.privacy.title">Complete Privacy</h3>
-                <p data-i18n="home.features.privacy.desc">Data never leaves your device. No account, no login, zero-knowledge architecture.</p>
+                <p data-i18n="home.features.privacy.desc">Data never leaves your device. No account, no login,
+                    zero-knowledge architecture.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">💰</div>
                 <h3 data-i18n="home.features.cost.title">Zero Ongoing Cost</h3>
-                <p data-i18n="home.features.cost.desc">One-time setup, forever free. No per-token fees, no subscriptions.</p>
+                <p data-i18n="home.features.cost.desc">One-time setup, forever free. No per-token fees, no
+                    subscriptions.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
                 <h3 data-i18n="home.features.speed.title">Instant Response</h3>
-                <p data-i18n="home.features.speed.desc">94 tokens/second local inference. No network latency, works offline.</p>
+                <p data-i18n="home.features.speed.desc">94 tokens/second local inference. No network latency, works
+                    offline.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🎯</div>
                 <h3 data-i18n="home.features.multimodal.title">Trimodal AI</h3>
-                <p data-i18n="home.features.multimodal.desc">Understand text, images, and audio. Complete multimodal capabilities.</p>
+                <p data-i18n="home.features.multimodal.desc">Understand text, images, and audio. Complete multimodal
+                    capabilities.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔌</div>
@@ -580,7 +641,8 @@
             <div class="feature-card">
                 <div class="feature-icon">🔧</div>
                 <h3 data-i18n="home.features.finetune.title">Customizable</h3>
-                <p data-i18n="home.features.finetune.desc">Fine-tune on your data. Create your personalized AI assistant.</p>
+                <p data-i18n="home.features.finetune.desc">Fine-tune on your data. Create your personalized AI
+                    assistant.</p>
             </div>
         </div>
     </section>
@@ -617,7 +679,8 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <p data-i18n="home.footer.description">LingKong AI - Open-source local trimodal AI platform (Text + Vision + Audio)</p>
+        <p data-i18n="home.footer.description">LingKong AI - Open-source local trimodal AI platform (Text + Vision +
+            Audio)</p>
         <p style="margin-top: 0.5rem;">
             <a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a>
             &nbsp;|&nbsp;
@@ -627,8 +690,7 @@
         </p>
     </footer>
 
-    <!-- i18n Script -->
-    <script src="/static/js/i18n.js"></script>
+    <!-- Scripts -->
     <script>
         function copyInstall() {
             const cmd = 'curl -fsSL https://lingkong.xyz/install.sh | bash';
@@ -636,8 +698,8 @@
 
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(cmd).then(() => {
-                    btn.textContent = i18n.t('common.copied');
-                    setTimeout(() => btn.textContent = i18n.t('common.copy'), 2000);
+                    btn.textContent = (i18n && i18n.t('common.copied')) || 'Copied!';
+                    setTimeout(() => btn.textContent = (i18n && i18n.t('common.copy')) || 'Copy', 2000);
                 });
             } else {
                 const textArea = document.createElement('textarea');
@@ -649,24 +711,16 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    btn.textContent = i18n.t('common.copied');
-                    setTimeout(() => btn.textContent = i18n.t('common.copy'), 2000);
+                    btn.textContent = (i18n && i18n.t('common.copied')) || 'Copied!';
+                    setTimeout(() => btn.textContent = (i18n && i18n.t('common.copy')) || 'Copy', 2000);
                 } catch (err) {
-                    btn.textContent = i18n.t('common.error');
-                    setTimeout(() => btn.textContent = i18n.t('common.copy'), 2000);
+                    btn.textContent = (i18n && i18n.t('common.error')) || 'Error';
+                    setTimeout(() => btn.textContent = (i18n && i18n.t('common.copy')) || 'Copy', 2000);
                 }
                 document.body.removeChild(textArea);
             }
         }
-
-        // Update page title based on language
-        document.addEventListener('DOMContentLoaded', () => {
-            const updateTitle = () => {
-                document.title = i18n.t('common.brand') + ' - ' + i18n.t('common.tagline');
-            };
-            // Wait for i18n to load
-            setTimeout(updateTitle, 100);
-        });
     </script>
 </body>
+
 </html>

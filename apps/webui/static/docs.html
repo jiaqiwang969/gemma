@@ -649,13 +649,102 @@
             font-size: 0.85rem;
         }
 
+        /* Mobile Sidebar Toggle */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-purple);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            transform: scale(1.05);
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+        }
+
         /* Responsive */
         @media (max-width: 900px) {
             .sidebar {
                 display: none;
+                position: fixed;
+                left: 0;
+                top: 60px;
+                bottom: 0;
+                width: 280px;
+                z-index: 150;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
             }
+
+            .sidebar.open {
+                display: block;
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.open {
+                display: block;
+            }
+
             .main {
                 margin-left: 0;
+            }
+
+            .main-header {
+                padding: 1rem;
+            }
+
+            .content {
+                padding: 1.5rem 1rem;
+            }
+
+            .sidebar-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .code-block {
+                font-size: 0.8rem;
+            }
+
+            .code-block pre {
+                padding: 1rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .endpoint-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .endpoint-url {
+                font-size: 0.85rem;
+                word-break: break-all;
             }
         }
 
@@ -681,8 +770,12 @@
 </head>
 <body>
     <div class="layout">
+        <!-- Mobile Sidebar Toggle -->
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- Sidebar -->
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <span class="logo-text" data-i18n="docs.title">API Documentation</span>
                 <span class="logo-badge">v1.0</span>
@@ -2066,6 +2159,36 @@ restored = lk.DoubleRatchetSession.import_state(state_json)
         // Run translation on load and language change
         window.addEventListener('i18n:ready', translateDocsPage);
         if (i18n && i18n.loaded) translateDocsPage();
+
+        // Mobile sidebar toggle
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        if (sidebarToggle && sidebar && sidebarOverlay) {
+            sidebarToggle.addEventListener('click', () => {
+                const isOpen = sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('open', isOpen);
+                sidebarToggle.textContent = isOpen ? '✕' : '☰';
+            });
+
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('open');
+                sidebarToggle.textContent = '☰';
+            });
+
+            // Close sidebar when clicking a nav item
+            sidebar.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 900) {
+                        sidebar.classList.remove('open');
+                        sidebarOverlay.classList.remove('open');
+                        sidebarToggle.textContent = '☰';
+                    }
+                });
+            });
+        }
     </script>
 </body>
 </html>
