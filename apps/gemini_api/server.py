@@ -232,19 +232,21 @@ if not LLAMA_MMPROJ_VISION:
             break
 
 # 多模态支持: Audio Projector (mmproj)
+# 注意: 当前 llama.cpp 不支持同时加载多个 mmproj，暂时禁用音频
 LLAMA_MMPROJ_AUDIO = os.environ.get("LLAMA_MMPROJ_AUDIO", "")
-if not LLAMA_MMPROJ_AUDIO:
-    for candidate in [
-        REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-f16.gguf",
-        REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-Q8_0.gguf",
-    ]:
-        if candidate.exists():
-            LLAMA_MMPROJ_AUDIO = str(candidate)
-            break
+# 禁用自动搜索音频 mmproj
+# if not LLAMA_MMPROJ_AUDIO:
+#     for candidate in [
+#         REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-f16.gguf",
+#         REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-Q8_0.gguf",
+#     ]:
+#         if candidate.exists():
+#             LLAMA_MMPROJ_AUDIO = str(candidate)
+#             break
 
-# 合并 vision+audio mmproj (llama.cpp 支持逗号分隔)
+# 合并 vision+audio mmproj (llama-mtmd-cli 支持逗号分隔)
 def get_combined_mmproj():
-    """获取合并的 mmproj 路径 (vision,audio 格式)"""
+    """获取合并的 mmproj 路径 (vision,audio 格式) - 仅用于 llama-mtmd-cli"""
     projectors = []
     if LLAMA_MMPROJ_VISION and Path(LLAMA_MMPROJ_VISION).exists():
         projectors.append(LLAMA_MMPROJ_VISION)
@@ -252,7 +254,18 @@ def get_combined_mmproj():
         projectors.append(LLAMA_MMPROJ_AUDIO)
     return ",".join(projectors) if projectors else ""
 
+# llama-server 只支持单个 mmproj，优先使用视觉
+# 音频通过 llama-mtmd-cli 单独处理
+def get_server_mmproj():
+    """获取 llama-server 使用的 mmproj (只支持单个)"""
+    if LLAMA_MMPROJ_VISION and Path(LLAMA_MMPROJ_VISION).exists():
+        return LLAMA_MMPROJ_VISION
+    if LLAMA_MMPROJ_AUDIO and Path(LLAMA_MMPROJ_AUDIO).exists():
+        return LLAMA_MMPROJ_AUDIO
+    return ""
+
 LLAMA_MMPROJ = os.environ.get("LLAMA_MMPROJ", "") or get_combined_mmproj()
+LLAMA_SERVER_MMPROJ = get_server_mmproj()  # llama-server 专用
 
 # 多模态能力标记
 VISION_ENABLED = bool(LLAMA_MMPROJ_VISION) and Path(LLAMA_MMPROJ_VISION).exists() if LLAMA_MMPROJ_VISION else False
@@ -830,19 +843,21 @@ def start_llama_server():
         "--ctx-size", "8192",
     ]
 
-    # 多模态支持: 添加 vision/audio projector
-    if MULTIMODAL_ENABLED:
-        cmd.extend(["-mm", LLAMA_MMPROJ])
+    # 多模态支持: llama-server 只支持单个 mmproj
+    # 音频通过 llama-mtmd-cli 单独处理
+    if LLAMA_SERVER_MMPROJ:
+        cmd.extend(["-mm", LLAMA_SERVER_MMPROJ])
         capabilities = []
         if VISION_ENABLED:
             capabilities.append("视觉")
+        # 音频能力通过 llama-mtmd-cli 提供，这里只标记
         if AUDIO_ENABLED:
-            capabilities.append("音频")
+            capabilities.append("音频(mtmd)")
         logger.info(f"多模态已启用: {'+'.join(capabilities)}")
         if VISION_ENABLED:
             logger.debug(f"  Vision: {Path(LLAMA_MMPROJ_VISION).name}")
         if AUDIO_ENABLED:
-            logger.debug(f"  Audio: {Path(LLAMA_MMPROJ_AUDIO).name}")
+            logger.debug(f"  Audio: {Path(LLAMA_MMPROJ_AUDIO).name} (via llama-mtmd-cli)")
 
     # 开启 slot persistence (真正的 KV Cache 持久化)
     if KV_CACHE_ENABLED:

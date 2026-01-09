@@ -511,7 +511,8 @@ start_gemini_api() {
     export LLAMA_MTMD_BIN="$LINGKONG_HOME/bin/llama-mtmd-cli"
     export LLAMA_MODEL="$MODEL"
     export LLAMA_MODEL_AUDIO="$MODEL"
-    # 多模态支持: 视觉 + 音频
+    # 多模态支持: llama-server 只支持单个 mmproj，优先视觉
+    # 音频通过 llama-mtmd-cli 单独处理
     export LLAMA_MMPROJ_VISION="$VISION"
     export LLAMA_MMPROJ_AUDIO="$AUDIO"
     export GEMINI_API_LLAMA_PORT="8090"
