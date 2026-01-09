@@ -20,7 +20,62 @@
   <script src="/static/tinybox/js/i18n-shim.js"></script>
   <style>
     /* Ensure body has padding for unified navbar */
-    body { padding-top: 60px !important; }
+    body {
+      padding-top: 60px !important;
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+
+    /* Override TinyBox variables with Unified Theme variables */
+    :root {
+      --background: var(--bg-primary) !important;
+      --foreground: var(--text-primary) !important;
+      --card: var(--bg-card) !important;
+      --card-foreground: var(--text-primary) !important;
+      --popover: var(--bg-secondary) !important;
+      --popover-foreground: var(--text-primary) !important;
+      --primary: var(--accent-primary) !important;
+      --primary-foreground: #ffffff !important;
+      --secondary: var(--bg-secondary) !important;
+      /* Mapped to bg-secondary to fit layout */
+      --secondary-foreground: var(--text-primary) !important;
+      --muted: var(--bg-tertiary) !important;
+      --muted-foreground: var(--text-muted) !important;
+      --accent: var(--accent-primary) !important;
+      --accent-foreground: #ffffff !important;
+      --destructive: var(--accent-red) !important;
+      --destructive-foreground: #ffffff !important;
+      --border: var(--border-color) !important;
+      --input: var(--bg-input) !important;
+      --ring: var(--accent-primary) !important;
+
+      /* Sidebar/Menu specific */
+      --sidebar: var(--bg-secondary) !important;
+      --sidebar-foreground: var(--text-primary) !important;
+      --sidebar-primary: var(--accent-primary) !important;
+      --sidebar-primary-foreground: #ffffff !important;
+      --sidebar-accent: var(--bg-tertiary) !important;
+      --sidebar-accent-foreground: var(--text-primary) !important;
+      --sidebar-border: var(--border-color) !important;
+      --sidebar-ring: var(--accent-primary) !important;
+    }
+
+    /* Force some specific overrides for solid/dashed cards found in index.css */
+    .solid-card {
+      background: var(--bg-card) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    .dashed-card {
+      background: var(--bg-card) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    .code-block {
+      background: var(--code-bg) !important;
+      border-color: var(--border-color) !important;
+      color: var(--code-text) !important;
+    }
   </style>
 </head>
 

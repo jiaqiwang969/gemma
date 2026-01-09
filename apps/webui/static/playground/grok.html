@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-i18n-title-key="pageTitle.playgroundGrok">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,27 +10,16 @@
     <script src="/static/js/unified-nav.js"></script>
     <style>
         :root {
-            /* Dark theme matching LingKong AI */
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #1a1a25;
-            --bg-input: #0d1117;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0b0;
-            --text-muted: #666;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent-primary: #8b5cf6;
-            --accent-blue: #4285f4;
-            --accent-green: #34a853;
-            --accent-yellow: #fbbc05;
-            --accent-red: #ea4335;
-            --code-bg: #0d1117;
-            --code-text: #e6edf3;
-            --left-color: #4285f4;
-            --right-color: #34a853;
+            /* Page specific overrides */
+            --left-color: var(--accent-blue);
+            --right-color: var(--accent-green);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -97,8 +87,14 @@
             border-color: var(--accent-primary);
         }
 
-        .config-item input.url { width: 200px; }
-        .config-item input.api-key { width: 160px; font-family: monospace; }
+        .config-item input.url {
+            width: 200px;
+        }
+
+        .config-item input.api-key {
+            width: 160px;
+            font-family: monospace;
+        }
 
         .btn {
             padding: 8px 16px;
@@ -114,10 +110,12 @@
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white;
         }
+
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
         }
+
         .btn-success {
             background: var(--accent-green);
             color: white;
@@ -176,7 +174,9 @@
             color: var(--text-secondary);
         }
 
-        .tip-list li { margin: 4px 0; }
+        .tip-list li {
+            margin: 4px 0;
+        }
 
         .tip-list code {
             background: rgba(139, 92, 246, 0.2);
@@ -222,6 +222,7 @@
             border-color: var(--accent-primary);
             color: var(--text-primary);
         }
+
         .test-tab.active {
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             color: white;
@@ -269,9 +270,17 @@
             font-size: 13px;
         }
 
-        .panel.left .panel-title { color: var(--left-color); }
-        .panel.right .panel-title { color: var(--right-color); }
-        .panel.center .panel-title { color: var(--accent-yellow); }
+        .panel.left .panel-title {
+            color: var(--left-color);
+        }
+
+        .panel.right .panel-title {
+            color: var(--right-color);
+        }
+
+        .panel.center .panel-title {
+            color: var(--accent-yellow);
+        }
 
         .panel-badge {
             padding: 4px 12px;
@@ -280,10 +289,25 @@
             font-weight: 500;
         }
 
-        .badge-pending { background: var(--bg-secondary); color: var(--text-secondary); }
-        .badge-running { background: var(--accent-yellow); color: #000; }
-        .badge-success { background: var(--accent-green); color: white; }
-        .badge-error { background: var(--accent-red); color: white; }
+        .badge-pending {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .badge-running {
+            background: var(--accent-yellow);
+            color: #000;
+        }
+
+        .badge-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .badge-error {
+            background: var(--accent-red);
+            color: white;
+        }
 
         .panel-content {
             padding: 12px;
@@ -343,18 +367,37 @@
             border: 1px solid var(--border-color);
         }
 
-        .stat-box.success { background: rgba(52, 168, 83, 0.15); border-color: rgba(52, 168, 83, 0.3); }
-        .stat-box.error { background: rgba(234, 67, 53, 0.15); border-color: rgba(234, 67, 53, 0.3); }
-        .stat-box.warning { background: rgba(251, 188, 5, 0.15); border-color: rgba(251, 188, 5, 0.3); }
+        .stat-box.success {
+            background: rgba(52, 168, 83, 0.15);
+            border-color: rgba(52, 168, 83, 0.3);
+        }
+
+        .stat-box.error {
+            background: rgba(234, 67, 53, 0.15);
+            border-color: rgba(234, 67, 53, 0.3);
+        }
+
+        .stat-box.warning {
+            background: rgba(251, 188, 5, 0.15);
+            border-color: rgba(251, 188, 5, 0.3);
+        }
 
         .stat-value {
             font-size: 20px;
             font-weight: 600;
         }
 
-        .stat-box.success .stat-value { color: var(--accent-green); }
-        .stat-box.error .stat-value { color: var(--accent-red); }
-        .stat-box.warning .stat-value { color: var(--accent-yellow); }
+        .stat-box.success .stat-value {
+            color: var(--accent-green);
+        }
+
+        .stat-box.error .stat-value {
+            color: var(--accent-red);
+        }
+
+        .stat-box.warning .stat-value {
+            color: var(--accent-yellow);
+        }
 
         .stat-label {
             font-size: 11px;
@@ -402,19 +445,26 @@
             border-radius: 3px;
         }
 
-        .legend-dot.match { background: var(--accent-green); }
-        .legend-dot.mismatch { background: var(--accent-red); }
+        .legend-dot.match {
+            background: var(--accent-green);
+        }
+
+        .legend-dot.mismatch {
+            background: var(--accent-red);
+        }
 
         @media (max-width: 1200px) {
             .comparison-container {
                 grid-template-columns: 1fr;
             }
+
             .panel.center {
                 order: -1;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <div class="header-content">
@@ -449,7 +499,8 @@
                 <div class="tip-card">
                     <div class="tip-title">模型命名与选型</div>
                     <ul class="tip-list">
-                        <li>官方 API 不存在 <code>grok-4.1</code>，页面会自动映射到 <code>grok-4-0709</code>（别名 <code>grok-4</code>/<code>grok-4-latest</code>）。</li>
+                        <li>官方 API 不存在 <code>grok-4.1</code>，页面会自动映射到 <code>grok-4-0709</code>（别名
+                            <code>grok-4</code>/<code>grok-4-latest</code>）。</li>
                         <li>函数调用建议使用 <code>grok-4-1-fast-reasoning</code>，更严格遵循 <code>tool_choice</code>。</li>
                         <li>图像理解与联网搜索优先使用 <code>grok-4.1</code>（官方实际为 <code>grok-4-0709</code>）。</li>
                     </ul>
@@ -501,8 +552,12 @@
                 <div class="test-tab" data-test="11-3">11.3 温度参数</div>
             </div>
             <div class="legend">
-                <div class="legend-item"><div class="legend-dot match"></div> 两边都成功</div>
-                <div class="legend-item"><div class="legend-dot mismatch"></div> 存在差异</div>
+                <div class="legend-item">
+                    <div class="legend-dot match"></div> 两边都成功
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot mismatch"></div> 存在差异
+                </div>
             </div>
         </div>
 
@@ -581,8 +636,8 @@
                 parameters: {
                     type: 'object',
                     properties: {
-                        city: {type: 'string'},
-                        unit: {type: 'string', enum: ['celsius', 'fahrenheit']}
+                        city: { type: 'string' },
+                        unit: { type: 'string', enum: ['celsius', 'fahrenheit'] }
                     },
                     required: ['city']
                 }
@@ -597,7 +652,7 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4.1',
                 body: {
-                    messages: [{role: 'user', content: 'Say hello in one word'}],
+                    messages: [{ role: 'user', content: 'Say hello in one word' }],
                     max_tokens: 50
                 }
             },
@@ -609,8 +664,8 @@
                 proxyModel: 'grok-4.1',
                 body: {
                     messages: [
-                        {role: 'system', content: 'You are a pirate'},
-                        {role: 'user', content: 'Say hello'}
+                        { role: 'system', content: 'You are a pirate' },
+                        { role: 'user', content: 'Say hello' }
                     ],
                     max_tokens: 100
                 }
@@ -623,10 +678,10 @@
                 proxyModel: 'grok-4.1',
                 body: {
                     messages: [
-                        {role: 'system', content: 'You are a helpful math tutor.'},
-                        {role: 'user', content: 'What is 15 * 17?'},
-                        {role: 'assistant', content: '15 * 17 = 255.'},
-                        {role: 'user', content: 'Now divide that by 5.'}
+                        { role: 'system', content: 'You are a helpful math tutor.' },
+                        { role: 'user', content: 'What is 15 * 17?' },
+                        { role: 'assistant', content: '15 * 17 = 255.' },
+                        { role: 'user', content: 'Now divide that by 5.' }
                     ],
                     max_tokens: 80
                 }
@@ -638,7 +693,7 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4.1',
                 body: {
-                    messages: [{role: 'user', content: 'Write a haiku about AI.'}],
+                    messages: [{ role: 'user', content: 'Write a haiku about AI.' }],
                     max_tokens: 100,
                     stream: true
                 }
@@ -650,7 +705,7 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4-1-fast-reasoning',
                 body: {
-                    messages: [{role: 'user', content: 'What is the weather in Tokyo?'}],
+                    messages: [{ role: 'user', content: 'What is the weather in Tokyo?' }],
                     tools: [weatherTool],
                     tool_choice: 'auto',
                     max_tokens: 100
@@ -663,9 +718,9 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4-1-fast-reasoning',
                 body: {
-                    messages: [{role: 'user', content: 'What is the weather in Beijing?'}],
+                    messages: [{ role: 'user', content: 'What is the weather in Beijing?' }],
                     tools: [weatherTool],
-                    tool_choice: {type: 'function', function: {name: 'get_weather'}},
+                    tool_choice: { type: 'function', function: { name: 'get_weather' } },
                     max_tokens: 120
                 }
             },
@@ -677,9 +732,9 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4-1-fast-reasoning',
                 body: {
-                    messages: [{role: 'user', content: 'What is the weather in Tokyo?'}],
+                    messages: [{ role: 'user', content: 'What is the weather in Tokyo?' }],
                     tools: [weatherTool],
-                    tool_choice: {type: 'function', function: {name: 'get_weather'}},
+                    tool_choice: { type: 'function', function: { name: 'get_weather' } },
                     max_tokens: 150
                 },
                 toolResult: {
@@ -697,7 +752,7 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4.1',
                 body: {
-                    messages: [{role: 'user', content: 'Give me info about Tokyo'}],
+                    messages: [{ role: 'user', content: 'Give me info about Tokyo' }],
                     response_format: {
                         type: 'json_schema',
                         json_schema: {
@@ -705,8 +760,8 @@
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    name: {type: 'string'},
-                                    country: {type: 'string'}
+                                    name: { type: 'string' },
+                                    country: { type: 'string' }
                                 }
                             }
                         }
@@ -721,7 +776,7 @@
                 officialModel: 'grok-3-mini',
                 proxyModel: 'grok-3-mini',
                 body: {
-                    messages: [{role: 'user', content: 'What is 15*17?'}],
+                    messages: [{ role: 'user', content: 'What is 15*17?' }],
                     reasoning_effort: 'high',
                     max_tokens: 100
                 }
@@ -736,8 +791,8 @@
                     messages: [{
                         role: 'user',
                         content: [
-                            {type: 'text', text: 'What color is this? One word.'},
-                            {type: 'image_url', image_url: {url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQzwAEjDAGNYAAACcdAQPwEjTPAAAAAElFTkSuQmCC'}}
+                            { type: 'text', text: 'What color is this? One word.' },
+                            { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQzwAEjDAGNYAAACcdAQPwEjTPAAAAAElFTkSuQmCC' } }
                         ]
                     }],
                     max_tokens: 20
@@ -761,8 +816,8 @@
                 proxyModel: 'grok-4.1',
                 body: {
                     messages: [
-                        {role: 'system', content: 'You have access to real-time web search. Please search for the latest information.'},
-                        {role: 'user', content: 'What is the current weather in San Francisco?'}
+                        { role: 'system', content: 'You have access to real-time web search. Please search for the latest information.' },
+                        { role: 'user', content: 'What is the current weather in San Francisco?' }
                     ],
                     max_tokens: 200
                 }
@@ -775,8 +830,8 @@
                 proxyModel: 'grok-4.1',
                 body: {
                     messages: [
-                        {role: 'system', content: 'You have access to X (Twitter) search. Please search for relevant posts and discussions.'},
-                        {role: 'user', content: 'What are people saying about the latest iPhone on X?'}
+                        { role: 'system', content: 'You have access to X (Twitter) search. Please search for relevant posts and discussions.' },
+                        { role: 'user', content: 'What are people saying about the latest iPhone on X?' }
                     ],
                     max_tokens: 200
                 }
@@ -831,7 +886,7 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4.1',
                 body: {
-                    messages: [{role: 'user', content: '用中文简要解释什么是人工智能，限制在50字以内。'}],
+                    messages: [{ role: 'user', content: '用中文简要解释什么是人工智能，限制在50字以内。' }],
                     max_tokens: 120
                 }
             },
@@ -842,7 +897,7 @@
                 officialModel: 'grok-4.1',
                 proxyModel: 'grok-4.1',
                 body: {
-                    messages: [{role: 'user', content: 'Give me a creative name for an AI startup.'}],
+                    messages: [{ role: 'user', content: 'Give me a creative name for an AI startup.' }],
                     max_tokens: 60,
                     temperature: 1.5
                 }
@@ -966,7 +1021,7 @@
         function updateBadge(id, status) {
             const badge = document.getElementById(id);
             badge.className = 'panel-badge badge-' + status;
-            const texts = {pending: '待测试', running: '运行中...', success: '成功', error: '失败'};
+            const texts = { pending: '待测试', running: '运行中...', success: '成功', error: '失败' };
             badge.textContent = texts[status] || status;
         }
 
@@ -1020,7 +1075,7 @@
                         buildBody(config, officialUrl, config.officialModel)
                     )
             ));
-            
+
             const rightPromise = timedRequest(() => (
                 config.flow === 'tool-followup'
                     ? runToolFlow(proxyUrl, proxyKey, config, config.proxyModel)
@@ -1041,7 +1096,7 @@
             // 显示结果
             displayResult('left', leftResult, leftTime);
             displayResult('right', rightResult, rightTime);
-            
+
             // 对比
             compareResults(leftResult, rightResult, leftTime, rightTime);
         }
@@ -1051,10 +1106,10 @@
             try {
                 const result = await fn();
                 const time = ((Date.now() - start) / 1000).toFixed(2);
-                return {result, time};
+                return { result, time };
             } catch (e) {
                 const time = ((Date.now() - start) / 1000).toFixed(2);
-                return {result: {status: 0, error: e.message || String(e)}, time};
+                return { result: { status: 0, error: e.message || String(e) }, time };
             }
         }
 
@@ -1075,19 +1130,19 @@
                 }
                 const resp = await fetch(url, options);
                 const contentType = resp.headers.get('content-type') || '';
-                
+
                 if (contentType.includes('text/event-stream')) {
-                    return {status: resp.status, data: await readEventStream(resp)};
+                    return { status: resp.status, data: await readEventStream(resp) };
                 }
                 if (contentType.includes('application/json')) {
-                    return {status: resp.status, data: await resp.json()};
+                    return { status: resp.status, data: await resp.json() };
                 } else {
                     // 非JSON响应（如音频）
                     const blob = await resp.blob();
-                    return {status: resp.status, data: {type: 'binary', size: blob.size, contentType: contentType}};
+                    return { status: resp.status, data: { type: 'binary', size: blob.size, contentType: contentType } };
                 }
             } catch (e) {
-                return {status: 0, error: e.message};
+                return { status: 0, error: e.message };
             }
         }
 
@@ -1100,11 +1155,11 @@
             let done = false;
 
             while (!done) {
-                const {value, done: readerDone} = await reader.read();
+                const { value, done: readerDone } = await reader.read();
                 if (readerDone) {
                     break;
                 }
-                buffer += decoder.decode(value, {stream: true});
+                buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split(/\r?\n/);
                 buffer = lines.pop() || '';
 
@@ -1133,7 +1188,7 @@
                 }
             }
 
-            return {type: 'stream', text: text, events: events};
+            return { type: 'stream', text: text, events: events };
         }
 
         async function runToolFlow(baseUrl, apiKey, config, model) {
@@ -1144,7 +1199,7 @@
                 return first;
             }
             if (first.status < 200 || first.status >= 300) {
-                return {status: first.status, error: '工具调用第一步失败', data: {type: 'tool-flow', step1: first.data}};
+                return { status: first.status, error: '工具调用第一步失败', data: { type: 'tool-flow', step1: first.data } };
             }
 
             const message = first.data && first.data.choices && first.data.choices[0]
@@ -1153,7 +1208,7 @@
             const toolCalls = message && message.tool_calls ? message.tool_calls : null;
 
             if (!toolCalls || toolCalls.length === 0) {
-                return {status: first.status, error: '未返回 tool_calls', data: {type: 'tool-flow', step1: first.data}};
+                return { status: first.status, error: '未返回 tool_calls', data: { type: 'tool-flow', step1: first.data } };
             }
 
             const toolCall = toolCalls[0];
@@ -1185,13 +1240,13 @@
                 return second;
             }
 
-            return {status: second.status, data: {type: 'tool-flow', step1: first.data, step2: second.data}};
+            return { status: second.status, data: { type: 'tool-flow', step1: first.data, step2: second.data } };
         }
 
         function displayResult(side, result, time) {
             const el = document.getElementById('response-' + side);
             const badge = 'badge-' + side;
-            
+
             if (result.error) {
                 updateBadge(badge, 'error');
                 el.innerHTML = '<pre style="color: #f44336;">错误: ' + result.error + '</pre>';
@@ -1212,20 +1267,20 @@
         function compareResults(left, right, leftTime, rightTime) {
             const statsEl = document.getElementById('stats-summary');
             const detailsEl = document.getElementById('compare-details');
-            
+
             statsEl.style.display = 'grid';
-            
+
             const leftOk = !left.error && left.status >= 200 && left.status < 300;
             const rightOk = !right.error && right.status >= 200 && right.status < 300;
-            
+
             document.getElementById('stat-left').textContent = leftOk ? '✅' : '❌';
             document.getElementById('stat-right').textContent = rightOk ? '✅' : '❌';
             document.getElementById('stat-left-time').textContent = leftTime + 's';
             document.getElementById('stat-right-time').textContent = rightTime + 's';
-            
+
             const rightBox = document.getElementById('stat-box-right');
             rightBox.className = 'stat-box ' + (rightOk ? 'success' : 'error');
-            
+
             // 对比详情
             let html = '';
             if (leftOk && rightOk) {
@@ -1259,7 +1314,7 @@
                     }
                 }
             }
-            
+
             detailsEl.innerHTML = html;
         }
 
@@ -1279,4 +1334,5 @@
         updateRequestPreview();
     </script>
 </body>
+
 </html>

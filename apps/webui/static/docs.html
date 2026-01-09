@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-i18n-title-key="pageTitle.docs">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,28 +8,15 @@
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/unified-nav.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
-        :root {
-            --bg-primary: #0a0a0b;
-            --bg-secondary: #111113;
-            --bg-tertiary: #18181b;
-            --bg-card: #1a1a1d;
-            --bg-code: #0d1117;
-            --text-primary: #fafafa;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
-            --accent-primary: #8b5cf6;
-            --accent-secondary: #6366f1;
-            --accent-green: #10b981;
-            --accent-blue: #3b82f6;
-            --accent-orange: #f59e0b;
-            --accent-red: #ef4444;
-            --border-color: rgba(255,255,255,0.08);
-            --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -129,7 +117,7 @@
         }
 
         .nav-item:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
         }
 
@@ -147,9 +135,20 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        .method.get { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
-        .method.post { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
-        .method.delete { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .method.get {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .method.post {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .method.delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-red);
+        }
 
         /* Main Content */
         .main {
@@ -274,8 +273,15 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        .endpoint-method.post { background: var(--accent-blue); color: white; }
-        .endpoint-method.get { background: var(--accent-green); color: white; }
+        .endpoint-method.post {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .endpoint-method.get {
+            background: var(--accent-green);
+            color: white;
+        }
 
         .endpoint-path {
             font-family: 'JetBrains Mono', monospace;
@@ -398,7 +404,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem 1rem;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             border-bottom: 1px solid var(--border-color);
         }
 
@@ -437,11 +443,25 @@
         }
 
         /* Syntax Highlighting */
-        .hljs-keyword { color: #ff7b72; }
-        .hljs-string { color: #a5d6ff; }
-        .hljs-number { color: #79c0ff; }
-        .hljs-property { color: #7ee787; }
-        .hljs-comment { color: #8b949e; }
+        .hljs-keyword {
+            color: #ff7b72;
+        }
+
+        .hljs-string {
+            color: #a5d6ff;
+        }
+
+        .hljs-number {
+            color: #79c0ff;
+        }
+
+        .hljs-property {
+            color: #7ee787;
+        }
+
+        .hljs-comment {
+            color: #8b949e;
+        }
 
         /* Response Section */
         .response-section {
@@ -464,9 +484,20 @@
             font-weight: 600;
         }
 
-        .status-200 { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
-        .status-400 { background: rgba(245, 158, 11, 0.15); color: var(--accent-orange); }
-        .status-500 { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .status-200 {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+
+        .status-400 {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+        }
+
+        .status-500 {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
 
         /* Info Boxes */
         .info-box {
@@ -597,8 +628,13 @@
             color: var(--text-secondary);
         }
 
-        .try-output.success { border-color: var(--accent-green); }
-        .try-output.error { border-color: var(--accent-red); }
+        .try-output.success {
+            border-color: var(--accent-green);
+        }
+
+        .try-output.error {
+            border-color: var(--accent-red);
+        }
 
         /* Encryption Section */
         .encryption-flow {
@@ -768,6 +804,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="layout">
         <!-- Mobile Sidebar Toggle -->
@@ -928,7 +965,7 @@
                                     </button>
                                 </div>
                                 <div class="code-content">
-<pre><span class="hljs-comment"># 基础文本生成</span>
+                                    <pre><span class="hljs-comment"># 基础文本生成</span>
 curl -X POST http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent \
   -H <span class="hljs-string">"Content-Type: application/json"</span> \
   -d <span class="hljs-string">'{
@@ -951,7 +988,7 @@ curl -X POST http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateCo
                                     </button>
                                 </div>
                                 <div class="code-content">
-<pre><span class="hljs-keyword">import</span> requests
+                                    <pre><span class="hljs-keyword">import</span> requests
 
 url = <span class="hljs-string">"http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent"</span>
 
@@ -982,7 +1019,7 @@ text = result[<span class="hljs-string">"candidates"</span>][<span class="hljs-n
                                     </button>
                                 </div>
                                 <div class="code-content">
-<pre><span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> fetch(
+                                    <pre><span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> fetch(
   <span class="hljs-string">'http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent'</span>,
   {
     method: <span class="hljs-string">'POST'</span>,
@@ -1039,7 +1076,8 @@ console.log(text);</pre>
                                             <td><span class="param-name">model</span></td>
                                             <td><span class="param-type">string</span></td>
                                             <td><span class="param-required">必填</span></td>
-                                            <td>模型名称，支持 <code>gemini-3-pro-preview</code> 或 <code>gemini-3-flash-preview</code></td>
+                                            <td>模型名称，支持 <code>gemini-3-pro-preview</code> 或
+                                                <code>gemini-3-flash-preview</code></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1100,7 +1138,7 @@ console.log(text);</pre>
                                 </div>
                                 <div class="code-block">
                                     <div class="code-content">
-<pre>{
+                                        <pre>{
   <span class="hljs-property">"candidates"</span>: [{
     <span class="hljs-property">"content"</span>: {
       <span class="hljs-property">"role"</span>: <span class="hljs-string">"model"</span>,
@@ -1199,7 +1237,7 @@ console.log(text);</pre>
                             <span class="code-lang">请求示例</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"contents"</span>: [{<span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"解释量子纠缠现象"</span>}]}],
   <span class="hljs-property">"generationConfig"</span>: {
     <span class="hljs-property">"thinkingConfig"</span>: {
@@ -1228,7 +1266,7 @@ console.log(text);</pre>
                             <span class="code-lang">工具声明示例</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"contents"</span>: [{<span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"查询北京和上海的天气"</span>}]}],
   <span class="hljs-property">"tools"</span>: [{
     <span class="hljs-property">"functionDeclarations"</span>: [{
@@ -1315,7 +1353,7 @@ console.log(text);</pre>
                             <span class="code-lang">图像理解示例</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"contents"</span>: [{
     <span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>,
     <span class="hljs-property">"parts"</span>: [
@@ -1337,7 +1375,7 @@ console.log(text);</pre>
                             <span class="code-lang">音频转录示例</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"contents"</span>: [{
     <span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>,
     <span class="hljs-property">"parts"</span>: [
@@ -1431,7 +1469,7 @@ console.log(text);</pre>
                             <span class="code-lang">多轮对话中使用 thoughtSignature</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"contents"</span>: [
     {<span class="hljs-property">"role"</span>: <span class="hljs-string">"user"</span>, <span class="hljs-property">"parts"</span>: [{<span class="hljs-property">"text"</span>: <span class="hljs-string">"我想学 Python"</span>}]},
     {
@@ -1534,7 +1572,7 @@ console.log(text);</pre>
                             <span class="code-lang">响应示例</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"crypto_available"</span>: <span class="hljs-literal">true</span>,
   <span class="hljs-property">"server_keys_loaded"</span>: <span class="hljs-literal">true</span>,
   <span class="hljs-property">"registered_clients"</span>: <span class="hljs-number">3</span>,
@@ -1561,7 +1599,7 @@ console.log(text);</pre>
                             <span class="code-lang">响应示例</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"signing_public"</span>: <span class="hljs-string">"base64_ed25519_public_key"</span>,
   <span class="hljs-property">"x25519_public"</span>: <span class="hljs-string">"base64_x25519_public_key"</span>,
   <span class="hljs-property">"user_id"</span>: <span class="hljs-string">"server_unique_id"</span>
@@ -1590,7 +1628,7 @@ console.log(text);</pre>
                             <span class="code-lang">Python - 使用 LingKong Client SDK</span>
                         </div>
                         <div class="code-content">
-<pre><span class="hljs-keyword">from</span> lingkong_client <span class="hljs-keyword">import</span> LingKongClient
+                            <pre><span class="hljs-keyword">from</span> lingkong_client <span class="hljs-keyword">import</span> LingKongClient
 
 <span class="hljs-comment"># 1. 创建客户端 (自动获取服务器公钥)</span>
 client = LingKongClient(
@@ -1620,7 +1658,7 @@ keys = client.export_keys()
                             <span class="code-lang">Python - 底层 API (使用 lingkong_crypto)</span>
                         </div>
                         <div class="code-content">
-<pre><span class="hljs-keyword">import</span> lingkong_crypto <span class="hljs-keyword">as</span> lk
+                            <pre><span class="hljs-keyword">import</span> lingkong_crypto <span class="hljs-keyword">as</span> lk
 <span class="hljs-keyword">import</span> requests
 <span class="hljs-keyword">import</span> json
 
@@ -1670,7 +1708,7 @@ resp = requests.post(
                             <span class="code-lang">加密请求结构 (EncryptedRequest)</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"ephemeral_public"</span>: <span class="hljs-string">"base64_x25519_临时公钥"</span>,
   <span class="hljs-property">"ciphertext"</span>: <span class="hljs-string">"base64_chacha20_加密内容"</span>,
   <span class="hljs-property">"nonce"</span>: <span class="hljs-string">"base64_12字节随机数"</span>,
@@ -1686,7 +1724,7 @@ resp = requests.post(
                             <span class="code-lang">加密响应结构 (EncryptedResponse)</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"ciphertext"</span>: <span class="hljs-string">"base64_chacha20_加密响应"</span>,
   <span class="hljs-property">"nonce"</span>: <span class="hljs-string">"base64_12字节随机数"</span>,
   <span class="hljs-property">"signature"</span>: <span class="hljs-string">"base64_服务器签名"</span>,
@@ -1730,7 +1768,7 @@ resp = requests.post(
                             <span class="code-lang">Python - 双棘轮会话</span>
                         </div>
                         <div class="code-content">
-<pre><span class="hljs-keyword">import</span> lingkong_crypto <span class="hljs-keyword">as</span> lk
+                            <pre><span class="hljs-keyword">import</span> lingkong_crypto <span class="hljs-keyword">as</span> lk
 
 <span class="hljs-comment"># 1. 初始化会话 (发起方)</span>
 shared_secret = ...  <span class="hljs-comment"># 从 KEM 获取</span>
@@ -1827,7 +1865,7 @@ restored = lk.DoubleRatchetSession.import_state(state_json)
                             <span class="code-lang">错误响应格式</span>
                         </div>
                         <div class="code-content">
-<pre>{
+                            <pre>{
   <span class="hljs-property">"error"</span>: {
     <span class="hljs-property">"message"</span>: <span class="hljs-string">"contents 不能为空"</span>,
     <span class="hljs-property">"code"</span>: <span class="hljs-string">"400"</span>
@@ -1882,7 +1920,8 @@ restored = lk.DoubleRatchetSession.import_state(state_json)
                         &nbsp;|&nbsp;
                         <a href="/chat" style="color: var(--accent-primary); text-decoration: none;">在线演示</a>
                         &nbsp;|&nbsp;
-                        <a href="https://github.com/jiaqiwang969/gemma" target="_blank" style="color: var(--accent-primary); text-decoration: none;">GitHub</a>
+                        <a href="https://github.com/jiaqiwang969/gemma" target="_blank"
+                            style="color: var(--accent-primary); text-decoration: none;">GitHub</a>
                     </p>
                 </footer>
             </div>
@@ -2191,4 +2230,5 @@ restored = lk.DoubleRatchetSession.import_state(state_json)
         }
     </script>
 </body>
+
 </html>

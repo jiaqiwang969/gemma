@@ -113,13 +113,18 @@ ssh $SERVER "mkdir -p /tmp/evolution"
 scp -r apps/webui/static/evolution/* $SERVER:/tmp/evolution/ 2>/dev/null || true
 echo "✓ evolution 已上传"
 
+echo "▶ 上传加密策略..."
+ssh $SERVER "mkdir -p /tmp/encryption"
+scp -r apps/webui/static/encryption/* $SERVER:/tmp/encryption/ 2>/dev/null || true
+echo "✓ encryption 已上传"
+
 echo "▶ 上传灵空聊天界面..."
 scp apps/webui/static/lingkong.html $SERVER:/tmp/lingkong.html 2>/dev/null || true
 echo "✓ lingkong.html 已上传"
 
 # 移动文件并设置权限
 echo "▶ 部署文件..."
-ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/static/evolution $REMOTE_DIR/models && \
+ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/static/evolution $REMOTE_DIR/static/encryption $REMOTE_DIR/models && \
     sudo mv /tmp/install.sh $REMOTE_DIR/install.sh && \
     sudo mv /tmp/webui.tar.gz $REMOTE_DIR/webui.tar.gz && \
     sudo mv /tmp/gemini_api.tar.gz $REMOTE_DIR/gemini_api.tar.gz && \
@@ -136,9 +141,10 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REM
     sudo cp -r /tmp/tinybox/* $REMOTE_DIR/static/tinybox/ 2>/dev/null || true && \
     sudo cp -r /tmp/playground/* $REMOTE_DIR/static/playground/ 2>/dev/null || true && \
     sudo cp -r /tmp/evolution/* $REMOTE_DIR/static/evolution/ 2>/dev/null || true && \
+    sudo cp -r /tmp/encryption/* $REMOTE_DIR/static/encryption/ 2>/dev/null || true && \
     sudo mv /tmp/i18n/*.json $REMOTE_DIR/static/i18n/ 2>/dev/null || true && \
     sudo mv /tmp/js/*.js $REMOTE_DIR/static/js/ 2>/dev/null || true && \
-    sudo rm -rf /tmp/pitch /tmp/i18n /tmp/js /tmp/tinybox /tmp/evolution 2>/dev/null || true && \
+    sudo rm -rf /tmp/pitch /tmp/i18n /tmp/js /tmp/tinybox /tmp/evolution /tmp/encryption 2>/dev/null || true && \
     sudo chmod 755 $REMOTE_DIR/install.sh && \
     sudo chmod 644 $REMOTE_DIR/webui.tar.gz && \
     sudo chmod 644 $REMOTE_DIR/gemini_api.tar.gz && \
@@ -149,6 +155,8 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REM
     sudo chmod 755 $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/tinybox/assets $REMOTE_DIR/static/tinybox/images 2>/dev/null || true && \
     sudo chmod -R 644 $REMOTE_DIR/static/evolution/* 2>/dev/null || true && \
     sudo chmod 755 $REMOTE_DIR/static/evolution 2>/dev/null || true && \
+    sudo chmod -R 644 $REMOTE_DIR/static/encryption/* 2>/dev/null || true && \
+    sudo chmod 755 $REMOTE_DIR/static/encryption 2>/dev/null || true && \
     sudo chmod 644 $REMOTE_DIR/static/i18n/*.json 2>/dev/null || true && \
     sudo chmod 644 $REMOTE_DIR/static/js/*.js 2>/dev/null || true && \
     sudo chown -R ubuntu:ubuntu $REMOTE_DIR/static $REMOTE_DIR/install.sh $REMOTE_DIR/webui.tar.gz $REMOTE_DIR/gemini_api.tar.gz"
@@ -157,7 +165,7 @@ echo "✓ 文件已部署"
 # 同步静态文件到 WebUI 目录 (nginx 从这里读取)
 echo "▶ 同步静态文件到 WebUI..."
 WEBUI_STATIC="/opt/lingkong-webui/static"
-ssh $SERVER "sudo mkdir -p $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground $WEBUI_STATIC/evolution && \
+ssh $SERVER "sudo mkdir -p $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground $WEBUI_STATIC/evolution $WEBUI_STATIC/encryption && \
     sudo cp $REMOTE_DIR/static/home.html $WEBUI_STATIC/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/downloads.html $WEBUI_STATIC/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/docs.html $WEBUI_STATIC/ 2>/dev/null || true && \
@@ -165,13 +173,15 @@ ssh $SERVER "sudo mkdir -p $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tin
     sudo cp -r $REMOTE_DIR/static/tinybox/* $WEBUI_STATIC/tinybox/ 2>/dev/null || true && \
     sudo cp -r $REMOTE_DIR/static/playground/* $WEBUI_STATIC/playground/ 2>/dev/null || true && \
     sudo cp -r $REMOTE_DIR/static/evolution/* $WEBUI_STATIC/evolution/ 2>/dev/null || true && \
+    sudo cp -r $REMOTE_DIR/static/encryption/* $WEBUI_STATIC/encryption/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/i18n/*.json $WEBUI_STATIC/i18n/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/js/*.js $WEBUI_STATIC/js/ 2>/dev/null || true && \
-    sudo chmod 755 $WEBUI_STATIC $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground $WEBUI_STATIC/evolution && \
+    sudo chmod 755 $WEBUI_STATIC $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground $WEBUI_STATIC/evolution $WEBUI_STATIC/encryption && \
     sudo chmod 644 $WEBUI_STATIC/*.html $WEBUI_STATIC/i18n/*.json $WEBUI_STATIC/js/*.js 2>/dev/null || true && \
     sudo chmod 644 $WEBUI_STATIC/tinybox/*.html $WEBUI_STATIC/tinybox/js/*.js $WEBUI_STATIC/tinybox/assets/* 2>/dev/null || true && \
     sudo chmod 644 $WEBUI_STATIC/playground/*.html 2>/dev/null || true && \
     sudo chmod 644 $WEBUI_STATIC/evolution/*.html $WEBUI_STATIC/evolution/*.png $WEBUI_STATIC/evolution/*.pdf 2>/dev/null || true && \
+    sudo chmod 644 $WEBUI_STATIC/encryption/*.html $WEBUI_STATIC/encryption/*.png 2>/dev/null || true && \
     sudo chown -R ubuntu:ubuntu $WEBUI_STATIC"
 echo "✓ WebUI 静态文件已同步"
 

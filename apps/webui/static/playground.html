@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-i18n-title-key="pageTitle.playground">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,26 +9,11 @@
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/unified-nav.js"></script>
     <style>
-        :root {
-            --primary: #8b5cf6;
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --bg: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #1a1a25;
-            --text: #ffffff;
-            --text-secondary: #a0a0b0;
-            --text-muted: #666;
-            --border: rgba(255, 255, 255, 0.1);
-            --code-bg: #0d1117;
-            --code-text: #d4d4d4;
-            --left-color: #6366f1;
-            --right-color: #22c55e;
-            --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -97,8 +83,14 @@
             border-color: var(--primary);
         }
 
-        .config-item input.url { width: 220px; }
-        .config-item input.api-key { width: 180px; font-family: monospace; }
+        .config-item input.url {
+            width: 220px;
+        }
+
+        .config-item input.api-key {
+            width: 180px;
+            font-family: monospace;
+        }
 
         .config-item select {
             padding: 6px 10px;
@@ -120,10 +112,24 @@
             transition: all 0.2s;
         }
 
-        .btn-primary { background: var(--accent-gradient); color: white; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-success:hover { transform: translateY(-1px); }
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+        }
 
         .main-container {
             max-width: 1900px;
@@ -162,7 +168,11 @@
             transition: all 0.2s;
         }
 
-        .test-tab:hover { background: var(--bg-card); color: var(--text); }
+        .test-tab:hover {
+            background: var(--bg-card);
+            color: var(--text);
+        }
+
         .test-tab.active {
             background: var(--accent-gradient);
             color: white;
@@ -211,9 +221,17 @@
             font-size: 13px;
         }
 
-        .panel.left .panel-title { color: var(--left-color); }
-        .panel.right .panel-title { color: var(--right-color); }
-        .panel.center .panel-title { color: #e65100; }
+        .panel.left .panel-title {
+            color: var(--left-color);
+        }
+
+        .panel.right .panel-title {
+            color: var(--right-color);
+        }
+
+        .panel.center .panel-title {
+            color: #e65100;
+        }
 
         .panel-badge {
             padding: 3px 10px;
@@ -222,10 +240,25 @@
             font-weight: 500;
         }
 
-        .badge-pending { background: var(--bg-secondary); color: var(--text-secondary); }
-        .badge-running { background: var(--warning); color: #000; }
-        .badge-success { background: var(--success); color: white; }
-        .badge-error { background: var(--error); color: white; }
+        .badge-pending {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .badge-running {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .badge-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-error {
+            background: var(--error);
+            color: white;
+        }
 
         .panel-content {
             padding: 12px;
@@ -334,18 +367,34 @@
             background: var(--bg-secondary);
         }
 
-        .stat-box.success { background: rgba(34, 197, 94, 0.15); }
-        .stat-box.error { background: rgba(239, 68, 68, 0.15); }
-        .stat-box.warning { background: rgba(245, 158, 11, 0.15); }
+        .stat-box.success {
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .stat-box.error {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .stat-box.warning {
+            background: rgba(245, 158, 11, 0.15);
+        }
 
         .stat-value {
             font-size: 20px;
             font-weight: 600;
         }
 
-        .stat-box.success .stat-value { color: var(--success); }
-        .stat-box.error .stat-value { color: var(--error); }
-        .stat-box.warning .stat-value { color: #e65100; }
+        .stat-box.success .stat-value {
+            color: var(--success);
+        }
+
+        .stat-box.error .stat-value {
+            color: var(--error);
+        }
+
+        .stat-box.warning .stat-value {
+            color: #e65100;
+        }
 
         .stat-label {
             font-size: 11px;
@@ -375,6 +424,7 @@
             .comparison-container {
                 grid-template-columns: 1fr;
             }
+
             .panel.center {
                 order: -1;
             }
@@ -401,10 +451,21 @@
             border-radius: 2px;
         }
 
-        .legend-dot.match { background: var(--success); }
-        .legend-dot.mismatch { background: var(--error); }
-        .legend-dot.missing { background: var(--warning); }
-        .legend-dot.order { background: var(--primary); }
+        .legend-dot.match {
+            background: var(--success);
+        }
+
+        .legend-dot.mismatch {
+            background: var(--error);
+        }
+
+        .legend-dot.missing {
+            background: var(--warning);
+        }
+
+        .legend-dot.order {
+            background: var(--primary);
+        }
 
         /* 音频测试专区 */
         .audio-test-section {
@@ -446,7 +507,9 @@
         }
 
         @keyframes blink {
-            50% { opacity: 0.5; }
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .audio-preview {
@@ -560,11 +623,17 @@
         }
 
         @keyframes progress-indeterminate {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(400%); }
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(400%);
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- 外部音频数据文件 (MLK Speech, 511KB base64) -->
     <script src="02-gemini-api-audio.js"></script>
@@ -620,10 +689,18 @@
                 <div class="test-tab" data-test="6-1">6.1 流式输出</div>
             </div>
             <div class="legend">
-                <div class="legend-item"><div class="legend-dot match"></div> 完全匹配</div>
-                <div class="legend-item"><div class="legend-dot mismatch"></div> 值不匹配</div>
-                <div class="legend-item"><div class="legend-dot missing"></div> 字段缺失</div>
-                <div class="legend-item"><div class="legend-dot order"></div> 顺序不同</div>
+                <div class="legend-item">
+                    <div class="legend-dot match"></div> 完全匹配
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot mismatch"></div> 值不匹配
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot missing"></div> 字段缺失
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot order"></div> 顺序不同
+                </div>
             </div>
         </div>
 
@@ -655,7 +732,8 @@
                 <div class="audio-info" id="audioInfo"></div>
                 <div class="audio-prompt">
                     <label>自定义提示词:</label>
-                    <input type="text" id="customAudioPrompt" value="Transcribe this audio and describe what you hear." style="flex: 1;">
+                    <input type="text" id="customAudioPrompt" value="Transcribe this audio and describe what you hear."
+                        style="flex: 1;">
                 </div>
                 <button class="btn btn-success" onclick="runCustomAudioTest()">🚀 运行自定义音频测试</button>
             </div>
@@ -741,34 +819,34 @@
         const testConfigs = {
             '1-1': {
                 name: '1.1 纯文本',
-                body: {"contents": [{"parts": [{"text": "hi"}]}], "generationConfig": {"maxOutputTokens": 512}}
+                body: { "contents": [{ "parts": [{ "text": "hi" }] }], "generationConfig": { "maxOutputTokens": 512 } }
             },
             '1-2': {
                 name: '1.2 思考等级 low',
                 body: {
-                    "contents": [{"parts": [{"text": "2+2=?"}]}],
-                    "generationConfig": {"thinkingConfig": {"thinkingLevel": "low"}, "maxOutputTokens": 256}
+                    "contents": [{ "parts": [{ "text": "2+2=?" }] }],
+                    "generationConfig": { "thinkingConfig": { "thinkingLevel": "low" }, "maxOutputTokens": 256 }
                 }
             },
             '1-3': {
                 name: '1.3 思考等级 high',
                 body: {
-                    "contents": [{"parts": [{"text": "Explain quantum entanglement briefly"}]}],
-                    "generationConfig": {"thinkingConfig": {"thinkingLevel": "high"}, "maxOutputTokens": 512}
+                    "contents": [{ "parts": [{ "text": "Explain quantum entanglement briefly" }] }],
+                    "generationConfig": { "thinkingConfig": { "thinkingLevel": "high" }, "maxOutputTokens": 512 }
                 }
             },
             '1-5': {
                 name: '1.5 系统指令',
                 body: {
-                    "contents": [{"parts": [{"text": "hi"}]}],
-                    "systemInstruction": {"parts": [{"text": "You are helpful"}]},
-                    "generationConfig": {"maxOutputTokens": 512}
+                    "contents": [{ "parts": [{ "text": "hi" }] }],
+                    "systemInstruction": { "parts": [{ "text": "You are helpful" }] },
+                    "generationConfig": { "maxOutputTokens": 512 }
                 }
             },
             '1-6': {
                 name: '1.6 JSON Schema',
                 body: {
-                    "contents": [{"parts": [{"text": "List 2 programming languages"}]}],
+                    "contents": [{ "parts": [{ "text": "List 2 programming languages" }] }],
                     "generationConfig": {
                         "responseMimeType": "application/json",
                         "responseSchema": {
@@ -776,7 +854,7 @@
                             "properties": {
                                 "languages": {
                                     "type": "array",
-                                    "items": {"type": "object", "properties": {"name": {"type": "string"}, "year": {"type": "integer"}}}
+                                    "items": { "type": "object", "properties": { "name": { "type": "string" }, "year": { "type": "integer" } } }
                                 }
                             }
                         },
@@ -787,72 +865,78 @@
             '3-1': {
                 name: '3.1 工具调用',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "Run ls command"}]}],
+                    "contents": [{ "role": "user", "parts": [{ "text": "Run ls command" }] }],
                     "tools": [{
                         "functionDeclarations": [{
                             "name": "shell_command",
                             "description": "Run shell command",
-                            "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}
+                            "parameters": { "type": "object", "properties": { "command": { "type": "string" } }, "required": ["command"] }
                         }]
                     }],
-                    "generationConfig": {"maxOutputTokens": 512}
+                    "generationConfig": { "maxOutputTokens": 512 }
                 }
             },
             '4-1': {
                 name: '4.1 toolConfig mode:ANY',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "What is the weather?"}]}],
-                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
-                    "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "contents": [{ "role": "user", "parts": [{ "text": "What is the weather?" }] }],
+                    "tools": [{ "functionDeclarations": [{ "name": "get_weather", "description": "Get weather", "parameters": { "type": "object", "properties": { "location": { "type": "string" } }, "required": ["location"] } }] }],
+                    "toolConfig": { "functionCallingConfig": { "mode": "ANY" } },
+                    "generationConfig": { "maxOutputTokens": 256 }
                 }
             },
             '4-2': {
                 name: '4.2 toolConfig mode:NONE',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "What is the weather in Tokyo?"}]}],
-                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
-                    "toolConfig": {"functionCallingConfig": {"mode": "NONE"}},
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "contents": [{ "role": "user", "parts": [{ "text": "What is the weather in Tokyo?" }] }],
+                    "tools": [{ "functionDeclarations": [{ "name": "get_weather", "description": "Get weather", "parameters": { "type": "object", "properties": { "location": { "type": "string" } }, "required": ["location"] } }] }],
+                    "toolConfig": { "functionCallingConfig": { "mode": "NONE" } },
+                    "generationConfig": { "maxOutputTokens": 256 }
                 }
             },
             '4-3': {
                 name: '4.3 并行调用',
                 body: {
-                    "contents": [{"role": "user", "parts": [{"text": "What is the weather in SF and Tokyo?"}]}],
-                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
-                    "generationConfig": {"maxOutputTokens": 512}
+                    "contents": [{ "role": "user", "parts": [{ "text": "What is the weather in SF and Tokyo?" }] }],
+                    "tools": [{ "functionDeclarations": [{ "name": "get_weather", "description": "Get weather", "parameters": { "type": "object", "properties": { "location": { "type": "string" } }, "required": ["location"] } }] }],
+                    "generationConfig": { "maxOutputTokens": 512 }
                 }
             },
             '5-1': {
                 name: '5.1 多模态视觉',
                 body: {
-                    "contents": [{"role": "user", "parts": [
-                        {"text": "What color is this image? Answer in one word."},
-                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}}
-                    ]}],
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "contents": [{
+                        "role": "user", "parts": [
+                            { "text": "What color is this image? Answer in one word." },
+                            { "inlineData": { "mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII=" } }
+                        ]
+                    }],
+                    "generationConfig": { "maxOutputTokens": 256 }
                 }
             },
             '5-2': {
                 name: '5.2 音频转录',
                 body: {
-                    "contents": [{"role": "user", "parts": [
-                        {"text": "Listen to this audio clip and transcribe what you hear. What is the speaker saying?"},
-                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
-                    ]}],
-                    "generationConfig": {"maxOutputTokens": 1024}
+                    "contents": [{
+                        "role": "user", "parts": [
+                            { "text": "Listen to this audio clip and transcribe what you hear. What is the speaker saying?" },
+                            { "inlineData": { "mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER" } }
+                        ]
+                    }],
+                    "generationConfig": { "maxOutputTokens": 1024 }
                 }
             },
             '5-3': {
                 name: '5.3 音频+思考',
                 body: {
-                    "contents": [{"role": "user", "parts": [
-                        {"text": "Listen carefully. First transcribe word-by-word, then analyze the rhetorical style and emotional tone."},
-                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
-                    ]}],
+                    "contents": [{
+                        "role": "user", "parts": [
+                            { "text": "Listen carefully. First transcribe word-by-word, then analyze the rhetorical style and emotional tone." },
+                            { "inlineData": { "mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER" } }
+                        ]
+                    }],
                     "generationConfig": {
-                        "thinkingConfig": {"thinkingLevel": "high"},
+                        "thinkingConfig": { "thinkingLevel": "high" },
                         "maxOutputTokens": 2048
                     }
                 }
@@ -860,29 +944,33 @@
             '5-4': {
                 name: '5.4 音频摘要',
                 body: {
-                    "contents": [{"role": "user", "parts": [
-                        {"text": "Summarize this speech in one sentence. What is the main message?"},
-                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
-                    ]}],
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "contents": [{
+                        "role": "user", "parts": [
+                            { "text": "Summarize this speech in one sentence. What is the main message?" },
+                            { "inlineData": { "mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER" } }
+                        ]
+                    }],
+                    "generationConfig": { "maxOutputTokens": 256 }
                 }
             },
             '5-5': {
                 name: '5.5 多图片对比',
                 body: {
-                    "contents": [{"role": "user", "parts": [
-                        {"text": "Compare these two images. What colors do you see in each? Answer briefly."},
-                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}},
-                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAM0lEQVR4nO3OsQ0AIAwDwez/aaMoKBhgAImChq9O8tNd3x8HSaIkUZIoSZQkShIliab8AC4FAT9cTiF5AAAAAElFTkSuQmCC"}}
-                    ]}],
-                    "generationConfig": {"maxOutputTokens": 256}
+                    "contents": [{
+                        "role": "user", "parts": [
+                            { "text": "Compare these two images. What colors do you see in each? Answer briefly." },
+                            { "inlineData": { "mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII=" } },
+                            { "inlineData": { "mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAM0lEQVR4nO3OsQ0AIAwDwez/aaMoKBhgAImChq9O8tNd3x8HSaIkUZIoSZQkShIliab8AC4FAT9cTiF5AAAAAElFTkSuQmCC" } }
+                        ]
+                    }],
+                    "generationConfig": { "maxOutputTokens": 256 }
                 }
             },
             '6-1': {
                 name: '6.1 流式输出',
                 body: {
-                    "contents": [{"parts": [{"text": "Count from 1 to 5."}]}],
-                    "generationConfig": {"maxOutputTokens": 128}
+                    "contents": [{ "parts": [{ "text": "Count from 1 to 5." }] }],
+                    "generationConfig": { "maxOutputTokens": 128 }
                 },
                 streaming: true  // 标记为流式测试
             }
@@ -913,7 +1001,7 @@
         function updateBadge(id, status) {
             const badge = document.getElementById(id);
             badge.className = `panel-badge badge-${status}`;
-            badge.textContent = {pending: '待测试', running: '运行中...', success: '成功', error: '失败', comparing: '对比中...'}[status];
+            badge.textContent = { pending: '待测试', running: '运行中...', success: '成功', error: '失败', comparing: '对比中...' }[status];
         }
 
         // ========== 核心：严格 JSON 对比 ==========
@@ -1352,7 +1440,7 @@
                                     // 实时更新显示
                                     const displayText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
                                     outputEl.innerHTML = `<pre style="color: #4caf50;">🔄 流式输出中...\n\n${displayText}</pre>`;
-                                } catch (e) {}
+                                } catch (e) { }
                             }
                         }
                     }
@@ -1536,20 +1624,24 @@
 
             // 构建请求
             const requestBody = {
-                "contents": [{"role": "user", "parts": [
-                    {"text": prompt},
-                    {"inlineData": {"mimeType": customAudioData.mimeType, "data": customAudioData.data}}
-                ]}],
-                "generationConfig": {"maxOutputTokens": 1024}
+                "contents": [{
+                    "role": "user", "parts": [
+                        { "text": prompt },
+                        { "inlineData": { "mimeType": customAudioData.mimeType, "data": customAudioData.data } }
+                    ]
+                }],
+                "generationConfig": { "maxOutputTokens": 1024 }
             };
 
             // 更新预览
             document.getElementById('requestPreview').textContent = JSON.stringify({
                 ...requestBody,
-                contents: [{...requestBody.contents[0], parts: [
-                    requestBody.contents[0].parts[0],
-                    {inlineData: {mimeType: customAudioData.mimeType, data: `[${customAudioData.fileName}, ${(customAudioData.size/1024).toFixed(1)}KB]`}}
-                ]}]
+                contents: [{
+                    ...requestBody.contents[0], parts: [
+                        requestBody.contents[0].parts[0],
+                        { inlineData: { mimeType: customAudioData.mimeType, data: `[${customAudioData.fileName}, ${(customAudioData.size / 1024).toFixed(1)}KB]` } }
+                    ]
+                }]
             }, null, 2);
 
             // 运行测试
@@ -1624,7 +1716,7 @@
 
         // 增强 runComparison 以记录历史
         const originalRunComparison = runComparison;
-        runComparison = async function() {
+        runComparison = async function () {
             const startTime = Date.now();
             await originalRunComparison();
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -1713,7 +1805,7 @@
         }
 
         // GPU 选择变更时切换
-        document.getElementById('gpuSelect').addEventListener('change', async function() {
+        document.getElementById('gpuSelect').addEventListener('change', async function () {
             const localUrl = document.getElementById('localUrl').value;
             const devices = this.value;
 
@@ -1856,4 +1948,5 @@
         if (i18n && i18n.loaded) translatePlaygroundPage();
     </script>
 </body>
+
 </html>

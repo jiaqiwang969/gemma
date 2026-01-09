@@ -23,7 +23,8 @@
     "playgroundGemini": "Gemini API Playground - 灵空 AI",
     "playgroundGrok": "Grok API Playground - 灵空 AI",
     "chat": "灵空 AI - 对话",
-    "tinybox": "TinyBox DIY 指南 - 6x RX 7900 XTX AI 工作站"
+    "tinybox": "TinyBox DIY 指南 - 6x RX 7900 XTX AI 工作站",
+    "encryption": "端到端加密架构 - 灵空 AI"
   },
   "nav": {
     "home": "首页",
@@ -34,6 +35,9 @@
     "playground": "API测试",
     "tinybox": "算力 DIY",
     "evolution": "进化系统",
+    "resources": "资源",
+    "encryption": "加密策略",
+    "pitch": "商业计划书",
     "tinybox_page": {
       "title": "Tinybox DIY 指南 - 6x RX 7900 XTX AI 工作站组装指南",
       "subtitle": "从硬件选型到开源优化，手把手教你组装一台 6x RX 7900 XTX 的 AI 算力怪兽",
@@ -62,6 +66,34 @@
     },
     "chat": "对话",
     "about": "关于"
+  },
+  "encryption_page": {
+    "title": "端到端加密架构",
+    "subtitle": "从第一性原理出发，设计真正安全的本地 AI 通信系统。Signal 协议 + 本地推理，让你的对话只属于你。",
+    "badge_e2e": "E2E 加密",
+    "badge_signal": "Signal 协议",
+    "badge_ratchet": "Double Ratchet",
+    "badge_forward": "前向保密",
+    "badge_zero": "零知识",
+    "download_btn": "下载完整 PDF (6.6MB)",
+    "slide_01": "封面",
+    "slide_02": "为什么需要 E2E 加密",
+    "slide_03": "威胁模型分析",
+    "slide_04": "Signal 协议原理",
+    "slide_05": "X3DH 密钥交换",
+    "slide_06": "Double Ratchet 算法",
+    "slide_07": "前向保密性",
+    "slide_08": "LingKong 加密架构",
+    "slide_09": "密钥管理",
+    "slide_10": "消息加密流程",
+    "slide_11": "本地存储安全",
+    "slide_12": "API 设计",
+    "slide_13": "实现路线图",
+    "slide_14": "总结",
+    "footer_tagline": "灵空 AI - 你的 AI. 你的数据. 你的掌控.",
+    "footer_home": "返回首页",
+    "footer_evolution": "进化系统",
+    "footer_pitch": "商业计划书"
   },
   "home": {
     "hero": {

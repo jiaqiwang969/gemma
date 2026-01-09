@@ -1,30 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LingKong AI - E2E Encrypted Chat</title>
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js" data-no-navbar></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
-        :root {
-            --bg-primary: #0a0a0b;
-            --bg-secondary: #111113;
-            --bg-tertiary: #18181b;
-            --bg-card: #1a1a1d;
-            --text-primary: #fafafa;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
-            --accent-primary: #8b5cf6;
-            --accent-secondary: #6366f1;
-            --accent-green: #10b981;
-            --accent-blue: #3b82f6;
-            --accent-red: #ef4444;
-            --border-color: rgba(255,255,255,0.08);
-            --gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -137,7 +125,7 @@
         }
 
         .history-item:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .history-item.active {
@@ -255,8 +243,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .header-right {
@@ -465,7 +460,7 @@
             align-items: center;
             gap: 8px;
             padding: 0.5rem 1rem;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 100px;
             font-size: 0.85rem;
         }
@@ -473,7 +468,7 @@
         .bubble .metrics {
             margin-top: 0.75rem;
             padding-top: 0.75rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             gap: 1.5rem;
             font-size: 0.8rem;
@@ -505,12 +500,26 @@
             animation: typing 1s infinite;
         }
 
-        .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
 
         @keyframes typing {
-            0%, 100% { transform: translateY(0); opacity: 0.5; }
-            50% { transform: translateY(-6px); opacity: 1; }
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: translateY(-6px);
+                opacity: 1;
+            }
         }
 
         /* Input Area */
@@ -668,15 +677,23 @@
             box-shadow: none;
         }
 
-        .hidden { display: none !important; }
-        #fileInput { display: none; }
+        .hidden {
+            display: none !important;
+        }
+
+        #fileInput {
+            display: none;
+        }
 
         /* Responsive */
         @media (max-width: 900px) {
-            .sidebar { display: none; }
+            .sidebar {
+                display: none;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="layout">
         <div class="sidebar">
@@ -743,7 +760,8 @@
                 <div class="welcome-card" id="welcomeCard">
                     <div class="welcome-icon">&#128274;</div>
                     <h2>Private AI Assistant</h2>
-                    <p>Your conversations are end-to-end encrypted. All data is processed locally, never uploaded to the cloud.</p>
+                    <p>Your conversations are end-to-end encrypted. All data is processed locally, never uploaded to the
+                        cloud.</p>
                     <div class="feature-pills">
                         <div class="feature-pill">
                             <span class="icon">&#128274;</span>
@@ -1374,4 +1392,5 @@
         init();
     </script>
 </body>
+
 </html>

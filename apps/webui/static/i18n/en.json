@@ -23,7 +23,8 @@
     "playgroundGemini": "Gemini API Playground - LingKong AI",
     "playgroundGrok": "Grok API Playground - LingKong AI",
     "chat": "LingKong AI - Chat",
-    "tinybox": "TinyBox DIY Guide - 6x RX 7900 XTX AI Workstation"
+    "tinybox": "TinyBox DIY Guide - 6x RX 7900 XTX AI Workstation",
+    "encryption": "E2E Encryption Architecture - LingKong AI"
   },
   "nav": {
     "home": "Home",
@@ -34,6 +35,9 @@
     "playground": "Playground",
     "tinybox": "TinyBox DIY",
     "evolution": "Evolution",
+    "resources": "Resources",
+    "encryption": "Encryption",
+    "pitch": "Business Plan",
     "tinybox_page": {
       "title": "Tinybox DIY Guide - 6x RX 7900 XTX AI Workstation Assembly Guide",
       "subtitle": "From hardware selection to open-source optimization, a step-by-step guide to building a 6x RX 7900 XTX AI monster.",
@@ -62,6 +66,34 @@
     },
     "chat": "Chat",
     "about": "About"
+  },
+  "encryption_page": {
+    "title": "E2E Encryption Architecture",
+    "subtitle": "Designing a truly secure local AI communication system from first principles. Signal Protocol + Local Inference, your conversations belong only to you.",
+    "badge_e2e": "E2E Encryption",
+    "badge_signal": "Signal Protocol",
+    "badge_ratchet": "Double Ratchet",
+    "badge_forward": "Forward Secrecy",
+    "badge_zero": "Zero Knowledge",
+    "download_btn": "Download Full PDF (6.6MB)",
+    "slide_01": "Cover",
+    "slide_02": "Why E2E Encryption",
+    "slide_03": "Threat Model Analysis",
+    "slide_04": "Signal Protocol Principles",
+    "slide_05": "X3DH Key Exchange",
+    "slide_06": "Double Ratchet Algorithm",
+    "slide_07": "Forward Secrecy",
+    "slide_08": "LingKong Encryption Architecture",
+    "slide_09": "Key Management",
+    "slide_10": "Message Encryption Flow",
+    "slide_11": "Local Storage Security",
+    "slide_12": "API Design",
+    "slide_13": "Implementation Roadmap",
+    "slide_14": "Summary",
+    "footer_tagline": "LingKong AI - Your AI. Your data. Your control.",
+    "footer_home": "Home",
+    "footer_evolution": "Evolution System",
+    "footer_pitch": "Business Plan"
   },
   "home": {
     "hero": {

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh" data-i18n-title-key="pageTitle.encryption">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 日夜进化系统 - 灵空 AI</title>
+    <title>端到端加密架构 - 灵空 AI</title>
     <script src="/static/js/i18n.js"></script>
     <script src="/static/js/unified-nav.js"></script>
     <link rel="icon" type="image/svg+xml"
@@ -34,7 +34,7 @@
             padding: 60px 2rem 40px;
             text-align: center;
             background:
-                radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
                 var(--bg-primary);
         }
 
@@ -72,7 +72,7 @@
         }
 
         .badge.highlight {
-            background: rgba(99, 102, 241, 0.2);
+            background: rgba(16, 185, 129, 0.2);
             border-color: var(--accent-primary);
             color: var(--accent-primary);
         }
@@ -93,7 +93,7 @@
 
         .download-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
         }
 
         /* Slides Container */
@@ -215,109 +215,133 @@
     <main class="main">
         <!-- Hero -->
         <section class="hero">
-            <h1>AI 日夜进化系统</h1>
-            <p>像人脑一样学习：白天服务用户，夜间整合记忆、微调进化。让 AI 每天都比昨天更懂你。</p>
+            <h1 data-i18n="encryption_page.title">端到端加密架构</h1>
+            <p data-i18n="encryption_page.subtitle">从第一性原理出发，设计真正安全的本地 AI 通信系统。Signal 协议 + 本地推理，让你的对话只属于你。</p>
 
             <div class="hero-badges">
-                <span class="badge highlight">类脑记忆</span>
-                <span class="badge highlight">睡眠微调</span>
-                <span class="badge">记忆碎片</span>
-                <span class="badge">知识图谱</span>
-                <span class="badge">持续进化</span>
+                <span class="badge highlight" data-i18n="encryption_page.badge_e2e">E2E 加密</span>
+                <span class="badge highlight" data-i18n="encryption_page.badge_signal">Signal 协议</span>
+                <span class="badge" data-i18n="encryption_page.badge_ratchet">Double Ratchet</span>
+                <span class="badge" data-i18n="encryption_page.badge_forward">前向保密</span>
+                <span class="badge" data-i18n="encryption_page.badge_zero">零知识</span>
             </div>
 
-            <a href="/static/evolution/AI_Day_Night_Evolution.pdf" class="download-btn" download>
-                📥 下载完整 PDF (3.1MB)
+            <a href="/static/encryption/Session_Architecture_First_Principles.pdf" class="download-btn" download>
+                📥 <span data-i18n="encryption_page.download_btn">下载完整 PDF (6.6MB)</span>
             </a>
         </section>
 
         <!-- Slides -->
         <div class="slides-container">
             <div class="slide" id="slide-1">
-                <img src="/static/evolution/page-01.png" alt="封面 - AI 日夜进化系统">
+                <img src="/static/encryption/page-01.png" alt="封面 - 端到端加密架构">
                 <div class="slide-number">
-                    <span>01 / 11</span>
-                    封面
+                    <span>01 / 14</span>
+                    <span data-i18n="encryption_page.slide_01">封面</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-2">
-                <img src="/static/evolution/page-02.png" alt="人脑记忆系统">
+                <img src="/static/encryption/page-02.png" alt="为什么需要 E2E 加密">
                 <div class="slide-number">
-                    <span>02 / 11</span>
-                    人脑记忆系统
+                    <span>02 / 14</span>
+                    <span data-i18n="encryption_page.slide_02">为什么需要 E2E 加密</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-3">
-                <img src="/static/evolution/page-03.png" alt="睡眠与记忆巩固">
+                <img src="/static/encryption/page-03.png" alt="威胁模型分析">
                 <div class="slide-number">
-                    <span>03 / 11</span>
-                    睡眠与记忆巩固
+                    <span>03 / 14</span>
+                    <span data-i18n="encryption_page.slide_03">威胁模型分析</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-4">
-                <img src="/static/evolution/page-04.png" alt="传统 RAG vs 类脑系统">
+                <img src="/static/encryption/page-04.png" alt="Signal 协议原理">
                 <div class="slide-number">
-                    <span>04 / 11</span>
-                    传统 RAG vs 类脑系统
+                    <span>04 / 14</span>
+                    <span data-i18n="encryption_page.slide_04">Signal 协议原理</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-5">
-                <img src="/static/evolution/page-05.png" alt="LingKong 记忆系统设计">
+                <img src="/static/encryption/page-05.png" alt="X3DH 密钥交换">
                 <div class="slide-number">
-                    <span>05 / 11</span>
-                    LingKong 记忆系统设计
+                    <span>05 / 14</span>
+                    <span data-i18n="encryption_page.slide_05">X3DH 密钥交换</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-6">
-                <img src="/static/evolution/page-06.png" alt="日夜循环架构">
+                <img src="/static/encryption/page-06.png" alt="Double Ratchet 算法">
                 <div class="slide-number">
-                    <span>06 / 11</span>
-                    日夜循环架构
+                    <span>06 / 14</span>
+                    <span data-i18n="encryption_page.slide_06">Double Ratchet 算法</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-7">
-                <img src="/static/evolution/page-07.png" alt="睡眠处理流程">
+                <img src="/static/encryption/page-07.png" alt="前向保密性">
                 <div class="slide-number">
-                    <span>07 / 11</span>
-                    睡眠处理流程
+                    <span>07 / 14</span>
+                    <span data-i18n="encryption_page.slide_07">前向保密性</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-8">
-                <img src="/static/evolution/page-08.png" alt="完整系统架构">
+                <img src="/static/encryption/page-08.png" alt="LingKong 加密架构">
                 <div class="slide-number">
-                    <span>08 / 11</span>
-                    完整系统架构
+                    <span>08 / 14</span>
+                    <span data-i18n="encryption_page.slide_08">LingKong 加密架构</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-9">
-                <img src="/static/evolution/page-09.png" alt="微调数据流">
+                <img src="/static/encryption/page-09.png" alt="密钥管理">
                 <div class="slide-number">
-                    <span>09 / 11</span>
-                    微调数据流
+                    <span>09 / 14</span>
+                    <span data-i18n="encryption_page.slide_09">密钥管理</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-10">
-                <img src="/static/evolution/page-10.png" alt="现有基础">
+                <img src="/static/encryption/page-10.png" alt="消息加密流程">
                 <div class="slide-number">
-                    <span>10 / 11</span>
-                    现有基础
+                    <span>10 / 14</span>
+                    <span data-i18n="encryption_page.slide_10">消息加密流程</span>
                 </div>
             </div>
 
             <div class="slide" id="slide-11">
-                <img src="/static/evolution/page-11.png" alt="下一步计划">
+                <img src="/static/encryption/page-11.png" alt="本地存储安全">
                 <div class="slide-number">
-                    <span>11 / 11</span>
-                    下一步计划
+                    <span>11 / 14</span>
+                    <span data-i18n="encryption_page.slide_11">本地存储安全</span>
+                </div>
+            </div>
+
+            <div class="slide" id="slide-12">
+                <img src="/static/encryption/page-12.png" alt="API 设计">
+                <div class="slide-number">
+                    <span>12 / 14</span>
+                    <span data-i18n="encryption_page.slide_12">API 设计</span>
+                </div>
+            </div>
+
+            <div class="slide" id="slide-13">
+                <img src="/static/encryption/page-13.png" alt="实现路线图">
+                <div class="slide-number">
+                    <span>13 / 14</span>
+                    <span data-i18n="encryption_page.slide_13">实现路线图</span>
+                </div>
+            </div>
+
+            <div class="slide" id="slide-14">
+                <img src="/static/encryption/page-14.png" alt="总结">
+                <div class="slide-number">
+                    <span>14 / 14</span>
+                    <span data-i18n="encryption_page.slide_14">总结</span>
                 </div>
             </div>
         </div>
@@ -335,13 +359,17 @@
             <div class="nav-dot" data-slide="9"></div>
             <div class="nav-dot" data-slide="10"></div>
             <div class="nav-dot" data-slide="11"></div>
+            <div class="nav-dot" data-slide="12"></div>
+            <div class="nav-dot" data-slide="13"></div>
+            <div class="nav-dot" data-slide="14"></div>
         </nav>
 
         <!-- Footer -->
         <footer class="footer">
-            <p>灵空 AI - 你的 AI. 你的数据. 你的掌控.</p>
-            <p><a href="/static/home.html">返回首页</a> · <a href="/static/pitch.html">商业计划书</a> · <a
-                    href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></p>
+            <p data-i18n="encryption_page.footer_tagline">灵空 AI - 你的 AI. 你的数据. 你的掌控.</p>
+            <p><a href="/static/home.html" data-i18n="encryption_page.footer_home">返回首页</a> · <a
+                    href="/static/evolution/index.html" data-i18n="encryption_page.footer_evolution">进化系统</a> · <a
+                    href="/static/pitch.html" data-i18n="encryption_page.footer_pitch">商业计划书</a></p>
         </footer>
     </main>
 
