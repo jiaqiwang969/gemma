@@ -16,6 +16,7 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
@@ -174,6 +175,18 @@ def before_request_handler():
     return None
 
 
+def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        try:
+            return datetime.utcfromtimestamp(float(value))
+        except ValueError:
+            return None
+
+
 @app.errorhandler(413)
 def request_entity_too_large(error):
     """处理请求体过大错误"""
@@ -193,6 +206,23 @@ DEFAULT_BACKEND = os.environ.get("GEMMA3N_BACKEND", "mmproj")  # mmproj | mps
 
 # llama.cpp 路径/模型（mmproj 模式使用）
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+EVOLUTION_AVAILABLE = False
+try:
+    from contexts.evolution import (
+        EvolutionConfig,
+        MemoryManager,
+        build_embedding_service_from_env,
+        create_index,
+        SQLiteLogStore,
+        SQLiteMemoryStore,
+    )
+    from contexts.evolution.schema import Feedback, InteractionLog, MemoryFragment
+    EVOLUTION_AVAILABLE = True
+except Exception:
+    EVOLUTION_AVAILABLE = False
 LINGKONG_HOME = Path.home() / ".lingkong"
 
 # 优先使用 ~/.lingkong 安装目录，回退到项目目录
@@ -359,6 +389,18 @@ GEMMA3N_HOME = Path.home() / ".gemma3n"
 SESSIONS_DIR = GEMMA3N_HOME / "sessions"
 HISTORY_FILE = GEMMA3N_HOME / "history.jsonl"
 
+# Evolution logging (SQLite + memory index)
+EVOLUTION_ENABLED = os.environ.get("EVOLUTION_ENABLED", "1") == "1"
+EVOLUTION_PERSIST_MEDIA = os.environ.get("EVOLUTION_PERSIST_MEDIA", "1") == "1"
+EVOLUTION_INDEX_METRIC = os.environ.get("EVOLUTION_INDEX_METRIC", "cosine")
+EVOLUTION_EMBED_MEDIA = os.environ.get("EVOLUTION_EMBED_MEDIA", "0") == "1"
+EVOLUTION_EMBED_TEXT = os.environ.get("EVOLUTION_EMBED_TEXT", "0") == "1"
+evolution_config = None
+evolution_log_store = None
+evolution_memory_manager = None
+evolution_index = None
+evolution_embedding_service = None
+
 # 会话管理 (内存缓存)
 sessions = {}  # session_id -> {"messages": [...], "created_at": timestamp, "file_path": ...}
 MAX_SESSIONS = 100
@@ -483,13 +525,219 @@ stats = {
     "avg_speed": 0
 }
 
+def init_evolution_storage():
+    """Initialize evolution SQLite stores and vector index placeholder."""
+    global evolution_config, evolution_log_store, evolution_memory_manager, evolution_index
+    if not (EVOLUTION_ENABLED and EVOLUTION_AVAILABLE):
+        return
+    if evolution_log_store is not None:
+        return
+
+    evolution_root = Path(
+        os.environ.get("EVOLUTION_STORAGE_ROOT", str(GEMMA3N_HOME / "evolution"))
+    )
+    sqlite_path = Path(
+        os.environ.get("EVOLUTION_SQLITE_PATH", str(evolution_root / "evolution.db"))
+    )
+    artifact_root = Path(
+        os.environ.get("EVOLUTION_ARTIFACT_ROOT", str(evolution_root / "artifacts"))
+    )
+    index_path = Path(
+        os.environ.get("EVOLUTION_INDEX_PATH", str(evolution_root / "index"))
+    )
+
+    evolution_config = EvolutionConfig(
+        storage_root=evolution_root,
+        sqlite_path=sqlite_path,
+        artifact_root=artifact_root,
+        vector_index_path=index_path,
+        retention_days=int(os.environ.get("EVOLUTION_RETENTION_DAYS", "30")),
+        min_feedback_score=float(os.environ.get("EVOLUTION_MIN_FEEDBACK_SCORE", "0.6")),
+        short_term_window_minutes=int(os.environ.get("EVOLUTION_SHORT_TERM_MINUTES", "5")),
+        short_term_window_frames=int(os.environ.get("EVOLUTION_SHORT_TERM_FRAMES", "5")),
+        history_retrieval_model=os.environ.get("EVOLUTION_HISTORY_MODEL", "siglip"),
+        history_retrieval_backend=os.environ.get("EVOLUTION_HISTORY_BACKEND", "faiss"),
+    )
+    evolution_config.ensure_paths()
+    evolution_log_store = SQLiteLogStore(sqlite_path)
+    memory_store = SQLiteMemoryStore(sqlite_path, include_embeddings=False)
+    evolution_index = create_index(
+        backend=evolution_config.history_retrieval_backend,
+        metric=EVOLUTION_INDEX_METRIC,
+    )
+    evolution_memory_manager = MemoryManager(store=memory_store, index=evolution_index)
+    logger.info(f"Evolution storage ready: {evolution_root}")
+
+
+def get_embedding_service():
+    """Lazily load embedding service for evolution indexing."""
+    global evolution_embedding_service
+    if not (EVOLUTION_ENABLED and EVOLUTION_AVAILABLE):
+        return None
+    if not (EVOLUTION_EMBED_MEDIA or EVOLUTION_EMBED_TEXT):
+        return None
+    if evolution_embedding_service is not None:
+        return evolution_embedding_service
+    try:
+        evolution_embedding_service = build_embedding_service_from_env()
+        return evolution_embedding_service
+    except Exception as exc:
+        logger.warning(f"Evolution embedding service unavailable: {exc}")
+        return None
+
+
+def close_evolution_storage() -> None:
+    """Close evolution stores to flush pending writes."""
+    global evolution_log_store, evolution_memory_manager
+    if evolution_log_store is not None:
+        evolution_log_store.close()
+        evolution_log_store = None
+    if evolution_memory_manager is not None:
+        evolution_memory_manager.close()
+        evolution_memory_manager = None
+
+
+def _build_media_path(
+    *, session_id: str, turn_index: int, index: int, kind: str, ext: str
+) -> str:
+    if EVOLUTION_PERSIST_MEDIA and evolution_config is not None:
+        base_dir = evolution_config.artifact_root / session_id / kind
+    else:
+        base_dir = Path("/tmp")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    suffix = ext if ext.startswith(".") else f".{ext}"
+    filename = f"{kind}_{session_id}_{turn_index}_{index}_{uuid.uuid4().hex[:6]}{suffix}"
+    return str(base_dir / filename)
+
+
+def _record_evolution_interaction(
+    *,
+    session_id: str,
+    turn_index: int,
+    user_text: str,
+    response_text: str,
+    image_paths: list,
+    audio_paths: list,
+    backend: str,
+    response_time_ms: Optional[int],
+    thought_signature: Optional[str],
+    feedback_data: Optional[object],
+    implicit_feedback_score: Optional[float],
+    retrieved_doc_ids: Optional[list],
+    embedding: Optional[object],
+) -> None:
+    if not (EVOLUTION_ENABLED and EVOLUTION_AVAILABLE):
+        return
+    if evolution_log_store is None or evolution_memory_manager is None:
+        return
+
+    timestamp = datetime.utcnow()
+    modalities = []
+    if user_text:
+        modalities.append("text")
+    if image_paths:
+        modalities.append("image")
+    if audio_paths:
+        modalities.append("audio")
+
+    feedback = None
+    explicit_feedback = None
+    if isinstance(feedback_data, dict):
+        explicit_feedback = feedback_data.get("rating")
+        feedback = Feedback(
+            rating=explicit_feedback,
+            score=feedback_data.get("score"),
+            timestamp=timestamp,
+            source=feedback_data.get("source", "explicit"),
+        )
+    elif isinstance(feedback_data, str):
+        explicit_feedback = feedback_data
+        feedback = Feedback(
+            rating=feedback_data,
+            score=None,
+            timestamp=timestamp,
+            source="explicit",
+        )
+
+    if implicit_feedback_score is not None:
+        if feedback is None:
+            feedback = Feedback(
+                rating=None,
+                score=implicit_feedback_score,
+                timestamp=timestamp,
+                source="implicit",
+            )
+        elif feedback.score is None:
+            feedback.score = implicit_feedback_score
+
+    try:
+        log = InteractionLog(
+            id=str(uuid.uuid4()),
+            session_id=session_id,
+            turn_index=turn_index,
+            timestamp=timestamp,
+            user_input=user_text,
+            input_modalities=modalities or ["text"],
+            attachments=[*image_paths, *audio_paths],
+            assistant_response=response_text,
+            thought_signature=thought_signature,
+            response_time_ms=response_time_ms,
+            model_version=model_info.get("name") or model_info.get("backend"),
+            lora_version=None,
+            retrieved_doc_ids=retrieved_doc_ids or [],
+            feedback=feedback,
+            metadata={
+                "backend": backend,
+                "image_paths": list(image_paths),
+                "audio_paths": list(audio_paths),
+            },
+        )
+        evolution_log_store.append(logs=[log])
+
+        fragment = MemoryFragment(
+            id=str(uuid.uuid4()),
+            timestamp=timestamp,
+            session_id=session_id,
+            turn_index=turn_index,
+            source="webui",
+            keyframe_path=image_paths[0] if image_paths else None,
+            audio_path=audio_paths[0] if audio_paths else None,
+            text_input=user_text,
+            transcript=None,
+            scene_description=None,
+            detected_objects=[],
+            user_intent=None,
+            ai_response=response_text,
+            gaze_heatmap_path=None,
+            focus_duration_s=None,
+            explicit_feedback=explicit_feedback,
+            implicit_feedback_score=implicit_feedback_score,
+            model_version=model_info.get("name") or model_info.get("backend"),
+            lora_version=None,
+            metadata={
+                "backend": backend,
+                "image_paths": list(image_paths),
+                "audio_paths": list(audio_paths),
+                "thought_signature": thought_signature,
+            },
+        )
+        if embedding is not None:
+            fragment.multimodal_embedding = embedding
+
+        evolution_memory_manager.add(fragments=[fragment])
+    except Exception as exc:
+        logger.warning(f"Evolution logging failed: {exc}")
+
 def init_storage():
     """初始化存储目录结构"""
     GEMMA3N_HOME.mkdir(exist_ok=True)
     SESSIONS_DIR.mkdir(exist_ok=True)
     if not HISTORY_FILE.exists():
         HISTORY_FILE.touch()
+    init_evolution_storage()
     logger.info(f"Storage 初始化完成: {GEMMA3N_HOME}")
+
+atexit.register(close_evolution_storage)
 
 def get_session_dir():
     """获取当天的会话目录 sessions/YYYY/MM/DD/"""
@@ -1718,6 +1966,26 @@ def status():
         "llama_cpp_files": llama_cpp_files,
     })
 
+
+@app.route("/api/evolution/logs", methods=["GET"])
+def evolution_logs():
+    if not (EVOLUTION_ENABLED and EVOLUTION_AVAILABLE):
+        return jsonify({"error": "Evolution logging disabled"}), 503
+    init_evolution_storage()
+    if evolution_log_store is None:
+        return jsonify({"error": "Evolution log store unavailable"}), 503
+    session_id = request.args.get("session_id")
+    limit = int(request.args.get("limit", "50"))
+    limit = max(1, min(limit, 500))
+    since = _parse_datetime(request.args.get("since"))
+    until = _parse_datetime(request.args.get("until"))
+    logs = list(
+        evolution_log_store.list_recent(
+            session_id=session_id, limit=limit, start=since, end=until
+        )
+    )
+    return jsonify({"count": len(logs), "logs": [log.to_dict() for log in logs]})
+
 @app.route("/api/session/new", methods=["POST"])
 def new_session():
     """创建新会话"""
@@ -1844,6 +2112,7 @@ def thought_stats():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     try:
+        request_started = time.perf_counter()
         # 请求大小限制
         MAX_REQUEST_SIZE = 500 * 1024 * 1024  # 500MB
         MAX_IMAGE_SIZE = 50 * 1024 * 1024     # 50MB per image
@@ -1921,6 +2190,7 @@ def chat():
                 sessions[session_id] = {"messages": [], "created_at": time.time(), "title": "新对话"}
 
         session = sessions[session_id]
+        turn_index = len(session["messages"]) // 2 + 1
         images = []  # PIL Image 对象列表 (MPS模式用)
         audios = []  # (audio_array, sr) 元组列表 (MPS模式用)
         image_paths = []  # 图片路径列表 (mmproj模式用)
@@ -1934,8 +2204,14 @@ def chat():
                 image_bytes = base64.b64decode(img_data)
                 img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
                 images.append(img)
-                # 保存临时图片供 mmproj 使用
-                img_path = f"/tmp/image_{session_id}_{idx}.png"
+                # 保存图片供 mmproj 使用，并可持久化到 Evolution 存储
+                img_path = _build_media_path(
+                    session_id=session_id,
+                    turn_index=turn_index,
+                    index=idx,
+                    kind="image",
+                    ext=".png",
+                )
                 img.save(img_path)
                 image_paths.append(img_path)
             except OSError as e:
@@ -1965,7 +2241,13 @@ def chat():
                 else:
                     ext = ".wav"
 
-                temp_path = f"/tmp/audio_{session_id}_{idx}{ext}"
+                temp_path = _build_media_path(
+                    session_id=session_id,
+                    turn_index=turn_index,
+                    index=idx,
+                    kind="audio",
+                    ext=ext,
+                )
                 with open(temp_path, "wb") as f:
                     f.write(audio_bytes)
 
@@ -2016,9 +2298,6 @@ def chat():
                 content.append({"type": "audio", "audio": audio[0], "sample_rate": audio[1]})
 
             content.append({"type": "text", "text": text})
-
-        # 计算当前轮次
-        turn_index = len(session["messages"]) // 2 + 1
 
         # 生成回复 (传入 session_id 和 has_media)
         # 确定当前媒体类型
@@ -2075,6 +2354,7 @@ def chat():
 
         if "error" not in result:
             # 如果有媒体输入，从模型回复中提取理解并存储到 thought signature
+            media_ref = None
             if has_media:
                 # 模型的回复就是对媒体的理解
                 # 将其存储为 "压缩记忆"
@@ -2124,6 +2404,34 @@ def chat():
             save_session_to_disk(session_id, session)
             # 追加到全局历史
             append_to_history(session_id, display_text)
+
+            response_time_ms = int((time.perf_counter() - request_started) * 1000)
+            feedback_data = data.get("feedback")
+            implicit_feedback_score = data.get("implicit_feedback_score")
+            retrieved_doc_ids = data.get("retrieved_doc_ids")
+            embedding = data.get("multimodal_embedding") or data.get("embedding")
+            if embedding is None:
+                service = get_embedding_service()
+                if service is not None:
+                    if EVOLUTION_EMBED_MEDIA and image_paths:
+                        embedding = service.embed_image_paths(image_paths)
+                    elif EVOLUTION_EMBED_TEXT and display_text:
+                        embedding = service.embed_text(display_text)
+            _record_evolution_interaction(
+                session_id=session_id,
+                turn_index=turn_index,
+                user_text=display_text,
+                response_text=result["response"],
+                image_paths=image_paths,
+                audio_paths=audio_paths,
+                backend=backend,
+                response_time_ms=response_time_ms,
+                thought_signature=media_ref,
+                feedback_data=feedback_data,
+                implicit_feedback_score=implicit_feedback_score,
+                retrieved_doc_ids=retrieved_doc_ids,
+                embedding=embedding,
+            )
 
         result["session_id"] = session_id
         return jsonify(result)
