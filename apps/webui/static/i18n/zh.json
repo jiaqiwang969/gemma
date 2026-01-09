@@ -12,7 +12,18 @@
     "confirm": "确认",
     "close": "关闭",
     "github": "GitHub",
-    "docs": "文档"
+    "docs": "文档",
+    "huggingface": "HuggingFace"
+  },
+  "pageTitle": {
+    "home": "灵空 AI - 你的 AI. 你的数据. 你的掌控.",
+    "downloads": "灵空 AI - 下载中心",
+    "docs": "灵空 AI - API 文档",
+    "playground": "灵空 AI - API Playground",
+    "playgroundGemini": "Gemini API Playground - 灵空 AI",
+    "playgroundGrok": "Grok API Playground - 灵空 AI",
+    "chat": "灵空 AI - 对话",
+    "tinybox": "TinyBox DIY 指南 - 6x RX 7900 XTX AI 工作站"
   },
   "nav": {
     "home": "首页",
@@ -21,7 +32,33 @@
     "downloads": "下载",
     "apiDocs": "API 文档",
     "playground": "Playground",
-    "tinybox": "TinyBox DIY",
+    "tinybox": "算力 DIY",
+    "tinybox_page": {
+      "title": "Tinybox DIY 指南 - 6x RX 7900 XTX AI 工作站组装指南",
+      "subtitle": "从硬件选型到开源优化，手把手教你组装一台 6x RX 7900 XTX 的 AI 算力怪兽",
+      "hardware_selection": "硬件选型",
+      "assembly_config": "组装配置",
+      "software_solution": "软件方案",
+      "start_assembly": "开始组装",
+      "assembly_guide_title": "手把手组装与配置",
+      "physical_assembly": "物理组装",
+      "why_tinybox": "为什么选择 TinyBox?",
+      "cost_comparison": "成本对比",
+      "performance": "性能表现",
+      "open_source": "开源方案",
+      "hardware_list": "硬件清单",
+      "total_cost": "总成本",
+      "assembly_steps": "组装步骤",
+      "software_setup": "软件配置",
+      "rocm_install": "ROCm 安装",
+      "pytorch_setup": "PyTorch 配置",
+      "llm_inference": "LLM 推理",
+      "benchmark": "性能测试结果",
+      "faq": "常见问题",
+      "resources": "资源",
+      "github_repo": "GitHub 仓库",
+      "community": "社区"
+    },
     "chat": "对话",
     "about": "关于"
   },
@@ -34,11 +71,16 @@
     "install": {
       "title": "快速安装",
       "oneLineInstall": "一键安装:",
+      "comment": "# 安装灵空 AI",
       "step1": "运行安装脚本",
       "step2": "启动服务",
       "step1Desc": "自动下载并配置所有组件",
       "step2Desc": "访问 http://localhost:5001",
-      "noPython": "无需 Python，无需复杂配置。三步启动你的私有 AI！"
+      "noPython": "无需 Python，无需复杂配置。两步启动你的私有 AI！",
+      "testedPlatforms": "已测试平台 (2025-01):",
+      "platformMac": "macOS 15 + Apple M4 Max (Metal)",
+      "platformUbuntu": "Ubuntu 22.04 + RTX 4090 (CUDA 12)",
+      "platformNote": "文本 + 视觉 + 音频 (语音转文字) 在两个平台上均完美运行"
     },
     "stats": {
       "localRun": "100% 本地",
@@ -49,6 +91,11 @@
       "speedDesc": "本地推理",
       "multimodal": "文本+视觉+音频",
       "multimodalDesc": "三模态支持"
+    },
+    "platforms": {
+      "macos": "macOS (Apple Silicon)",
+      "ubuntu": "Ubuntu x86_64 (CUDA)",
+      "linux": "Linux x86_64 (CPU)"
     },
     "features": {
       "title": "核心特性",
@@ -102,8 +149,7 @@
       }
     },
     "footer": {
-      "description": "灵空 AI - 开源本地三模态 AI 平台 (文本 + 视觉 + 音频)",
-      "links": "首页 | 文档 | GitHub"
+      "description": "灵空 AI - 开源本地三模态 AI 平台 (文本 + 视觉 + 音频)"
     }
   },
   "chat": {
@@ -172,8 +218,9 @@
     },
     "binaries": {
       "title": "程序文件",
-      "macos": "macOS Apple Silicon (M1/M2/M3) 推理引擎",
-      "linux": "Linux x86_64 推理引擎",
+      "macos": "macOS Apple Silicon (M1/M2/M3/M4) 推理引擎",
+      "linux": "Linux x86_64 推理引擎 (CPU)",
+      "linuxCuda": "Linux x86_64 NVIDIA CUDA 加速版 (Ubuntu 22.04+)",
       "webui": "Web 界面 - 包含聊天界面和 API 服务"
     },
     "help": {
@@ -186,15 +233,34 @@
       "step2": "用下载工具下载上方的模型文件",
       "step3": "将下载好的 .gguf 文件移动到",
       "step4": "确保文件名保持不变：",
-      "step5": "然后运行安装脚本，会自动跳过已存在的模型："
+      "step5": "然后运行安装脚本，会自动跳过已存在的模型：",
+      "required": "必需",
+      "optional": "可选"
     },
     "resume": {
       "title": "断点续传下载",
       "desc": "使用 wget 支持断点续传，网络中断后可继续下载：",
-      "tip": "提示：wget -c 会自动续传，如果下载中断直接重新运行即可"
+      "tip": "提示：wget -c 会自动续传，如果下载中断直接重新运行即可",
+      "comment": {
+        "createDir": "# 创建目录",
+        "textModel": "# 下载文本模型 (必需, 2.6GB)",
+        "visionModel": "# 下载视觉模型 (可选, 570MB)",
+        "audioModel": "# 下载音频模型 (可选, 1.3GB)"
+      }
     },
     "structure": {
-      "title": "完整安装目录结构"
+      "title": "完整安装目录结构",
+      "comments": {
+        "inferenceEngine": "# 推理引擎",
+        "apiServer": "# API 服务器",
+        "cliTool": "# 命令行工具",
+        "modelFiles": "# ⬅️ 模型文件放这里",
+        "textModel": "# 文本模型 (必需)",
+        "visionModel": "# 视觉模型 (可选)",
+        "audioModel": "# 音频模型 (可选)",
+        "webInterface": "# Web 界面",
+        "dependencies": "# 依赖库"
+      }
     }
   },
   "docs": {
@@ -216,35 +282,400 @@
       "resources": "资源",
       "errors": "错误处理",
       "examples": "代码示例",
-      "demo": "在线演示"
+      "demo": "在线演示",
+      "cryptoApi": "加密 API",
+      "keyExchange": "密钥交换",
+      "messageFormat": "消息格式",
+      "doubleRatchet": "双棘轮"
     },
     "sections": {
       "overview": "概述",
       "request": "请求",
       "response": "响应",
       "parameters": "参数"
+    },
+    "intro": {
+      "title": "LingKong AI API",
+      "desc": "基于 Gemma 3N 的本地推理 API，完全兼容 Google Gemini 3 Pro Preview 格式，支持端到端加密通信。",
+      "features": {
+        "e2e": {
+          "title": "端到端加密",
+          "desc": "ChaCha20-Poly1305 + X25519 ECDH，消息全程加密传输"
+        },
+        "local": {
+          "title": "本地推理",
+          "desc": "基于 llama.cpp，GPU 加速，零网络延迟"
+        },
+        "multimodal": {
+          "title": "多模态支持",
+          "desc": "支持图像理解和音频转录，视觉+听觉双模态"
+        },
+        "thinking": {
+          "title": "思考模式",
+          "desc": "支持 thinkingLevel 配置，模拟深度推理"
+        }
+      },
+      "compatibility": {
+        "title": "API 兼容性",
+        "desc": "本 API 完全兼容 Google Gemini API 格式，现有 Gemini 客户端只需修改 base URL 即可接入。"
+      }
+    },
+    "quickStart": {
+      "title": "快速开始",
+      "desc": "5 分钟内完成 API 调用",
+      "generateDesc": "生成文本内容的核心接口。支持纯文本、多模态输入，以及工具调用。",
+      "comment": "# 基础文本生成"
+    },
+    "generateContent": {
+      "title": "generateContent",
+      "desc": "生成文本内容的核心接口",
+      "pathParams": "路径参数",
+      "bodyParams": "请求体参数",
+      "paramName": "参数名",
+      "paramType": "类型",
+      "paramRequired": "必填",
+      "paramDesc": "说明",
+      "required": "必填",
+      "optional": "可选",
+      "modelDesc": "模型名称，支持 gemini-3-pro-preview 或 gemini-3-flash-preview",
+      "contentsDesc": "对话内容数组，每个元素包含 role 和 parts",
+      "generationConfigDesc": "生成配置，包括 maxOutputTokens, temperature, thinkingConfig 等",
+      "systemInstructionDesc": "系统指令/人设设定",
+      "toolsDesc": "工具/函数声明列表",
+      "toolConfigDesc": "工具调用配置，mode 可选 AUTO/ANY/NONE",
+      "responseExample": "响应示例"
+    },
+    "thinking": {
+      "title": "思考模式 (thinkingConfig)",
+      "desc": "启用深度推理，让模型在回答前进行思考",
+      "info": {
+        "title": "思考模式说明",
+        "desc": "思考模式通过 prompt engineering 模拟 Gemini 3 的 thinking 功能。模型会先在 <thinking> 标签中进行推理，然后在 <answer> 标签中给出答案。"
+      },
+      "levels": {
+        "title": "thinkingLevel 可选值",
+        "value": "值",
+        "depth": "思考深度",
+        "output": "输出格式",
+        "useCase": "适用场景",
+        "none": {
+          "depth": "禁用",
+          "output": "直接输出答案",
+          "useCase": "简单问答、快速响应"
+        },
+        "minimal": {
+          "depth": "极简",
+          "output": "1-2 句思考",
+          "useCase": "简单任务"
+        },
+        "low": {
+          "depth": "浅层",
+          "output": "简短思考（不显示）",
+          "useCase": "日常对话"
+        },
+        "medium": {
+          "depth": "中等（默认）",
+          "output": "结构化思考",
+          "useCase": "一般问题"
+        },
+        "high": {
+          "depth": "深度",
+          "output": "详细推理过程",
+          "useCase": "复杂问题、数学、逻辑"
+        }
+      },
+      "requestExample": "请求示例"
+    },
+    "tools": {
+      "title": "工具调用 (Function Calling)",
+      "desc": "让模型调用外部函数，支持并行调用",
+      "declarationExample": "工具声明示例",
+      "modeTitle": "toolConfig.mode 说明",
+      "mode": "模式",
+      "behavior": "行为",
+      "auto": "模型自动决定是否调用工具（默认）",
+      "any": "强制调用工具，不返回纯文本",
+      "noneMode": "禁用工具调用，只返回文本"
+    },
+    "multimodal": {
+      "title": "三模态支持",
+      "desc": "支持文本、图像理解和音频转录",
+      "text": {
+        "title": "文本对话",
+        "desc": "多轮对话、系统指令<br>支持 thinking 深度推理"
+      },
+      "image": {
+        "title": "图像理解",
+        "desc": "支持 PNG, JPEG, WebP, GIF<br>通过 Vision mmproj (570MB)"
+      },
+      "audio": {
+        "title": "音频转录",
+        "desc": "支持 WAV, MP3, FLAC, OGG<br>通过 Audio mmproj (1.4GB)"
+      },
+      "imageExample": "图像理解示例",
+      "audioExample": "音频转录示例",
+      "audioFormat": {
+        "title": "音频格式要求",
+        "desc": "推荐使用 16kHz 单声道 WAV 格式以获得最佳效果。支持的格式: WAV, MP3, FLAC, OGG, WebM。音频文件需转换为 Base64 编码后传入 inlineData.data 字段。"
+      },
+      "platformSupport": {
+        "title": "平台支持 (2025-01)",
+        "macos": "macOS (Apple Silicon): Metal GPU 加速，完整支持",
+        "ubuntu": "Ubuntu x86_64 (CUDA): NVIDIA GPU 加速，完整支持 (包含音频转录修复)",
+        "linux": "Linux x86_64 (CPU): 纯 CPU 推理，速度较慢",
+        "note": "音频转录功能已在 Ubuntu 22.04 + NVIDIA RTX 4090 上测试通过。"
+      }
+    },
+    "thoughtSignature": {
+      "title": "思维签名 (Thought Signature)",
+      "desc": "AI 的\"工作记忆\"，实现真正的有状态推理",
+      "concept": {
+        "title": "核心概念",
+        "desc": "传统 LLM 像患有\"短期记忆丧失症\"的天才，每次对话都要重新阅读历史。Thought Signature 通过 KV Cache 持久化，让 AI 具备真正的工作记忆。"
+      },
+      "flow": {
+        "inference": "推理生成",
+        "kvCapture": "KV Cache 捕获",
+        "base64Sig": "Base64 签名",
+        "stateRestore": "状态恢复"
+      },
+      "example": "多轮对话中使用 thoughtSignature"
+    },
+    "e2eEncryption": {
+      "title": "端到端加密通信",
+      "desc": "确保 AI 对话的绝对隐私",
+      "why": {
+        "title": "为什么需要加密？",
+        "desc": "即使使用本地推理，消息在传输过程中仍可能被截获。端到端加密确保只有你和 AI 能读取对话内容。LingKong 基于 Signal Protocol 设计，提供前向保密和密钥轮换保护。"
+      },
+      "flow": {
+        "identity": "Ed25519 身份",
+        "kem": "X25519 KEM",
+        "encrypt": "ChaCha20 加密",
+        "auth": "Poly1305 认证"
+      },
+      "features": {
+        "kem": {
+          "title": "KEM 密钥封装",
+          "desc": "非交互式密钥建立，无需多轮握手"
+        },
+        "chacha": {
+          "title": "ChaCha20-Poly1305",
+          "desc": "AEAD 认证加密，机密性+完整性保障"
+        },
+        "ed25519": {
+          "title": "Ed25519 签名",
+          "desc": "数字签名验证消息真实性，防篡改"
+        },
+        "forward": {
+          "title": "前向保密",
+          "desc": "每次请求使用临时密钥，历史消息不可破解"
+        }
+      }
+    },
+    "cryptoApi": {
+      "title": "加密 API 端点",
+      "status": "检查加密功能状态",
+      "publicKey": "获取服务器公钥（用于加密请求）",
+      "encryptedGenerate": "加密的内容生成 API"
+    },
+    "keyExchange": {
+      "title": "密钥交换流程",
+      "desc": "使用 LingKong Client SDK 进行端到端加密通信",
+      "sdkExample": "Python - 使用 LingKong Client SDK",
+      "lowLevelExample": "Python - 底层 API (使用 lingkong_crypto)"
+    },
+    "messageEncryption": {
+      "title": "加密消息格式",
+      "desc": "请求和响应的加密信封结构",
+      "requestStructure": "加密请求结构 (EncryptedRequest)",
+      "responseStructure": "加密响应结构 (EncryptedResponse)",
+      "securityTip": {
+        "title": "安全提示",
+        "desc": "每条消息都使用唯一的临时密钥对 (ephemeral_public)，确保前向保密。即使长期密钥泄露，历史消息也无法被解密。"
+      }
+    },
+    "doubleRatchet": {
+      "title": "双棘轮协议 (可选)",
+      "desc": "长期会话的增强前向保密",
+      "useCase": {
+        "title": "适用场景",
+        "desc": "对于长期会话或高安全需求场景，可以使用双棘轮协议。每条消息都会触发密钥轮换，提供更强的安全保障。"
+      },
+      "example": "Python - 双棘轮会话",
+      "flow": {
+        "kemInit": "KEM 初始化",
+        "chainRatchet": "链棘轮",
+        "dhRatchet": "DH 棘轮",
+        "msgEncrypt": "消息加密"
+      }
+    },
+    "errors": {
+      "title": "错误处理",
+      "statusCode": "状态码",
+      "errorType": "错误类型",
+      "description": "说明",
+      "success": "成功",
+      "successDesc": "请求处理成功",
+      "badRequest": "请求错误",
+      "badRequestDesc": "请求参数无效或缺失",
+      "serverError": "服务器错误",
+      "serverErrorDesc": "推理服务异常",
+      "responseFormat": "错误响应格式"
+    },
+    "tryIt": {
+      "title": "在线测试",
+      "sendRequest": "发送请求",
+      "response": "响应",
+      "clickToSend": "点击\"发送请求\"查看响应...",
+      "requesting": "请求中...",
+      "errorPrefix": "错误: ",
+      "serverNotRunning": "请确保本地服务器运行中:\npython apps/gemini_api/server.py"
+    },
+    "footer": {
+      "version": "LingKong AI API v1.0 | 基于 Gemma 3N 本地推理",
+      "home": "首页",
+      "demo": "在线演示"
     }
   },
   "playground": {
     "title": "API Playground",
-    "subtitle": "交互式 API 测试工具",
+    "subtitle": "多模型交互式 API 测试工具",
+    "gemini": {
+      "desc": "测试并对比 Google Gemini API 与本地 Gemma 3n 推理。支持文本、视觉、音频和工具调用。",
+      "feature1": "文本生成 & 多轮对话",
+      "feature2": "视觉 (图像理解)",
+      "feature3": "音频转录",
+      "feature4": "函数调用 & JSON Schema",
+      "feature5": "流式输出"
+    },
+    "grok": {
+      "desc": "测试 xAI Grok API 与代理服务对比。支持推理模型、网络搜索和图像生成。",
+      "feature1": "Grok-4 & 推理模型",
+      "feature2": "Web & X (Twitter) 搜索",
+      "feature3": "图像理解 & 生成",
+      "feature4": "函数调用 & JSON Schema",
+      "feature5": "Embeddings & TTS"
+    },
     "config": {
-      "realApi": "真实 API",
-      "localService": "本地服务",
-      "apiKey": "API Key"
+      "realApi": "真实API:",
+      "localService": "本地服务:",
+      "apiKey": "API Key:",
+      "apiKeyPlaceholder": "输入你的 API Key",
+      "gpu": "GPU:",
+      "autoSelect": "自动选择",
+      "allGpus": "全部 GPU",
+      "switching": "切换中..."
     },
     "actions": {
-      "runTest": "运行测试",
+      "runTest": "对比测试",
       "runAll": "全部测试",
-      "compare": "对比"
+      "compare": "对比",
+      "refresh": "刷新"
+    },
+    "testSelector": {
+      "title": "选择测试用例",
+      "pureText": "纯文本",
+      "thinkingLow": "思考low",
+      "thinkingHigh": "思考high",
+      "systemInstruction": "系统指令",
+      "jsonSchema": "JSON Schema",
+      "toolCall": "工具调用",
+      "modeAny": "mode:ANY",
+      "modeNone": "mode:NONE",
+      "parallelCall": "并行调用",
+      "multimodalVision": "多模态视觉",
+      "audioTranscription": "音频转录",
+      "audioThinking": "音频+思考",
+      "audioSummary": "音频摘要",
+      "multiImage": "多图片",
+      "streaming": "流式输出"
+    },
+    "legend": {
+      "match": "完全匹配",
+      "mismatch": "值不匹配",
+      "missing": "字段缺失",
+      "orderDiff": "顺序不同"
+    },
+    "request": {
+      "title": "请求内容 (Request Body)",
+      "selectToView": "选择测试用例查看请求内容..."
+    },
+    "audio": {
+      "title": "自定义音频测试",
+      "uploadAudio": "上传音频",
+      "record": "录音",
+      "stopRecord": "停止",
+      "recording": "录音中...",
+      "processing": "处理中...",
+      "audioLoaded": "音频已加载",
+      "recordingComplete": "录音完成",
+      "customPrompt": "自定义提示词:",
+      "runCustomTest": "运行自定义音频测试",
+      "file": "文件:",
+      "size": "大小:",
+      "type": "类型:",
+      "noMicrophone": "无法访问麦克风"
+    },
+    "history": {
+      "title": "测试历史",
+      "clear": "清空"
     },
     "results": {
       "realResponse": "真实 Gemini API",
       "localResponse": "本地 Gemma 3n",
-      "comparison": "对比结果",
+      "comparison": "JSON 字段逐项对比",
       "pending": "待测试",
+      "running": "运行中...",
+      "success": "成功",
+      "failed": "失败",
+      "comparing": "对比中...",
       "match": "匹配",
-      "mismatch": "不匹配"
+      "mismatch": "不匹配",
+      "clickToRun": "点击\"对比测试\"执行...",
+      "requesting": "请求中...",
+      "waitingResponse": "等待响应...",
+      "cannotCompare": "无法对比：至少一方请求失败"
+    },
+    "stats": {
+      "match": "匹配",
+      "mismatch": "不匹配",
+      "missingReal": "真实API缺失",
+      "missingLocal": "本地缺失",
+      "orderDiff": "顺序不同"
+    },
+    "compare": {
+      "keyOrderDiff": "键顺序差异",
+      "valueMismatch": "值不匹配",
+      "localMissing": "本地实现缺失",
+      "realApiMissing": "真实API缺失 / 本地多余",
+      "matchItems": "匹配项",
+      "clickToExpand": "- 点击展开/折叠",
+      "real": "真实:",
+      "local": "本地:",
+      "realApiHas": "真实API有:",
+      "localHas": "本地有:",
+      "noCompareData": "无对比数据"
+    },
+    "streaming": {
+      "streamRequesting": "流式请求中...",
+      "streamOutput": "流式输出中...",
+      "receivedChunks": "收到 chunks",
+      "finalResponse": "最终响应:",
+      "chunkCount": "Chunk 数量"
+    },
+    "errors": {
+      "enterApiKey": "请输入 API Key",
+      "networkError": "网络错误:",
+      "ensureServerRunning": "请确保服务器运行:\npython apps/gemini_api/server.py",
+      "uploadOrRecordFirst": "请先上传或录制音频",
+      "audioProcessing": "音频处理中... (可能需要30-60秒)",
+      "switchFailed": "切换失败:",
+      "unknownError": "未知错误"
+    },
+    "gpu": {
+      "switched": "GPU 已切换:",
+      "auto": "自动"
     }
   }
 }
