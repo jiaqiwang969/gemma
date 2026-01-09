@@ -141,6 +141,19 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REM
     sudo chown -R ubuntu:ubuntu $REMOTE_DIR/static $REMOTE_DIR/install.sh $REMOTE_DIR/webui.tar.gz $REMOTE_DIR/gemini_api.tar.gz"
 echo "✓ 文件已部署"
 
+# 同步静态文件到 WebUI 目录 (nginx 从这里读取)
+echo "▶ 同步静态文件到 WebUI..."
+WEBUI_STATIC="/opt/lingkong-webui/static"
+ssh $SERVER "sudo cp $REMOTE_DIR/static/home.html $WEBUI_STATIC/ 2>/dev/null || true && \
+    sudo cp $REMOTE_DIR/static/downloads.html $WEBUI_STATIC/ 2>/dev/null || true && \
+    sudo cp $REMOTE_DIR/static/docs.html $WEBUI_STATIC/ 2>/dev/null || true && \
+    sudo cp $REMOTE_DIR/static/playground.html $WEBUI_STATIC/ 2>/dev/null || true && \
+    sudo cp -r $REMOTE_DIR/static/tinybox $WEBUI_STATIC/ 2>/dev/null || true && \
+    sudo cp $REMOTE_DIR/static/i18n/*.json $WEBUI_STATIC/i18n/ 2>/dev/null || true && \
+    sudo cp $REMOTE_DIR/static/js/*.js $WEBUI_STATIC/js/ 2>/dev/null || true && \
+    sudo chown -R ubuntu:ubuntu $WEBUI_STATIC"
+echo "✓ WebUI 静态文件已同步"
+
 # 清理本地临时文件
 rm -f /tmp/webui.tar.gz /tmp/gemini_api.tar.gz
 
