@@ -2109,6 +2109,119 @@ def health():
     return jsonify(response), http_status
 
 
+@app.route("/gpu/list", methods=["GET"])
+def gpu_list():
+    """
+    获取可用 GPU 列表
+
+    返回所有 NVIDIA GPU 的信息，包括名称、显存、使用情况等。
+    """
+    import subprocess
+
+    try:
+        # 使用 nvidia-smi 获取 GPU 信息
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index,name,memory.total,memory.free,memory.used,utilization.gpu",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5
+        )
+
+        if result.returncode != 0:
+            return jsonify({"error": "nvidia-smi 执行失败", "gpus": []}), 200
+
+        gpus = []
+        for line in result.stdout.strip().split("\n"):
+            if not line.strip():
+                continue
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 6:
+                gpus.append({
+                    "index": int(parts[0]),
+                    "name": parts[1],
+                    "memory_total_mb": int(parts[2]),
+                    "memory_free_mb": int(parts[3]),
+                    "memory_used_mb": int(parts[4]),
+                    "utilization_percent": int(parts[5]) if parts[5] != "[N/A]" else 0
+                })
+
+        return jsonify({
+            "gpus": gpus,
+            "current_device": LLAMA_GPU_DEVICES or "auto",
+            "split_mode": LLAMA_SPLIT_MODE
+        })
+
+    except FileNotFoundError:
+        return jsonify({"error": "nvidia-smi 未找到 (无 NVIDIA GPU)", "gpus": []})
+    except Exception as e:
+        return jsonify({"error": str(e), "gpus": []})
+
+
+@app.route("/gpu/select", methods=["POST"])
+def gpu_select():
+    """
+    选择使用的 GPU 并重启 llama-server
+
+    请求体:
+    {
+        "devices": "0" 或 "0,1" 或 "auto",
+        "split_mode": "layer" 或 "row" 或 "none"
+    }
+    """
+    global LLAMA_GPU_DEVICES, LLAMA_SPLIT_MODE
+
+    data = request.json or {}
+    new_devices = data.get("devices", "")
+    new_split_mode = data.get("split_mode", "layer")
+
+    # 验证参数
+    if new_devices and new_devices != "auto":
+        # 验证设备 ID 格式
+        try:
+            for d in new_devices.split(","):
+                int(d.strip())
+        except ValueError:
+            return jsonify({"error": "无效的设备 ID 格式"}), 400
+
+    if new_split_mode not in ["none", "layer", "row"]:
+        return jsonify({"error": "无效的分割模式"}), 400
+
+    # 更新配置
+    old_devices = LLAMA_GPU_DEVICES
+    old_split_mode = LLAMA_SPLIT_MODE
+
+    LLAMA_GPU_DEVICES = "" if new_devices == "auto" else new_devices
+    LLAMA_SPLIT_MODE = new_split_mode
+
+    # 更新环境变量
+    os.environ["LLAMA_GPU_DEVICES"] = LLAMA_GPU_DEVICES
+    os.environ["LLAMA_SPLIT_MODE"] = LLAMA_SPLIT_MODE
+
+    # 重启 llama-server
+    logger.info(f"GPU 配置变更: {old_devices or 'auto'} -> {LLAMA_GPU_DEVICES or 'auto'}")
+
+    # 停止现有进程
+    cleanup_subprocess()
+    time.sleep(1)
+
+    # 重新启动
+    success = start_llama_server()
+
+    if success:
+        return jsonify({
+            "status": "ok",
+            "message": "GPU 配置已更新，服务已重启",
+            "devices": LLAMA_GPU_DEVICES or "auto",
+            "split_mode": LLAMA_SPLIT_MODE
+        })
+    else:
+        # 恢复旧配置
+        LLAMA_GPU_DEVICES = old_devices
+        LLAMA_SPLIT_MODE = old_split_mode
+        os.environ["LLAMA_GPU_DEVICES"] = LLAMA_GPU_DEVICES
+        os.environ["LLAMA_SPLIT_MODE"] = LLAMA_SPLIT_MODE
+        return jsonify({"error": "重启失败，已恢复原配置"}), 500
+
+
 @app.route(f"/{API_VERSION}/models/<model_name>:generateContent", methods=["POST"])
 def generate_content(model_name: str):
     """

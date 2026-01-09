@@ -551,6 +551,13 @@
                     <label>本地服务:</label>
                     <input type="text" id="localUrl" class="url" value="http://localhost:5001">
                 </div>
+                <div class="config-item">
+                    <label>GPU:</label>
+                    <select id="gpuSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; min-width: 150px;">
+                        <option value="auto">自动选择</option>
+                    </select>
+                    <button class="btn" onclick="refreshGpuList()" title="刷新 GPU 列表" style="padding: 6px 8px;">🔄</button>
+                </div>
                 <button class="btn btn-primary" onclick="runComparison()">对比测试</button>
                 <button class="btn btn-success" onclick="runAllComparisons()">全部测试</button>
             </div>
@@ -1599,6 +1606,92 @@
         // 初始化
         updateRequestPreview();
         updateAudioSection();
+
+        // ========== GPU 选择功能 ==========
+
+        // 刷新 GPU 列表
+        async function refreshGpuList() {
+            const localUrl = document.getElementById('localUrl').value;
+            const select = document.getElementById('gpuSelect');
+
+            try {
+                const response = await fetch(`${localUrl}/gpu/list`);
+                const data = await response.json();
+
+                // 清空现有选项
+                select.innerHTML = '<option value="auto">自动选择</option>';
+
+                if (data.gpus && data.gpus.length > 0) {
+                    // 添加单 GPU 选项
+                    data.gpus.forEach(gpu => {
+                        const option = document.createElement('option');
+                        option.value = String(gpu.index);
+                        const memUsed = (gpu.memory_used_mb / 1024).toFixed(1);
+                        const memTotal = (gpu.memory_total_mb / 1024).toFixed(1);
+                        option.textContent = `GPU ${gpu.index}: ${gpu.name} (${memUsed}/${memTotal}GB)`;
+                        select.appendChild(option);
+                    });
+
+                    // 如果有多个 GPU，添加多 GPU 选项
+                    if (data.gpus.length > 1) {
+                        const allOption = document.createElement('option');
+                        allOption.value = data.gpus.map(g => g.index).join(',');
+                        allOption.textContent = `全部 GPU (${data.gpus.length} 块)`;
+                        select.appendChild(allOption);
+                    }
+
+                    // 设置当前选中的值
+                    if (data.current_device && data.current_device !== 'auto') {
+                        select.value = data.current_device;
+                    }
+                } else if (data.error) {
+                    const option = document.createElement('option');
+                    option.value = "auto";
+                    option.textContent = data.error;
+                    select.appendChild(option);
+                }
+            } catch (e) {
+                console.error('获取 GPU 列表失败:', e);
+                select.innerHTML = '<option value="auto">无法连接服务</option>';
+            }
+        }
+
+        // GPU 选择变更时切换
+        document.getElementById('gpuSelect').addEventListener('change', async function() {
+            const localUrl = document.getElementById('localUrl').value;
+            const devices = this.value;
+
+            // 显示加载状态
+            const originalText = this.options[this.selectedIndex].text;
+            this.options[this.selectedIndex].text = '切换中...';
+            this.disabled = true;
+
+            try {
+                const response = await fetch(`${localUrl}/gpu/select`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ devices: devices, split_mode: 'layer' })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    alert(`GPU 已切换: ${data.devices === '' ? '自动' : 'GPU ' + data.devices}`);
+                    // 刷新列表以更新显存使用情况
+                    setTimeout(refreshGpuList, 2000);
+                } else {
+                    alert('切换失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('切换失败: ' + e.message);
+            } finally {
+                this.options[this.selectedIndex].text = originalText;
+                this.disabled = false;
+            }
+        });
+
+        // 页面加载时获取 GPU 列表
+        refreshGpuList();
     </script>
 </body>
 </html>
