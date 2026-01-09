@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en" data-i18n-title-key="pageTitle.playgroundGemini">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini API Playground</title>
+    <!-- I18n must load before unified-nav.js -->
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
+    <style>
+        :root {
+            /* Dark theme matching LingKong AI */
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --bg-input: #0d1117;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #666;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-primary: #8b5cf6;
+            --accent-blue: #4285f4;
+            --accent-green: #34a853;
+            --accent-yellow: #fbbc05;
+            --accent-red: #ea4335;
+            --code-bg: #0d1117;
+            --code-text: #e6edf3;
+            --left-color: #4285f4;
+            --right-color: #34a853;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            position: sticky;
+            top: 60px;
+            z-index: 99;
+        }
+
+        .header-content {
+            max-width: 1900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.3em;
+            background: linear-gradient(135deg, #4285f4, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .config-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .config-item label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .config-item input, .config-item select {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .config-item input:focus, .config-item select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .config-item input.url { width: 220px; }
+        .config-item input.api-key { width: 180px; font-family: monospace; }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .main-container {
+            max-width: 1900px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .test-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .test-selector h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .test-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .test-tab {
+            padding: 6px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .test-tab:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+        .test-tab.active {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* 三栏布局: 左边真实API, 中间对比结果, 右边本地服务 */
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 400px 1fr;
+            gap: 15px;
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel.left .panel-header {
+            background: linear-gradient(135deg, rgba(66, 133, 244, 0.15), transparent);
+            border-left: 3px solid var(--left-color);
+        }
+
+        .panel.right .panel-header {
+            background: linear-gradient(135deg, rgba(52, 168, 83, 0.15), transparent);
+            border-left: 3px solid var(--right-color);
+        }
+
+        .panel.center .panel-header {
+            background: linear-gradient(135deg, rgba(251, 188, 5, 0.15), transparent);
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .panel-title {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .panel.left .panel-title { color: var(--left-color); }
+        .panel.right .panel-title { color: var(--right-color); }
+        .panel.center .panel-title { color: var(--accent-yellow); }
+
+        .panel-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-pending { background: var(--bg-secondary); color: var(--text-secondary); }
+        .badge-running { background: var(--accent-yellow); color: #000; }
+        .badge-success { background: var(--accent-green); color: white; }
+        .badge-error { background: var(--accent-red); color: white; }
+
+        .panel-content {
+            padding: 12px;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .code-block pre {
+            color: var(--code-text);
+            font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+        }
+
+        /* 对比结果样式 */
+        .compare-section {
+            margin-bottom: 15px;
+        }
+
+        .compare-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .compare-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .compare-item.match {
+            background: rgba(52, 168, 83, 0.15);
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .compare-item.mismatch {
+            background: rgba(234, 67, 53, 0.15);
+            border-left: 3px solid var(--accent-red);
+        }
+
+        .compare-item.missing-left {
+            background: rgba(251, 188, 5, 0.15);
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .compare-item.missing-right {
+            background: rgba(234, 67, 53, 0.15);
+            border-left: 3px solid var(--accent-red);
+        }
+
+        .compare-item.order-diff {
+            background: rgba(139, 92, 246, 0.15);
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .compare-icon {
+            width: 18px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .compare-path {
+            color: var(--text-primary);
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .compare-detail {
+            color: var(--text-secondary);
+            font-size: 11px;
+            margin-left: 26px;
+            margin-top: 2px;
+        }
+
+        /* 统计摘要 */
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-box.success { background: rgba(52, 168, 83, 0.15); border-color: rgba(52, 168, 83, 0.3); }
+        .stat-box.error { background: rgba(234, 67, 53, 0.15); border-color: rgba(234, 67, 53, 0.3); }
+        .stat-box.warning { background: rgba(251, 188, 5, 0.15); border-color: rgba(251, 188, 5, 0.3); }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .stat-box.success .stat-value { color: var(--accent-green); }
+        .stat-box.error .stat-value { color: var(--accent-red); }
+        .stat-box.warning .stat-value { color: var(--accent-yellow); }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* 请求预览 */
+        .request-preview {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .request-preview h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .request-preview .code-block {
+            max-height: 150px;
+        }
+
+        @media (max-width: 1400px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+            .panel.center {
+                order: -1;
+            }
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 11px;
+            flex-wrap: wrap;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.match { background: var(--accent-green); }
+        .legend-dot.mismatch { background: var(--accent-red); }
+        .legend-dot.missing { background: var(--accent-yellow); }
+        .legend-dot.order { background: var(--accent-primary); }
+
+        /* 音频测试专区 */
+        .audio-test-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff5722;
+        }
+
+        .audio-test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .audio-test-header h3 {
+            font-size: 14px;
+            color: #ff5722;
+            margin: 0;
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .audio-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .audio-status.recording {
+            color: var(--accent-red);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+
+        .audio-preview {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .audio-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 8px 0;
+        }
+
+        .audio-prompt {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .audio-prompt label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .audio-prompt input {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        /* 测试历史 */
+        .test-history {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-header h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: var(--bg);
+        }
+
+        .history-item.pass {
+            border-left: 3px solid var(--success);
+        }
+
+        .history-item.fail {
+            border-left: 3px solid var(--error);
+        }
+
+        .history-time {
+            color: var(--text-secondary);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-bar-fill.indeterminate {
+            width: 30%;
+            animation: progress-indeterminate 1.5s infinite linear;
+        }
+
+        @keyframes progress-indeterminate {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 外部音频数据文件 (MLK Speech, 511KB base64) -->
+    <script src="02-gemini-api-audio.js"></script>
+
+    <div class="header">
+        <div class="header-content">
+            <h1>Gemini API 严格对比测试</h1>
+            <div class="config-group">
+                <div class="config-item">
+                    <label>真实API:</label>
+                    <input type="text" id="realApiUrl" class="url" value="https://generativelanguage.googleapis.com">
+                </div>
+                <div class="config-item">
+                    <label>API Key:</label>
+                    <input type="text" id="apiKey" class="api-key" value="" placeholder="输入你的 API Key">
+                </div>
+                <div class="config-item">
+                    <label>本地服务:</label>
+                    <input type="text" id="localUrl" class="url" value="http://localhost:5001">
+                </div>
+                <div class="config-item">
+                    <label>GPU:</label>
+                    <select id="gpuSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; min-width: 150px;">
+                        <option value="auto">自动选择</option>
+                    </select>
+                    <button class="btn" onclick="refreshGpuList()" title="刷新 GPU 列表" style="padding: 6px 8px;">🔄</button>
+                </div>
+                <button class="btn btn-primary" onclick="runComparison()">对比测试</button>
+                <button class="btn btn-success" onclick="runAllComparisons()">全部测试</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- 测试选择器 -->
+        <div class="test-selector">
+            <h3>选择测试用例</h3>
+            <div class="test-tabs">
+                <div class="test-tab active" data-test="1-1">1.1 纯文本</div>
+                <div class="test-tab" data-test="1-2">1.2 思考low</div>
+                <div class="test-tab" data-test="1-3">1.3 思考high</div>
+                <div class="test-tab" data-test="1-5">1.5 系统指令</div>
+                <div class="test-tab" data-test="1-6">1.6 JSON Schema</div>
+                <div class="test-tab" data-test="3-1">3.1 工具调用</div>
+                <div class="test-tab" data-test="4-1">4.1 mode:ANY</div>
+                <div class="test-tab" data-test="4-2">4.2 mode:NONE</div>
+                <div class="test-tab" data-test="4-3">4.3 并行调用</div>
+                <div class="test-tab" data-test="5-1">5.1 多模态视觉</div>
+                <div class="test-tab" data-test="5-2">5.2 音频转录</div>
+                <div class="test-tab" data-test="5-3">5.3 音频+思考</div>
+                <div class="test-tab" data-test="5-4">5.4 音频摘要</div>
+                <div class="test-tab" data-test="5-5">5.5 多图片</div>
+                <div class="test-tab" data-test="6-1">6.1 流式输出</div>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot match"></div> 完全匹配</div>
+                <div class="legend-item"><div class="legend-dot mismatch"></div> 值不匹配</div>
+                <div class="legend-item"><div class="legend-dot missing"></div> 字段缺失</div>
+                <div class="legend-item"><div class="legend-dot order"></div> 顺序不同</div>
+            </div>
+        </div>
+
+        <!-- 请求预览 -->
+        <div class="request-preview">
+            <h3>请求内容 (Request Body)</h3>
+            <div class="code-block">
+                <pre id="requestPreview">选择测试用例查看请求内容...</pre>
+            </div>
+        </div>
+
+        <!-- 音频测试专区 -->
+        <div class="audio-test-section" id="audioTestSection" style="display: none;">
+            <div class="audio-test-header">
+                <h3>🎤 自定义音频测试</h3>
+                <div class="audio-controls">
+                    <input type="file" id="audioFileInput" accept="audio/*" style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('audioFileInput').click()">
+                        📁 上传音频
+                    </button>
+                    <button class="btn" id="recordBtn" onclick="toggleRecording()">
+                        🔴 录音
+                    </button>
+                    <span id="audioStatus" class="audio-status"></span>
+                </div>
+            </div>
+            <div class="audio-preview" id="audioPreview" style="display: none;">
+                <audio id="audioPlayer" controls style="width: 100%;"></audio>
+                <div class="audio-info" id="audioInfo"></div>
+                <div class="audio-prompt">
+                    <label>自定义提示词:</label>
+                    <input type="text" id="customAudioPrompt" value="Transcribe this audio and describe what you hear." style="flex: 1;">
+                </div>
+                <button class="btn btn-success" onclick="runCustomAudioTest()">🚀 运行自定义音频测试</button>
+            </div>
+        </div>
+
+        <!-- 测试历史记录 -->
+        <div class="test-history" id="testHistory" style="display: none;">
+            <div class="history-header">
+                <h3>📊 测试历史</h3>
+                <button class="btn" onclick="clearHistory()">清空</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+
+        <!-- 三栏对比 -->
+        <div class="comparison-container">
+            <!-- 左边：真实 Gemini API -->
+            <div class="panel left">
+                <div class="panel-header">
+                    <span class="panel-title">真实 Gemini API</span>
+                    <span class="panel-badge badge-pending" id="badge-left">待测试</span>
+                </div>
+                <div class="panel-content">
+                    <div class="code-block" id="response-left">
+                        <pre>点击"对比测试"执行...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间：对比结果 -->
+            <div class="panel center">
+                <div class="panel-header">
+                    <span class="panel-title">JSON 字段逐项对比</span>
+                    <span class="panel-badge badge-pending" id="badge-center">待对比</span>
+                </div>
+                <div class="panel-content" id="compare-results">
+                    <div class="stats-summary" id="stats-summary" style="display: none;">
+                        <div class="stat-box success">
+                            <div class="stat-value" id="stat-match">0</div>
+                            <div class="stat-label">匹配</div>
+                        </div>
+                        <div class="stat-box error">
+                            <div class="stat-value" id="stat-mismatch">0</div>
+                            <div class="stat-label">不匹配</div>
+                        </div>
+                        <div class="stat-box warning">
+                            <div class="stat-value" id="stat-missing-left">0</div>
+                            <div class="stat-label">真实API缺失</div>
+                        </div>
+                        <div class="stat-box warning">
+                            <div class="stat-value" id="stat-missing-right">0</div>
+                            <div class="stat-label">本地缺失</div>
+                        </div>
+                        <div class="stat-box" style="background: #f3e5f5;">
+                            <div class="stat-value" id="stat-order" style="color: #9c27b0;">0</div>
+                            <div class="stat-label">顺序不同</div>
+                        </div>
+                    </div>
+                    <div id="compare-details">
+                        <p style="color: var(--text-secondary); font-size: 12px;">运行测试后显示逐项对比结果...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右边：本地服务器 -->
+            <div class="panel right">
+                <div class="panel-header">
+                    <span class="panel-title">本地 Gemma 3n</span>
+                    <span class="panel-badge badge-pending" id="badge-right">待测试</span>
+                </div>
+                <div class="panel-content">
+                    <div class="code-block" id="response-right">
+                        <pre>点击"对比测试"执行...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTest = '1-1';
+
+        const testConfigs = {
+            '1-1': {
+                name: '1.1 纯文本',
+                body: {"contents": [{"parts": [{"text": "hi"}]}], "generationConfig": {"maxOutputTokens": 512}}
+            },
+            '1-2': {
+                name: '1.2 思考等级 low',
+                body: {
+                    "contents": [{"parts": [{"text": "2+2=?"}]}],
+                    "generationConfig": {"thinkingConfig": {"thinkingLevel": "low"}, "maxOutputTokens": 256}
+                }
+            },
+            '1-3': {
+                name: '1.3 思考等级 high',
+                body: {
+                    "contents": [{"parts": [{"text": "Explain quantum entanglement briefly"}]}],
+                    "generationConfig": {"thinkingConfig": {"thinkingLevel": "high"}, "maxOutputTokens": 512}
+                }
+            },
+            '1-5': {
+                name: '1.5 系统指令',
+                body: {
+                    "contents": [{"parts": [{"text": "hi"}]}],
+                    "systemInstruction": {"parts": [{"text": "You are helpful"}]},
+                    "generationConfig": {"maxOutputTokens": 512}
+                }
+            },
+            '1-6': {
+                name: '1.6 JSON Schema',
+                body: {
+                    "contents": [{"parts": [{"text": "List 2 programming languages"}]}],
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "responseSchema": {
+                            "type": "object",
+                            "properties": {
+                                "languages": {
+                                    "type": "array",
+                                    "items": {"type": "object", "properties": {"name": {"type": "string"}, "year": {"type": "integer"}}}
+                                }
+                            }
+                        },
+                        "maxOutputTokens": 512
+                    }
+                }
+            },
+            '3-1': {
+                name: '3.1 工具调用',
+                body: {
+                    "contents": [{"role": "user", "parts": [{"text": "Run ls command"}]}],
+                    "tools": [{
+                        "functionDeclarations": [{
+                            "name": "shell_command",
+                            "description": "Run shell command",
+                            "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}
+                        }]
+                    }],
+                    "generationConfig": {"maxOutputTokens": 512}
+                }
+            },
+            '4-1': {
+                name: '4.1 toolConfig mode:ANY',
+                body: {
+                    "contents": [{"role": "user", "parts": [{"text": "What is the weather?"}]}],
+                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
+                    "toolConfig": {"functionCallingConfig": {"mode": "ANY"}},
+                    "generationConfig": {"maxOutputTokens": 256}
+                }
+            },
+            '4-2': {
+                name: '4.2 toolConfig mode:NONE',
+                body: {
+                    "contents": [{"role": "user", "parts": [{"text": "What is the weather in Tokyo?"}]}],
+                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
+                    "toolConfig": {"functionCallingConfig": {"mode": "NONE"}},
+                    "generationConfig": {"maxOutputTokens": 256}
+                }
+            },
+            '4-3': {
+                name: '4.3 并行调用',
+                body: {
+                    "contents": [{"role": "user", "parts": [{"text": "What is the weather in SF and Tokyo?"}]}],
+                    "tools": [{"functionDeclarations": [{"name": "get_weather", "description": "Get weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}]}],
+                    "generationConfig": {"maxOutputTokens": 512}
+                }
+            },
+            '5-1': {
+                name: '5.1 多模态视觉',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "What color is this image? Answer in one word."},
+                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}}
+                    ]}],
+                    "generationConfig": {"maxOutputTokens": 256}
+                }
+            },
+            '5-2': {
+                name: '5.2 音频转录',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Listen to this audio clip and transcribe what you hear. What is the speaker saying?"},
+                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
+                    ]}],
+                    "generationConfig": {"maxOutputTokens": 1024}
+                }
+            },
+            '5-3': {
+                name: '5.3 音频+思考',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Listen carefully. First transcribe word-by-word, then analyze the rhetorical style and emotional tone."},
+                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
+                    ]}],
+                    "generationConfig": {
+                        "thinkingConfig": {"thinkingLevel": "high"},
+                        "maxOutputTokens": 2048
+                    }
+                }
+            },
+            '5-4': {
+                name: '5.4 音频摘要',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Summarize this speech in one sentence. What is the main message?"},
+                        {"inlineData": {"mimeType": "audio/flac", "data": "AUDIO_PLACEHOLDER"}}
+                    ]}],
+                    "generationConfig": {"maxOutputTokens": 256}
+                }
+            },
+            '5-5': {
+                name: '5.5 多图片对比',
+                body: {
+                    "contents": [{"role": "user", "parts": [
+                        {"text": "Compare these two images. What colors do you see in each? Answer briefly."},
+                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAANUlEQVR4nO3QsQ0AMAzDsLT//9yeoCkbeYAN6LzZdZf3x0GSKEmUJEoSJYmSREmiJFGSaMoHo8QBPwYSAhsAAAAASUVORK5CYII="}},
+                        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAM0lEQVR4nO3OsQ0AIAwDwez/aaMoKBhgAImChq9O8tNd3x8HSaIkUZIoSZQkShIliab8AC4FAT9cTiF5AAAAAElFTkSuQmCC"}}
+                    ]}],
+                    "generationConfig": {"maxOutputTokens": 256}
+                }
+            },
+            '6-1': {
+                name: '6.1 流式输出',
+                body: {
+                    "contents": [{"parts": [{"text": "Count from 1 to 5."}]}],
+                    "generationConfig": {"maxOutputTokens": 128}
+                },
+                streaming: true  // 标记为流式测试
+            }
+        };
+
+        // 运行时注入 MLK 音频数据 (从外部 JS 文件加载)
+        if (typeof MLK_SPEECH_AUDIO !== 'undefined') {
+            testConfigs['5-2'].body.contents[0].parts[1].inlineData.data = MLK_SPEECH_AUDIO;
+            testConfigs['5-3'].body.contents[0].parts[1].inlineData.data = MLK_SPEECH_AUDIO;
+            testConfigs['5-4'].body.contents[0].parts[1].inlineData.data = MLK_SPEECH_AUDIO;
+        }
+
+        // 初始化
+        document.querySelectorAll('.test-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentTest = tab.dataset.test;
+                updateRequestPreview();
+            });
+        });
+
+        function updateRequestPreview() {
+            const config = testConfigs[currentTest];
+            document.getElementById('requestPreview').textContent = JSON.stringify(config.body, null, 2);
+        }
+
+        function updateBadge(id, status) {
+            const badge = document.getElementById(id);
+            badge.className = `panel-badge badge-${status}`;
+            badge.textContent = {pending: '待测试', running: '运行中...', success: '成功', error: '失败', comparing: '对比中...'}[status];
+        }
+
+        // ========== 核心：严格 JSON 对比 ==========
+
+        /**
+         * 深度对比两个 JSON 对象，返回所有差异
+         */
+        function deepCompare(left, right, path = '') {
+            const results = [];
+
+            // 获取键顺序（保持原始顺序）
+            const leftKeys = left ? Object.keys(left) : [];
+            const rightKeys = right ? Object.keys(right) : [];
+            const allKeys = [...new Set([...leftKeys, ...rightKeys])];
+
+            // 检查键顺序是否相同
+            if (leftKeys.length > 0 && rightKeys.length > 0) {
+                const leftOrder = leftKeys.filter(k => rightKeys.includes(k)).join(',');
+                const rightOrder = rightKeys.filter(k => leftKeys.includes(k)).join(',');
+                if (leftOrder !== rightOrder && leftOrder.length > 0) {
+                    results.push({
+                        type: 'order',
+                        path: path || '(root)',
+                        leftOrder: leftKeys,
+                        rightOrder: rightKeys
+                    });
+                }
+            }
+
+            for (const key of allKeys) {
+                const currentPath = path ? `${path}.${key}` : key;
+                const leftVal = left ? left[key] : undefined;
+                const rightVal = right ? right[key] : undefined;
+
+                // 左边缺失
+                if (leftVal === undefined && rightVal !== undefined) {
+                    results.push({
+                        type: 'missing-left',
+                        path: currentPath,
+                        rightVal: summarizeValue(rightVal)
+                    });
+                    continue;
+                }
+
+                // 右边缺失
+                if (leftVal !== undefined && rightVal === undefined) {
+                    results.push({
+                        type: 'missing-right',
+                        path: currentPath,
+                        leftVal: summarizeValue(leftVal)
+                    });
+                    continue;
+                }
+
+                // 类型不同
+                const leftType = getType(leftVal);
+                const rightType = getType(rightVal);
+                if (leftType !== rightType) {
+                    results.push({
+                        type: 'mismatch',
+                        path: currentPath,
+                        leftVal: `(${leftType}) ${summarizeValue(leftVal)}`,
+                        rightVal: `(${rightType}) ${summarizeValue(rightVal)}`
+                    });
+                    continue;
+                }
+
+                // 递归对比对象
+                if (leftType === 'object') {
+                    results.push(...deepCompare(leftVal, rightVal, currentPath));
+                    continue;
+                }
+
+                // 递归对比数组
+                if (leftType === 'array') {
+                    // 先对比数组长度
+                    if (leftVal.length !== rightVal.length) {
+                        results.push({
+                            type: 'mismatch',
+                            path: currentPath + '.length',
+                            leftVal: leftVal.length,
+                            rightVal: rightVal.length
+                        });
+                    }
+                    // 对比每个元素
+                    const maxLen = Math.max(leftVal.length, rightVal.length);
+                    for (let i = 0; i < maxLen; i++) {
+                        if (i >= leftVal.length) {
+                            results.push({
+                                type: 'missing-left',
+                                path: `${currentPath}[${i}]`,
+                                rightVal: summarizeValue(rightVal[i])
+                            });
+                        } else if (i >= rightVal.length) {
+                            results.push({
+                                type: 'missing-right',
+                                path: `${currentPath}[${i}]`,
+                                leftVal: summarizeValue(leftVal[i])
+                            });
+                        } else if (getType(leftVal[i]) === 'object') {
+                            results.push(...deepCompare(leftVal[i], rightVal[i], `${currentPath}[${i}]`));
+                        } else if (JSON.stringify(leftVal[i]) !== JSON.stringify(rightVal[i])) {
+                            results.push({
+                                type: 'mismatch',
+                                path: `${currentPath}[${i}]`,
+                                leftVal: summarizeValue(leftVal[i]),
+                                rightVal: summarizeValue(rightVal[i])
+                            });
+                        } else {
+                            results.push({
+                                type: 'match',
+                                path: `${currentPath}[${i}]`,
+                                value: summarizeValue(leftVal[i])
+                            });
+                        }
+                    }
+                    continue;
+                }
+
+                // 对比原始值 (忽略一些动态字段)
+                if (shouldIgnoreField(currentPath)) {
+                    results.push({
+                        type: 'match',
+                        path: currentPath,
+                        value: '(dynamic, ignored)'
+                    });
+                    continue;
+                }
+
+                if (JSON.stringify(leftVal) === JSON.stringify(rightVal)) {
+                    results.push({
+                        type: 'match',
+                        path: currentPath,
+                        value: summarizeValue(leftVal)
+                    });
+                } else {
+                    results.push({
+                        type: 'mismatch',
+                        path: currentPath,
+                        leftVal: summarizeValue(leftVal),
+                        rightVal: summarizeValue(rightVal)
+                    });
+                }
+            }
+
+            return results;
+        }
+
+        function getType(val) {
+            if (val === null) return 'null';
+            if (Array.isArray(val)) return 'array';
+            return typeof val;
+        }
+
+        function summarizeValue(val) {
+            if (val === null) return 'null';
+            if (val === undefined) return 'undefined';
+            if (typeof val === 'string') {
+                if (val.length > 50) return `"${val.substring(0, 50)}..."`;
+                return `"${val}"`;
+            }
+            if (typeof val === 'object') {
+                const str = JSON.stringify(val);
+                if (str.length > 60) return str.substring(0, 60) + '...';
+                return str;
+            }
+            return String(val);
+        }
+
+        // 忽略动态字段 (每次请求都会变化的字段)
+        function shouldIgnoreField(path) {
+            const ignorePaths = [
+                'responseId',
+                'modelVersion',
+                /\.thoughtSignature$/,
+                /\.text$/,  // 文本内容每次不同
+                /usageMetadata\./,  // token 计数每次不同
+            ];
+            return ignorePaths.some(p => {
+                if (typeof p === 'string') return path === p;
+                return p.test(path);
+            });
+        }
+
+        // 渲染对比结果
+        function renderCompareResults(results) {
+            const container = document.getElementById('compare-details');
+            const statsContainer = document.getElementById('stats-summary');
+
+            // 统计
+            const stats = {
+                match: results.filter(r => r.type === 'match').length,
+                mismatch: results.filter(r => r.type === 'mismatch').length,
+                missingLeft: results.filter(r => r.type === 'missing-left').length,
+                missingRight: results.filter(r => r.type === 'missing-right').length,
+                order: results.filter(r => r.type === 'order').length
+            };
+
+            document.getElementById('stat-match').textContent = stats.match;
+            document.getElementById('stat-mismatch').textContent = stats.mismatch;
+            document.getElementById('stat-missing-left').textContent = stats.missingLeft;
+            document.getElementById('stat-missing-right').textContent = stats.missingRight;
+            document.getElementById('stat-order').textContent = stats.order;
+            statsContainer.style.display = 'grid';
+
+            // 按类型分组显示
+            let html = '';
+
+            // 顺序问题
+            const orderIssues = results.filter(r => r.type === 'order');
+            if (orderIssues.length > 0) {
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">键顺序差异 (${orderIssues.length})</div>`;
+                orderIssues.forEach(r => {
+                    html += `<div class="compare-item order-diff">
+                        <span class="compare-icon">⚡</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">真实: [${r.leftOrder.join(', ')}]</div>
+                            <div class="compare-detail">本地: [${r.rightOrder.join(', ')}]</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            // 值不匹配
+            const mismatches = results.filter(r => r.type === 'mismatch');
+            if (mismatches.length > 0) {
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">值不匹配 (${mismatches.length})</div>`;
+                mismatches.forEach(r => {
+                    html += `<div class="compare-item mismatch">
+                        <span class="compare-icon">✗</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">真实: ${r.leftVal}</div>
+                            <div class="compare-detail">本地: ${r.rightVal}</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            // 本地缺失
+            const missingRight = results.filter(r => r.type === 'missing-right');
+            if (missingRight.length > 0) {
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">本地实现缺失 (${missingRight.length})</div>`;
+                missingRight.forEach(r => {
+                    html += `<div class="compare-item missing-right">
+                        <span class="compare-icon">⚠</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">真实API有: ${r.leftVal}</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            // 真实API缺失 (可能是我们多加的字段)
+            const missingLeft = results.filter(r => r.type === 'missing-left');
+            if (missingLeft.length > 0) {
+                html += `<div class="compare-section">
+                    <div class="compare-section-title">真实API缺失 / 本地多余 (${missingLeft.length})</div>`;
+                missingLeft.forEach(r => {
+                    html += `<div class="compare-item missing-left">
+                        <span class="compare-icon">➕</span>
+                        <div>
+                            <div class="compare-path">${r.path}</div>
+                            <div class="compare-detail">本地有: ${r.rightVal}</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            // 匹配项 (折叠显示)
+            const matches = results.filter(r => r.type === 'match');
+            if (matches.length > 0) {
+                html += `<div class="compare-section">
+                    <div class="compare-section-title" style="cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                        ✓ 匹配项 (${matches.length}) - 点击展开/折叠
+                    </div>
+                    <div style="display: none;">`;
+                matches.forEach(r => {
+                    html += `<div class="compare-item match">
+                        <span class="compare-icon">✓</span>
+                        <span class="compare-path">${r.path}: ${r.value}</span>
+                    </div>`;
+                });
+                html += '</div></div>';
+            }
+
+            container.innerHTML = html || '<p style="color: var(--text-secondary);">无对比数据</p>';
+
+            // 更新中间面板状态
+            const hasIssues = stats.mismatch + stats.missingRight + stats.order > 0;
+            updateBadge('badge-center', hasIssues ? 'error' : 'success');
+        }
+
+        async function runComparison() {
+            const config = testConfigs[currentTest];
+            const realApiUrl = document.getElementById('realApiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const localUrl = document.getElementById('localUrl').value;
+
+            // 检查是否是流式测试
+            if (config.streaming) {
+                return runStreamingComparison(config, realApiUrl, apiKey, localUrl);
+            }
+
+            // 重置状态
+            updateBadge('badge-left', 'running');
+            updateBadge('badge-right', 'running');
+            updateBadge('badge-center', 'comparing');
+            document.getElementById('response-left').innerHTML = '<pre>请求中...</pre>';
+            document.getElementById('response-right').innerHTML = '<pre>请求中...</pre>';
+            document.getElementById('compare-details').innerHTML = '<p style="color: var(--text-secondary);">等待响应...</p>';
+            document.getElementById('stats-summary').style.display = 'none';
+
+            let leftResp = null, rightResp = null;
+
+            // 并行请求
+            const leftPromise = (async () => {
+                if (!apiKey) return { error: '请输入 API Key' };
+                try {
+                    const resp = await fetch(`${realApiUrl}/v1beta/models/gemini-3-pro-preview:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config.body)
+                    });
+                    return await resp.json();
+                } catch (e) {
+                    return { error: e.message };
+                }
+            })();
+
+            const rightPromise = (async () => {
+                try {
+                    const resp = await fetch(`${localUrl}/v1beta/models/gemini-3-pro-preview:generateContent`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config.body)
+                    });
+                    return await resp.json();
+                } catch (e) {
+                    return { error: e.message };
+                }
+            })();
+
+            [leftResp, rightResp] = await Promise.all([leftPromise, rightPromise]);
+
+            // 显示左边结果
+            if (leftResp.error) {
+                updateBadge('badge-left', 'error');
+                document.getElementById('response-left').innerHTML = `<pre style="color: #f44336;">错误: ${leftResp.error}</pre>`;
+            } else {
+                updateBadge('badge-left', 'success');
+                document.getElementById('response-left').innerHTML = `<pre>${JSON.stringify(leftResp, null, 2)}</pre>`;
+            }
+
+            // 显示右边结果
+            if (rightResp.error) {
+                updateBadge('badge-right', 'error');
+                document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">错误: ${rightResp.error}\n\n请确保服务器运行:\npython apps/gemini_api/server.py</pre>`;
+            } else {
+                updateBadge('badge-right', 'success');
+                document.getElementById('response-right').innerHTML = `<pre>${JSON.stringify(rightResp, null, 2)}</pre>`;
+            }
+
+            // 执行深度对比
+            if (!leftResp.error && !rightResp.error) {
+                const results = deepCompare(leftResp, rightResp);
+                renderCompareResults(results);
+            } else {
+                updateBadge('badge-center', 'error');
+                document.getElementById('compare-details').innerHTML = '<p style="color: var(--error);">无法对比：至少一方请求失败</p>';
+            }
+        }
+
+        async function runAllComparisons() {
+            const testIds = Object.keys(testConfigs);
+            for (const testId of testIds) {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                document.querySelector(`.test-tab[data-test="${testId}"]`).classList.add('active');
+                currentTest = testId;
+                updateRequestPreview();
+                await runComparison();
+                await new Promise(r => setTimeout(r, 3000));
+            }
+        }
+
+        // ========== 流式输出测试 ==========
+        async function runStreamingComparison(config, realApiUrl, apiKey, localUrl) {
+            // 重置状态
+            updateBadge('badge-left', 'running');
+            updateBadge('badge-right', 'running');
+            updateBadge('badge-center', 'comparing');
+            document.getElementById('response-left').innerHTML = '<pre>流式请求中...</pre>';
+            document.getElementById('response-right').innerHTML = '<pre>流式请求中...</pre>';
+            document.getElementById('compare-details').innerHTML = '<p style="color: var(--text-secondary);">流式对比中...</p>';
+            document.getElementById('stats-summary').style.display = 'none';
+
+            // 流式请求处理函数
+            async function streamRequest(url, isLeft) {
+                const outputEl = document.getElementById(isLeft ? 'response-left' : 'response-right');
+                const chunks = [];
+                let finalResponse = null;
+
+                try {
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config.body)
+                    });
+
+                    const reader = resp.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const text = decoder.decode(value, { stream: true });
+                        const lines = text.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    chunks.push(data);
+                                    finalResponse = data;
+
+                                    // 实时更新显示
+                                    const displayText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                                    outputEl.innerHTML = `<pre style="color: #4caf50;">🔄 流式输出中...\n\n${displayText}</pre>`;
+                                } catch (e) {}
+                            }
+                        }
+                    }
+
+                    return { chunks, finalResponse };
+                } catch (e) {
+                    return { error: e.message };
+                }
+            }
+
+            // 并行流式请求
+            const leftUrl = `${realApiUrl}/v1beta/models/gemini-3-pro-preview:streamGenerateContent?key=${apiKey}&alt=sse`;
+            const rightUrl = `${localUrl}/v1beta/models/gemini-3-pro-preview:streamGenerateContent?alt=sse`;
+
+            const [leftResult, rightResult] = await Promise.all([
+                apiKey ? streamRequest(leftUrl, true) : Promise.resolve({ error: '请输入 API Key' }),
+                streamRequest(rightUrl, false)
+            ]);
+
+            // 显示最终结果
+            if (leftResult.error) {
+                updateBadge('badge-left', 'error');
+                document.getElementById('response-left').innerHTML = `<pre style="color: #f44336;">错误: ${leftResult.error}</pre>`;
+            } else {
+                updateBadge('badge-left', 'success');
+                document.getElementById('response-left').innerHTML = `<pre>收到 ${leftResult.chunks.length} 个 chunks\n\n最终响应:\n${JSON.stringify(leftResult.finalResponse, null, 2)}</pre>`;
+            }
+
+            if (rightResult.error) {
+                updateBadge('badge-right', 'error');
+                document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">错误: ${rightResult.error}</pre>`;
+            } else {
+                updateBadge('badge-right', 'success');
+                document.getElementById('response-right').innerHTML = `<pre>收到 ${rightResult.chunks.length} 个 chunks\n\n最终响应:\n${JSON.stringify(rightResult.finalResponse, null, 2)}</pre>`;
+            }
+
+            // 流式对比：比较最终响应
+            if (!leftResult.error && !rightResult.error && leftResult.finalResponse && rightResult.finalResponse) {
+                const results = deepCompare(leftResult.finalResponse, rightResult.finalResponse);
+                renderCompareResults(results);
+
+                // 添加 chunk 数量对比
+                const chunkInfo = `
+                    <div class="compare-section">
+                        <div class="compare-section-title">流式统计</div>
+                        <div class="compare-item ${leftResult.chunks.length === rightResult.chunks.length ? 'match' : 'mismatch'}">
+                            <span class="compare-icon">${leftResult.chunks.length === rightResult.chunks.length ? '✓' : '✗'}</span>
+                            <span class="compare-path">Chunk 数量 - 真实: ${leftResult.chunks.length}, 本地: ${rightResult.chunks.length}</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('compare-details').innerHTML = chunkInfo + document.getElementById('compare-details').innerHTML;
+            } else {
+                updateBadge('badge-center', 'error');
+                document.getElementById('compare-details').innerHTML = '<p style="color: var(--error);">无法对比：至少一方请求失败</p>';
+            }
+        }
+
+        // ========== 音频功能 ==========
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let customAudioData = null;
+        let testHistory = [];
+
+        // 监听测试选项变化，显示/隐藏音频专区
+        function updateAudioSection() {
+            const audioSection = document.getElementById('audioTestSection');
+            const historySection = document.getElementById('testHistory');
+            if (currentTest.startsWith('5-') && currentTest !== '5-1') {
+                audioSection.style.display = 'block';
+            } else {
+                audioSection.style.display = 'none';
+            }
+            // 显示历史记录
+            if (testHistory.length > 0) {
+                historySection.style.display = 'block';
+                renderHistory();
+            }
+        }
+
+        // 文件上传处理
+        document.getElementById('audioFileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const arrayBuffer = event.target.result;
+                const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+
+                customAudioData = {
+                    data: base64,
+                    mimeType: file.type || 'audio/wav',
+                    fileName: file.name,
+                    size: file.size
+                };
+
+                // 显示预览
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = URL.createObjectURL(file);
+                document.getElementById('audioInfo').textContent =
+                    `文件: ${file.name} | 大小: ${(file.size / 1024).toFixed(1)} KB | 类型: ${file.type}`;
+                document.getElementById('audioPreview').style.display = 'block';
+                document.getElementById('audioStatus').textContent = '✅ 音频已加载';
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 录音功能
+        async function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            const statusEl = document.getElementById('audioStatus');
+
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // 停止录音
+                mediaRecorder.stop();
+                recordBtn.textContent = '🔴 录音';
+                recordBtn.classList.remove('btn-error');
+                statusEl.textContent = '处理中...';
+                statusEl.classList.remove('recording');
+            } else {
+                // 开始录音
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        audioChunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const arrayBuffer = event.target.result;
+                            const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+
+                            customAudioData = {
+                                data: base64,
+                                mimeType: 'audio/webm',
+                                fileName: 'recording.webm',
+                                size: audioBlob.size
+                            };
+
+                            // 显示预览
+                            const audioPlayer = document.getElementById('audioPlayer');
+                            audioPlayer.src = URL.createObjectURL(audioBlob);
+                            document.getElementById('audioInfo').textContent =
+                                `录音 | 大小: ${(audioBlob.size / 1024).toFixed(1)} KB`;
+                            document.getElementById('audioPreview').style.display = 'block';
+                            statusEl.textContent = '✅ 录音完成';
+                        };
+                        reader.readAsArrayBuffer(audioBlob);
+
+                        // 停止所有音轨
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    recordBtn.textContent = '⏹ 停止';
+                    recordBtn.classList.add('btn-error');
+                    statusEl.textContent = '🔴 录音中...';
+                    statusEl.classList.add('recording');
+                } catch (err) {
+                    statusEl.textContent = '❌ 无法访问麦克风';
+                    console.error('Recording error:', err);
+                }
+            }
+        }
+
+        // 运行自定义音频测试
+        async function runCustomAudioTest() {
+            if (!customAudioData) {
+                alert('请先上传或录制音频');
+                return;
+            }
+
+            const prompt = document.getElementById('customAudioPrompt').value;
+            const localUrl = document.getElementById('localUrl').value;
+
+            // 构建请求
+            const requestBody = {
+                "contents": [{"role": "user", "parts": [
+                    {"text": prompt},
+                    {"inlineData": {"mimeType": customAudioData.mimeType, "data": customAudioData.data}}
+                ]}],
+                "generationConfig": {"maxOutputTokens": 1024}
+            };
+
+            // 更新预览
+            document.getElementById('requestPreview').textContent = JSON.stringify({
+                ...requestBody,
+                contents: [{...requestBody.contents[0], parts: [
+                    requestBody.contents[0].parts[0],
+                    {inlineData: {mimeType: customAudioData.mimeType, data: `[${customAudioData.fileName}, ${(customAudioData.size/1024).toFixed(1)}KB]`}}
+                ]}]
+            }, null, 2);
+
+            // 运行测试
+            updateBadge('badge-right', 'running');
+            document.getElementById('response-right').innerHTML = '<pre>音频处理中... (可能需要30-60秒)</pre>';
+
+            const startTime = Date.now();
+            try {
+                const resp = await fetch(`${localUrl}/v1beta/models/gemini-3-pro-preview:generateContent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await resp.json();
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+                if (data.error) {
+                    updateBadge('badge-right', 'error');
+                    document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">错误: ${JSON.stringify(data.error, null, 2)}</pre>`;
+                    addToHistory('自定义音频', false, elapsed);
+                } else {
+                    updateBadge('badge-right', 'success');
+                    document.getElementById('response-right').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    addToHistory('自定义音频', true, elapsed);
+                }
+            } catch (err) {
+                updateBadge('badge-right', 'error');
+                document.getElementById('response-right').innerHTML = `<pre style="color: #f44336;">网络错误: ${err.message}</pre>`;
+                addToHistory('自定义音频', false, '0');
+            }
+        }
+
+        // 测试历史管理
+        function addToHistory(testName, passed, duration) {
+            testHistory.unshift({
+                name: testName,
+                passed: passed,
+                time: new Date().toLocaleTimeString(),
+                duration: duration + 's'
+            });
+            if (testHistory.length > 20) testHistory.pop();
+
+            document.getElementById('testHistory').style.display = 'block';
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = testHistory.map(h => `
+                <div class="history-item ${h.passed ? 'pass' : 'fail'}">
+                    <span>${h.passed ? '✓' : '✗'} ${h.name}</span>
+                    <span class="history-time">${h.time} (${h.duration})</span>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            testHistory = [];
+            document.getElementById('testHistory').style.display = 'none';
+        }
+
+        // 修改原有的标签点击事件
+        document.querySelectorAll('.test-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentTest = tab.dataset.test;
+                updateRequestPreview();
+                updateAudioSection();
+            });
+        });
+
+        // 增强 runComparison 以记录历史
+        const originalRunComparison = runComparison;
+        runComparison = async function() {
+            const startTime = Date.now();
+            await originalRunComparison();
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+            // 检查是否成功
+            const leftBadge = document.getElementById('badge-left').textContent;
+            const rightBadge = document.getElementById('badge-right').textContent;
+            const passed = leftBadge === '成功' && rightBadge === '成功';
+
+            addToHistory(testConfigs[currentTest].name, passed, elapsed);
+        };
+
+        // 初始化
+        updateRequestPreview();
+        updateAudioSection();
+
+        // ========== GPU 选择功能 ==========
+
+        // 刷新 GPU 列表
+        async function refreshGpuList() {
+            const localUrl = document.getElementById('localUrl').value;
+            const select = document.getElementById('gpuSelect');
+            const gpuItem = select.parentElement;
+
+            try {
+                const response = await fetch(`${localUrl}/gpu/list`);
+                const data = await response.json();
+
+                // 清空现有选项
+                select.innerHTML = '';
+
+                if (data.gpus && data.gpus.length > 1) {
+                    // 多 GPU: 显示选择框
+                    gpuItem.style.display = 'flex';
+
+                    // 添加自动选择
+                    const autoOption = document.createElement('option');
+                    autoOption.value = 'auto';
+                    autoOption.textContent = '自动选择';
+                    select.appendChild(autoOption);
+
+                    // 添加单 GPU 选项
+                    data.gpus.forEach(gpu => {
+                        const option = document.createElement('option');
+                        option.value = gpu.device_id || `CUDA${gpu.index}`;
+                        const memFree = (gpu.memory_free_mb / 1024).toFixed(1);
+                        const memTotal = (gpu.memory_total_mb / 1024).toFixed(1);
+                        option.textContent = `${gpu.device_id}: ${gpu.name} (${memFree}/${memTotal}GB)`;
+                        select.appendChild(option);
+                    });
+
+                    // 添加全部 GPU 选项
+                    const allOption = document.createElement('option');
+                    allOption.value = data.gpus.map(g => g.device_id || `CUDA${g.index}`).join(',');
+                    allOption.textContent = `全部 GPU (${data.gpus.length} 块)`;
+                    select.appendChild(allOption);
+
+                    // 设置当前选中的值
+                    if (data.current_device && data.current_device !== 'auto') {
+                        select.value = data.current_device;
+                    }
+                } else if (data.gpus && data.gpus.length === 1) {
+                    // 单 GPU: 隐藏选择框，显示 GPU 信息
+                    const gpu = data.gpus[0];
+                    const memFree = (gpu.memory_free_mb / 1024).toFixed(1);
+                    const memTotal = (gpu.memory_total_mb / 1024).toFixed(1);
+
+                    const option = document.createElement('option');
+                    option.value = gpu.device_id || `CUDA${gpu.index}`;
+                    option.textContent = `${gpu.name} (${memFree}/${memTotal}GB)`;
+                    select.appendChild(option);
+
+                    // 单 GPU 时禁用选择，只显示信息
+                    select.disabled = true;
+                    select.style.opacity = '0.8';
+                    gpuItem.style.display = 'flex';
+                } else {
+                    // 无 GPU 或 macOS Metal
+                    gpuItem.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('获取 GPU 列表失败:', e);
+                // 连接失败时隐藏 GPU 选择
+                gpuItem.style.display = 'none';
+            }
+        }
+
+        // GPU 选择变更时切换
+        document.getElementById('gpuSelect').addEventListener('change', async function() {
+            const localUrl = document.getElementById('localUrl').value;
+            const devices = this.value;
+
+            // 显示加载状态
+            const originalText = this.options[this.selectedIndex].text;
+            this.options[this.selectedIndex].text = '切换中...';
+            this.disabled = true;
+
+            try {
+                const response = await fetch(`${localUrl}/gpu/select`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ devices: devices, split_mode: 'layer' })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    alert(`GPU 已切换: ${data.devices === '' ? '自动' : 'GPU ' + data.devices}`);
+                    // 刷新列表以更新显存使用情况
+                    setTimeout(refreshGpuList, 2000);
+                } else {
+                    alert('切换失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('切换失败: ' + e.message);
+            } finally {
+                this.options[this.selectedIndex].text = originalText;
+                this.disabled = false;
+            }
+        });
+
+        // 页面加载时获取 GPU 列表
+        refreshGpuList();
+
+        // ========== I18n 翻译 ==========
+        function translatePlaygroundPage() {
+            const t = (key, fallback) => (i18n && i18n.t(key)) || fallback;
+
+            // 翻译映射
+            const translations = {
+                // Header
+                'Gemini API 严格对比测试': t('playground.title', 'Gemini API Comparison Test'),
+                '真实API:': t('playground.config.realApi', 'Real API:'),
+                'API Key:': t('playground.config.apiKey', 'API Key:'),
+                '输入你的 API Key': t('playground.config.apiKeyPlaceholder', 'Enter your API Key'),
+                '本地服务:': t('playground.config.localService', 'Local Service:'),
+                'GPU:': t('playground.config.gpu', 'GPU:'),
+                '自动选择': t('playground.config.autoSelect', 'Auto Select'),
+                '对比测试': t('playground.actions.runTest', 'Compare Test'),
+                '全部测试': t('playground.actions.runAll', 'Test All'),
+
+                // Test selector
+                '选择测试用例': t('playground.testSelector.title', 'Select Test Case'),
+                '1.1 纯文本': '1.1 ' + t('playground.testSelector.pureText', 'Pure Text'),
+                '1.2 思考low': '1.2 ' + t('playground.testSelector.thinkingLow', 'Thinking Low'),
+                '1.3 思考high': '1.3 ' + t('playground.testSelector.thinkingHigh', 'Thinking High'),
+                '1.5 系统指令': '1.5 ' + t('playground.testSelector.systemInstruction', 'System Instruction'),
+                '1.6 JSON Schema': '1.6 JSON Schema',
+                '3.1 工具调用': '3.1 ' + t('playground.testSelector.toolCall', 'Tool Call'),
+                '4.1 mode:ANY': '4.1 mode:ANY',
+                '4.2 mode:NONE': '4.2 mode:NONE',
+                '4.3 并行调用': '4.3 ' + t('playground.testSelector.parallelCall', 'Parallel Call'),
+                '5.1 多模态视觉': '5.1 ' + t('playground.testSelector.multimodalVision', 'Multimodal Vision'),
+                '5.2 音频转录': '5.2 ' + t('playground.testSelector.audioTranscription', 'Audio Transcription'),
+                '5.3 音频+思考': '5.3 ' + t('playground.testSelector.audioThinking', 'Audio+Thinking'),
+                '5.4 音频摘要': '5.4 ' + t('playground.testSelector.audioSummary', 'Audio Summary'),
+                '5.5 多图片': '5.5 ' + t('playground.testSelector.multiImage', 'Multi Image'),
+                '6.1 流式输出': '6.1 ' + t('playground.testSelector.streaming', 'Streaming'),
+
+                // Legend
+                '完全匹配': t('playground.legend.match', 'Match'),
+                '值不匹配': t('playground.legend.mismatch', 'Mismatch'),
+                '字段缺失': t('playground.legend.missing', 'Missing'),
+                '顺序不同': t('playground.legend.orderDiff', 'Order Diff'),
+
+                // Request preview
+                '请求内容 (Request Body)': t('playground.request.title', 'Request Body'),
+                '选择测试用例查看请求内容...': t('playground.request.selectToView', 'Select test case to view request...'),
+
+                // Audio section
+                '🎤 自定义音频测试': '🎤 ' + t('playground.audio.title', 'Custom Audio Test'),
+                '📁 上传音频': '📁 ' + t('playground.audio.uploadAudio', 'Upload Audio'),
+                '🔴 录音': '🔴 ' + t('playground.audio.record', 'Record'),
+                '自定义提示词:': t('playground.audio.customPrompt', 'Custom prompt:'),
+                '🚀 运行自定义音频测试': '🚀 ' + t('playground.audio.runCustomTest', 'Run Custom Audio Test'),
+
+                // History
+                '📊 测试历史': '📊 ' + t('playground.history.title', 'Test History'),
+                '清空': t('playground.history.clear', 'Clear'),
+
+                // Results panels
+                '真实 Gemini API': t('playground.results.realResponse', 'Real Gemini API'),
+                '本地 Gemma 3n': t('playground.results.localResponse', 'Local Gemma 3n'),
+                'JSON 字段逐项对比': t('playground.results.comparison', 'JSON Field Comparison'),
+                '待测试': t('playground.results.pending', 'Pending'),
+                '待对比': t('playground.results.pending', 'Pending'),
+                '点击"对比测试"执行...': t('playground.results.clickToRun', 'Click "Compare Test" to run...'),
+                '运行测试后显示逐项对比结果...': t('playground.results.waitingResponse', 'Waiting for response...'),
+
+                // Stats
+                '匹配': t('playground.stats.match', 'Match'),
+                '不匹配': t('playground.stats.mismatch', 'Mismatch'),
+                '真实API缺失': t('playground.stats.missingReal', 'Real API Missing'),
+                '本地缺失': t('playground.stats.missingLocal', 'Local Missing')
+            };
+
+            // 遍历所有文本节点并替换
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            while (walker.nextNode()) {
+                textNodes.push(walker.currentNode);
+            }
+
+            textNodes.forEach(node => {
+                let text = node.textContent.trim();
+                if (translations[text]) {
+                    node.textContent = node.textContent.replace(text, translations[text]);
+                }
+            });
+
+            // 更新 placeholder
+            const apiKeyInput = document.getElementById('apiKey');
+            if (apiKeyInput) {
+                apiKeyInput.placeholder = t('playground.config.apiKeyPlaceholder', 'Enter your API Key');
+            }
+
+            // 更新语言按钮状态
+            if (i18n) i18n.updateLangButtons();
+        }
+
+        // 在 i18n 加载完成后翻译页面
+        window.addEventListener('i18n:ready', translatePlaygroundPage);
+        if (i18n && i18n.loaded) translatePlaygroundPage();
+    </script>
+</body>
+</html>

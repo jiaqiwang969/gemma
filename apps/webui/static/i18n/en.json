@@ -12,7 +12,18 @@
     "confirm": "Confirm",
     "close": "Close",
     "github": "GitHub",
-    "docs": "Docs"
+    "docs": "Docs",
+    "huggingface": "HuggingFace"
+  },
+  "pageTitle": {
+    "home": "LingKong AI - Your AI. Your data. Your control.",
+    "downloads": "LingKong AI - Download Center",
+    "docs": "LingKong AI - API Documentation",
+    "playground": "LingKong AI - API Playground",
+    "playgroundGemini": "Gemini API Playground - LingKong AI",
+    "playgroundGrok": "Grok API Playground - LingKong AI",
+    "chat": "LingKong AI - Chat",
+    "tinybox": "TinyBox DIY Guide - 6x RX 7900 XTX AI Workstation"
   },
   "nav": {
     "home": "Home",
@@ -22,6 +33,32 @@
     "apiDocs": "API Docs",
     "playground": "Playground",
     "tinybox": "TinyBox DIY",
+    "tinybox_page": {
+      "title": "Tinybox DIY Guide - 6x RX 7900 XTX AI Workstation Assembly Guide",
+      "subtitle": "From hardware selection to open-source optimization, a step-by-step guide to building a 6x RX 7900 XTX AI monster.",
+      "hardware_selection": "Hardware Selection",
+      "assembly_config": "Assembly Config",
+      "software_solution": "Software Solution",
+      "start_assembly": "Start Assembly",
+      "assembly_guide_title": "Assembly & Configuration Guide",
+      "physical_assembly": "Physical Assembly",
+      "why_tinybox": "Why TinyBox?",
+      "cost_comparison": "Cost Comparison",
+      "performance": "Performance",
+      "open_source": "Open Source",
+      "hardware_list": "Hardware List",
+      "total_cost": "Total Cost",
+      "assembly_steps": "Assembly Steps",
+      "software_setup": "Software Setup",
+      "rocm_install": "ROCm Installation",
+      "pytorch_setup": "PyTorch Setup",
+      "llm_inference": "LLM Inference",
+      "benchmark": "Benchmark Results",
+      "faq": "FAQ",
+      "resources": "Resources",
+      "github_repo": "GitHub Repository",
+      "community": "Community"
+    },
     "chat": "Chat",
     "about": "About"
   },
@@ -34,11 +71,16 @@
     "install": {
       "title": "Quick Install",
       "oneLineInstall": "One-line install:",
+      "comment": "# Install LingKong AI",
       "step1": "Run install script",
       "step2": "Start service",
       "step1Desc": "Downloads and configures everything automatically",
       "step2Desc": "Visit http://localhost:5001",
-      "noPython": "No Python required. No complex setup. Three steps to your private AI!"
+      "noPython": "No Python required. No complex setup. Two steps to your private AI!",
+      "testedPlatforms": "Tested Platforms (2025-01):",
+      "platformMac": "macOS 15 + Apple M4 Max (Metal)",
+      "platformUbuntu": "Ubuntu 22.04 + RTX 4090 (CUDA 12)",
+      "platformNote": "Text + Vision + Audio (Speech-to-Text) fully working on both platforms"
     },
     "stats": {
       "localRun": "100% Local",
@@ -49,6 +91,11 @@
       "speedDesc": "Local inference",
       "multimodal": "Text+Vision+Audio",
       "multimodalDesc": "Full multimodal"
+    },
+    "platforms": {
+      "macos": "macOS (Apple Silicon)",
+      "ubuntu": "Ubuntu x86_64 (CUDA)",
+      "linux": "Linux x86_64 (CPU)"
     },
     "features": {
       "title": "Core Features",
@@ -102,8 +149,7 @@
       }
     },
     "footer": {
-      "description": "LingKong AI - Open-source local trimodal AI platform (Text + Vision + Audio)",
-      "links": "Home | Docs | GitHub"
+      "description": "LingKong AI - Open-source local trimodal AI platform (Text + Vision + Audio)"
     }
   },
   "chat": {
@@ -172,8 +218,9 @@
     },
     "binaries": {
       "title": "Program Files",
-      "macos": "macOS Apple Silicon (M1/M2/M3) inference engine",
-      "linux": "Linux x86_64 inference engine",
+      "macos": "macOS Apple Silicon (M1/M2/M3/M4) inference engine",
+      "linux": "Linux x86_64 inference engine (CPU)",
+      "linuxCuda": "Linux x86_64 with NVIDIA CUDA acceleration (Ubuntu 22.04+)",
       "webui": "Web interface - includes chat UI and API service"
     },
     "help": {
@@ -186,15 +233,34 @@
       "step2": "Download model files using your download tool",
       "step3": "Move downloaded .gguf files to",
       "step4": "Keep file names unchanged:",
-      "step5": "Run install script, it will skip existing models:"
+      "step5": "Run install script, it will skip existing models:",
+      "required": "required",
+      "optional": "optional"
     },
     "resume": {
       "title": "Resume Download",
       "desc": "Use wget with resume support, can continue download after interruption:",
-      "tip": "Tip: wget -c will auto-resume, just re-run if interrupted"
+      "tip": "Tip: wget -c will auto-resume, just re-run if interrupted",
+      "comment": {
+        "createDir": "# Create directory",
+        "textModel": "# Download text model (required, 2.6GB)",
+        "visionModel": "# Download vision model (optional, 570MB)",
+        "audioModel": "# Download audio model (optional, 1.3GB)"
+      }
     },
     "structure": {
-      "title": "Complete Install Directory Structure"
+      "title": "Complete Install Directory Structure",
+      "comments": {
+        "inferenceEngine": "# Inference engine",
+        "apiServer": "# API server",
+        "cliTool": "# CLI tool",
+        "modelFiles": "# Model files here",
+        "textModel": "# Text model (required)",
+        "visionModel": "# Vision model (optional)",
+        "audioModel": "# Audio model (optional)",
+        "webInterface": "# Web interface",
+        "dependencies": "# Dependencies"
+      }
     }
   },
   "docs": {
@@ -216,35 +282,400 @@
       "resources": "Resources",
       "errors": "Error Handling",
       "examples": "Code Examples",
-      "demo": "Live Demo"
+      "demo": "Live Demo",
+      "cryptoApi": "Crypto API",
+      "keyExchange": "Key Exchange",
+      "messageFormat": "Message Format",
+      "doubleRatchet": "Double Ratchet"
     },
     "sections": {
       "overview": "Overview",
       "request": "Request",
       "response": "Response",
       "parameters": "Parameters"
+    },
+    "intro": {
+      "title": "LingKong AI API",
+      "desc": "Local inference API based on Gemma 3N, fully compatible with Google Gemini 3 Pro Preview format, supports end-to-end encrypted communication.",
+      "features": {
+        "e2e": {
+          "title": "End-to-End Encryption",
+          "desc": "ChaCha20-Poly1305 + X25519 ECDH, messages encrypted throughout transmission"
+        },
+        "local": {
+          "title": "Local Inference",
+          "desc": "Based on llama.cpp, GPU accelerated, zero network latency"
+        },
+        "multimodal": {
+          "title": "Multimodal Support",
+          "desc": "Supports image understanding and audio transcription, vision + audio dual modality"
+        },
+        "thinking": {
+          "title": "Thinking Mode",
+          "desc": "Supports thinkingLevel configuration, simulates deep reasoning"
+        }
+      },
+      "compatibility": {
+        "title": "API Compatibility",
+        "desc": "This API is fully compatible with Google Gemini API format. Existing Gemini clients only need to change the base URL to connect."
+      }
+    },
+    "quickStart": {
+      "title": "Quick Start",
+      "desc": "Complete API call in 5 minutes",
+      "generateDesc": "Core interface for generating text content. Supports plain text, multimodal input, and tool calling.",
+      "comment": "# Basic text generation"
+    },
+    "generateContent": {
+      "title": "generateContent",
+      "desc": "Core interface for generating text content",
+      "pathParams": "Path Parameters",
+      "bodyParams": "Request Body Parameters",
+      "paramName": "Parameter",
+      "paramType": "Type",
+      "paramRequired": "Required",
+      "paramDesc": "Description",
+      "required": "Required",
+      "optional": "Optional",
+      "modelDesc": "Model name, supports gemini-3-pro-preview or gemini-3-flash-preview",
+      "contentsDesc": "Conversation content array, each element contains role and parts",
+      "generationConfigDesc": "Generation config, includes maxOutputTokens, temperature, thinkingConfig, etc.",
+      "systemInstructionDesc": "System instruction/persona setting",
+      "toolsDesc": "Tool/function declaration list",
+      "toolConfigDesc": "Tool calling config, mode can be AUTO/ANY/NONE",
+      "responseExample": "Response Example"
+    },
+    "thinking": {
+      "title": "Thinking Mode (thinkingConfig)",
+      "desc": "Enable deep reasoning, let the model think before answering",
+      "info": {
+        "title": "Thinking Mode Description",
+        "desc": "Thinking mode simulates Gemini 3's thinking feature through prompt engineering. The model will first reason in <thinking> tags, then give the answer in <answer> tags."
+      },
+      "levels": {
+        "title": "thinkingLevel Options",
+        "value": "Value",
+        "depth": "Thinking Depth",
+        "output": "Output Format",
+        "useCase": "Use Case",
+        "none": {
+          "depth": "Disabled",
+          "output": "Direct answer",
+          "useCase": "Simple Q&A, fast response"
+        },
+        "minimal": {
+          "depth": "Minimal",
+          "output": "1-2 sentences of thought",
+          "useCase": "Simple tasks"
+        },
+        "low": {
+          "depth": "Shallow",
+          "output": "Brief thinking (hidden)",
+          "useCase": "Daily conversation"
+        },
+        "medium": {
+          "depth": "Medium (default)",
+          "output": "Structured thinking",
+          "useCase": "General questions"
+        },
+        "high": {
+          "depth": "Deep",
+          "output": "Detailed reasoning process",
+          "useCase": "Complex problems, math, logic"
+        }
+      },
+      "requestExample": "Request Example"
+    },
+    "tools": {
+      "title": "Tool Calling (Function Calling)",
+      "desc": "Let the model call external functions, supports parallel calling",
+      "declarationExample": "Tool Declaration Example",
+      "modeTitle": "toolConfig.mode Description",
+      "mode": "Mode",
+      "behavior": "Behavior",
+      "auto": "Model automatically decides whether to call tools (default)",
+      "any": "Force tool calling, no plain text returned",
+      "noneMode": "Disable tool calling, only return text"
+    },
+    "multimodal": {
+      "title": "Trimodal Support",
+      "desc": "Supports text, image understanding and audio transcription",
+      "text": {
+        "title": "Text Conversation",
+        "desc": "Multi-turn dialogue, system instructions<br>Supports thinking deep reasoning"
+      },
+      "image": {
+        "title": "Image Understanding",
+        "desc": "Supports PNG, JPEG, WebP, GIF<br>Via Vision mmproj (570MB)"
+      },
+      "audio": {
+        "title": "Audio Transcription",
+        "desc": "Supports WAV, MP3, FLAC, OGG<br>Via Audio mmproj (1.4GB)"
+      },
+      "imageExample": "Image Understanding Example",
+      "audioExample": "Audio Transcription Example",
+      "audioFormat": {
+        "title": "Audio Format Requirements",
+        "desc": "Recommended 16kHz mono WAV format for best results. Supported formats: WAV, MP3, FLAC, OGG, WebM. Audio files need to be Base64 encoded and passed to inlineData.data field."
+      },
+      "platformSupport": {
+        "title": "Platform Support (2025-01)",
+        "macos": "macOS (Apple Silicon): Metal GPU acceleration, full support",
+        "ubuntu": "Ubuntu x86_64 (CUDA): NVIDIA GPU acceleration, full support (includes audio transcription fix)",
+        "linux": "Linux x86_64 (CPU): Pure CPU inference, slower",
+        "note": "Audio transcription tested on Ubuntu 22.04 + NVIDIA RTX 4090."
+      }
+    },
+    "thoughtSignature": {
+      "title": "Thought Signature",
+      "desc": "AI's \"working memory\", enables true stateful reasoning",
+      "concept": {
+        "title": "Core Concept",
+        "desc": "Traditional LLMs are like geniuses with \"short-term memory loss\", having to re-read history every conversation. Thought Signature enables true working memory through KV Cache persistence."
+      },
+      "flow": {
+        "inference": "Inference Generation",
+        "kvCapture": "KV Cache Capture",
+        "base64Sig": "Base64 Signature",
+        "stateRestore": "State Restore"
+      },
+      "example": "Using thoughtSignature in Multi-turn Dialogue"
+    },
+    "e2eEncryption": {
+      "title": "End-to-End Encrypted Communication",
+      "desc": "Ensure absolute privacy of AI conversations",
+      "why": {
+        "title": "Why Encryption?",
+        "desc": "Even with local inference, messages can still be intercepted during transmission. End-to-end encryption ensures only you and the AI can read the conversation. LingKong is designed based on Signal Protocol, providing forward secrecy and key rotation protection."
+      },
+      "flow": {
+        "identity": "Ed25519 Identity",
+        "kem": "X25519 KEM",
+        "encrypt": "ChaCha20 Encryption",
+        "auth": "Poly1305 Auth"
+      },
+      "features": {
+        "kem": {
+          "title": "KEM Key Encapsulation",
+          "desc": "Non-interactive key establishment, no multi-round handshake needed"
+        },
+        "chacha": {
+          "title": "ChaCha20-Poly1305",
+          "desc": "AEAD authenticated encryption, confidentiality + integrity guarantee"
+        },
+        "ed25519": {
+          "title": "Ed25519 Signature",
+          "desc": "Digital signature verifies message authenticity, tamper-proof"
+        },
+        "forward": {
+          "title": "Forward Secrecy",
+          "desc": "Each request uses ephemeral keys, historical messages cannot be decrypted"
+        }
+      }
+    },
+    "cryptoApi": {
+      "title": "Crypto API Endpoints",
+      "status": "Check encryption feature status",
+      "publicKey": "Get server public key (for encrypting requests)",
+      "encryptedGenerate": "Encrypted content generation API"
+    },
+    "keyExchange": {
+      "title": "Key Exchange Flow",
+      "desc": "Use LingKong Client SDK for end-to-end encrypted communication",
+      "sdkExample": "Python - Using LingKong Client SDK",
+      "lowLevelExample": "Python - Low-level API (using lingkong_crypto)"
+    },
+    "messageEncryption": {
+      "title": "Encrypted Message Format",
+      "desc": "Encryption envelope structure for requests and responses",
+      "requestStructure": "Encrypted Request Structure (EncryptedRequest)",
+      "responseStructure": "Encrypted Response Structure (EncryptedResponse)",
+      "securityTip": {
+        "title": "Security Tip",
+        "desc": "Each message uses a unique ephemeral key pair (ephemeral_public), ensuring forward secrecy. Even if long-term keys are compromised, historical messages cannot be decrypted."
+      }
+    },
+    "doubleRatchet": {
+      "title": "Double Ratchet Protocol (Optional)",
+      "desc": "Enhanced forward secrecy for long-term sessions",
+      "useCase": {
+        "title": "Use Case",
+        "desc": "For long-term sessions or high-security scenarios, you can use the double ratchet protocol. Each message triggers key rotation, providing stronger security."
+      },
+      "example": "Python - Double Ratchet Session",
+      "flow": {
+        "kemInit": "KEM Init",
+        "chainRatchet": "Chain Ratchet",
+        "dhRatchet": "DH Ratchet",
+        "msgEncrypt": "Message Encrypt"
+      }
+    },
+    "errors": {
+      "title": "Error Handling",
+      "statusCode": "Status Code",
+      "errorType": "Error Type",
+      "description": "Description",
+      "success": "Success",
+      "successDesc": "Request processed successfully",
+      "badRequest": "Bad Request",
+      "badRequestDesc": "Invalid or missing request parameters",
+      "serverError": "Server Error",
+      "serverErrorDesc": "Inference service exception",
+      "responseFormat": "Error Response Format"
+    },
+    "tryIt": {
+      "title": "Online Test",
+      "sendRequest": "Send Request",
+      "response": "Response",
+      "clickToSend": "Click \"Send Request\" to see response...",
+      "requesting": "Requesting...",
+      "errorPrefix": "Error: ",
+      "serverNotRunning": "Please ensure local server is running:\npython apps/gemini_api/server.py"
+    },
+    "footer": {
+      "version": "LingKong AI API v1.0 | Based on Gemma 3N Local Inference",
+      "home": "Home",
+      "demo": "Live Demo"
     }
   },
   "playground": {
     "title": "API Playground",
-    "subtitle": "Interactive API testing tool",
+    "subtitle": "Interactive API testing tools for multiple AI models",
+    "gemini": {
+      "desc": "Test and compare Google Gemini API with local Gemma 3n inference. Supports text, vision, audio, and tool calling.",
+      "feature1": "Text generation & multi-turn chat",
+      "feature2": "Vision (image understanding)",
+      "feature3": "Audio transcription",
+      "feature4": "Function calling & JSON Schema",
+      "feature5": "Streaming output"
+    },
+    "grok": {
+      "desc": "Test xAI Grok API with proxy service comparison. Supports reasoning models, web search, and image generation.",
+      "feature1": "Grok-4 & reasoning models",
+      "feature2": "Web & X (Twitter) search",
+      "feature3": "Image understanding & generation",
+      "feature4": "Function calling & JSON Schema",
+      "feature5": "Embeddings & TTS"
+    },
     "config": {
-      "realApi": "Real API",
-      "localService": "Local Service",
-      "apiKey": "API Key"
+      "realApi": "Real API:",
+      "localService": "Local Service:",
+      "apiKey": "API Key:",
+      "apiKeyPlaceholder": "Enter your API Key",
+      "gpu": "GPU:",
+      "autoSelect": "Auto Select",
+      "allGpus": "All GPUs",
+      "switching": "Switching..."
     },
     "actions": {
-      "runTest": "Run Test",
-      "runAll": "Run All",
-      "compare": "Compare"
+      "runTest": "Compare Test",
+      "runAll": "Test All",
+      "compare": "Compare",
+      "refresh": "Refresh"
+    },
+    "testSelector": {
+      "title": "Select Test Case",
+      "pureText": "Pure Text",
+      "thinkingLow": "Thinking Low",
+      "thinkingHigh": "Thinking High",
+      "systemInstruction": "System Instruction",
+      "jsonSchema": "JSON Schema",
+      "toolCall": "Tool Call",
+      "modeAny": "mode:ANY",
+      "modeNone": "mode:NONE",
+      "parallelCall": "Parallel Call",
+      "multimodalVision": "Multimodal Vision",
+      "audioTranscription": "Audio Transcription",
+      "audioThinking": "Audio+Thinking",
+      "audioSummary": "Audio Summary",
+      "multiImage": "Multi Image",
+      "streaming": "Streaming"
+    },
+    "legend": {
+      "match": "Match",
+      "mismatch": "Mismatch",
+      "missing": "Missing",
+      "orderDiff": "Order Diff"
+    },
+    "request": {
+      "title": "Request Body",
+      "selectToView": "Select test case to view request..."
+    },
+    "audio": {
+      "title": "Custom Audio Test",
+      "uploadAudio": "Upload Audio",
+      "record": "Record",
+      "stopRecord": "Stop",
+      "recording": "Recording...",
+      "processing": "Processing...",
+      "audioLoaded": "Audio loaded",
+      "recordingComplete": "Recording complete",
+      "customPrompt": "Custom prompt:",
+      "runCustomTest": "Run Custom Audio Test",
+      "file": "File:",
+      "size": "Size:",
+      "type": "Type:",
+      "noMicrophone": "Cannot access microphone"
+    },
+    "history": {
+      "title": "Test History",
+      "clear": "Clear"
     },
     "results": {
       "realResponse": "Real Gemini API",
       "localResponse": "Local Gemma 3n",
-      "comparison": "Comparison",
+      "comparison": "JSON Field Comparison",
       "pending": "Pending",
+      "running": "Running...",
+      "success": "Success",
+      "failed": "Failed",
+      "comparing": "Comparing...",
       "match": "Match",
-      "mismatch": "Mismatch"
+      "mismatch": "Mismatch",
+      "clickToRun": "Click \"Compare Test\" to run...",
+      "requesting": "Requesting...",
+      "waitingResponse": "Waiting for response...",
+      "cannotCompare": "Cannot compare: at least one request failed"
+    },
+    "stats": {
+      "match": "Match",
+      "mismatch": "Mismatch",
+      "missingReal": "Real API Missing",
+      "missingLocal": "Local Missing",
+      "orderDiff": "Order Diff"
+    },
+    "compare": {
+      "keyOrderDiff": "Key Order Diff",
+      "valueMismatch": "Value Mismatch",
+      "localMissing": "Local Missing",
+      "realApiMissing": "Real API Missing / Local Extra",
+      "matchItems": "Match Items",
+      "clickToExpand": "- Click to expand/collapse",
+      "real": "Real:",
+      "local": "Local:",
+      "realApiHas": "Real API has:",
+      "localHas": "Local has:",
+      "noCompareData": "No comparison data"
+    },
+    "streaming": {
+      "streamRequesting": "Streaming request...",
+      "streamOutput": "Streaming output...",
+      "receivedChunks": "Received chunks",
+      "finalResponse": "Final response:",
+      "chunkCount": "Chunk Count"
+    },
+    "errors": {
+      "enterApiKey": "Please enter API Key",
+      "networkError": "Network error:",
+      "ensureServerRunning": "Please ensure local server is running:\npython apps/gemini_api/server.py",
+      "uploadOrRecordFirst": "Please upload or record audio first",
+      "audioProcessing": "Audio processing... (may take 30-60 seconds)",
+      "switchFailed": "Switch failed:",
+      "unknownError": "Unknown error"
+    },
+    "gpu": {
+      "switched": "GPU switched:",
+      "auto": "Auto"
     }
   }
 }

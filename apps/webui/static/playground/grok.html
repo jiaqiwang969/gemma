@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en" data-i18n-title-key="pageTitle.playgroundGrok">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xAI Grok API Playground</title>
+    <!-- I18n must load before unified-nav.js -->
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
+    <style>
+        :root {
+            /* Dark theme matching LingKong AI */
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --bg-input: #0d1117;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #666;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-primary: #8b5cf6;
+            --accent-blue: #4285f4;
+            --accent-green: #34a853;
+            --accent-yellow: #fbbc05;
+            --accent-red: #ea4335;
+            --code-bg: #0d1117;
+            --code-text: #e6edf3;
+            --left-color: #4285f4;
+            --right-color: #34a853;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            position: sticky;
+            top: 60px;
+            z-index: 99;
+        }
+
+        .header-content {
+            max-width: 1900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.3em;
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .config-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .config-item label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .config-item input {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .config-item input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .config-item input.url { width: 200px; }
+        .config-item input.api-key { width: 160px; font-family: monospace; }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .main-container {
+            max-width: 1900px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .tips-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .tips-panel h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tip-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .tip-card.tip-current {
+            background: var(--bg-card);
+            border-color: var(--accent-primary);
+        }
+
+        .tip-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 6px;
+        }
+
+        .tip-list {
+            list-style: disc;
+            padding-left: 18px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .tip-list li { margin: 4px 0; }
+
+        .tip-list code {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .test-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .test-selector h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .test-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .test-tab {
+            padding: 6px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .test-tab:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+        .test-tab.active {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border-color: transparent;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 350px 1fr;
+            gap: 15px;
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel.left .panel-header {
+            background: linear-gradient(135deg, rgba(66, 133, 244, 0.15), transparent);
+            border-left: 3px solid var(--left-color);
+        }
+
+        .panel.right .panel-header {
+            background: linear-gradient(135deg, rgba(52, 168, 83, 0.15), transparent);
+            border-left: 3px solid var(--right-color);
+        }
+
+        .panel.center .panel-header {
+            background: linear-gradient(135deg, rgba(251, 188, 5, 0.15), transparent);
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .panel-title {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .panel.left .panel-title { color: var(--left-color); }
+        .panel.right .panel-title { color: var(--right-color); }
+        .panel.center .panel-title { color: var(--accent-yellow); }
+
+        .panel-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-pending { background: var(--bg-secondary); color: var(--text-secondary); }
+        .badge-running { background: var(--accent-yellow); color: #000; }
+        .badge-success { background: var(--accent-green); color: white; }
+        .badge-error { background: var(--accent-red); color: white; }
+
+        .panel-content {
+            padding: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .code-block pre {
+            color: var(--code-text);
+            font-family: 'JetBrains Mono', 'Fira Code', Monaco, monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+        }
+
+        .request-preview {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .request-preview h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .request-preview .code-block {
+            max-height: 150px;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-box.success { background: rgba(52, 168, 83, 0.15); border-color: rgba(52, 168, 83, 0.3); }
+        .stat-box.error { background: rgba(234, 67, 53, 0.15); border-color: rgba(234, 67, 53, 0.3); }
+        .stat-box.warning { background: rgba(251, 188, 5, 0.15); border-color: rgba(251, 188, 5, 0.3); }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .stat-box.success .stat-value { color: var(--accent-green); }
+        .stat-box.error .stat-value { color: var(--accent-red); }
+        .stat-box.warning .stat-value { color: var(--accent-yellow); }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .compare-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .compare-item.match {
+            background: rgba(52, 168, 83, 0.15);
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .compare-item.mismatch {
+            background: rgba(234, 67, 53, 0.15);
+            border-left: 3px solid var(--accent-red);
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 11px;
+            flex-wrap: wrap;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.match { background: var(--accent-green); }
+        .legend-dot.mismatch { background: var(--accent-red); }
+
+        @media (max-width: 1200px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+            .panel.center {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>xAI Grok API 对比测试</h1>
+            <div class="config-group">
+                <div class="config-item">
+                    <label>官方 API:</label>
+                    <input type="text" id="officialUrl" class="url" value="https://api.x.ai/v1">
+                </div>
+                <div class="config-item">
+                    <label>官方 Key:</label>
+                    <input type="password" id="officialKey" class="api-key" placeholder="输入你的 xAI API Key">
+                </div>
+                <div class="config-item">
+                    <label>代理服务:</label>
+                    <input type="text" id="proxyUrl" class="url" value="https://api.vectorengine.ai/v1">
+                </div>
+                <div class="config-item">
+                    <label>代理 Key:</label>
+                    <input type="password" id="proxyKey" class="api-key" placeholder="输入代理 API Key">
+                </div>
+                <button class="btn btn-primary" onclick="runComparison()">对比测试</button>
+                <button class="btn btn-success" onclick="runAllTests()">全部测试</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="tips-panel">
+            <h3>学习提示</h3>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <div class="tip-title">模型命名与选型</div>
+                    <ul class="tip-list">
+                        <li>官方 API 不存在 <code>grok-4.1</code>，页面会自动映射到 <code>grok-4-0709</code>（别名 <code>grok-4</code>/<code>grok-4-latest</code>）。</li>
+                        <li>函数调用建议使用 <code>grok-4-1-fast-reasoning</code>，更严格遵循 <code>tool_choice</code>。</li>
+                        <li>图像理解与联网搜索优先使用 <code>grok-4.1</code>（官方实际为 <code>grok-4-0709</code>）。</li>
+                    </ul>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-title">功能注意事项</div>
+                    <ul class="tip-list">
+                        <li>联网搜索为内置能力，通过系统提示引导，不需要 <code>search_parameters</code>。</li>
+                        <li>流式输出需 <code>stream: true</code>；页面会汇总增量内容。</li>
+                        <li>代理服务可能不支持 TTS 或图像生成，失败时优先用官方 API 排查。</li>
+                    </ul>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-title">调试建议</div>
+                    <ul class="tip-list">
+                        <li>关注 <code>usage</code> 和 <code>reasoning_tokens</code>（推理模型或 fast-reasoning）。</li>
+                        <li>函数调用请检查 <code>tool_calls</code> 是否返回，必要时用 <code>tool_choice</code> 强制。</li>
+                        <li>嵌入结果看 <code>data[0].embedding</code> 长度；TTS 返回二进制大小。</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tip-card tip-current">
+                <div class="tip-title">当前测试提示</div>
+                <ul class="tip-list" id="testTips"></ul>
+            </div>
+        </div>
+
+        <div class="test-selector">
+            <h3>选择测试用例</h3>
+            <div class="test-tabs">
+                <div class="test-tab active" data-test="1-1">1.1 基础对话</div>
+                <div class="test-tab" data-test="1-2">1.2 系统提示词</div>
+                <div class="test-tab" data-test="1-3">1.3 多轮对话</div>
+                <div class="test-tab" data-test="1-4">1.4 流式输出</div>
+                <div class="test-tab" data-test="2-1">2.1 函数调用</div>
+                <div class="test-tab" data-test="2-2">2.2 强制工具调用</div>
+                <div class="test-tab" data-test="2-3">2.3 工具调用全流程</div>
+                <div class="test-tab" data-test="3-1">3.1 JSON Schema</div>
+                <div class="test-tab" data-test="4-1">4.1 推理模型</div>
+                <div class="test-tab" data-test="5-1">5.1 图像理解</div>
+                <div class="test-tab" data-test="6-1">6.1 图像生成</div>
+                <div class="test-tab" data-test="7-1">7.1 Web搜索</div>
+                <div class="test-tab" data-test="7-2">7.2 X搜索</div>
+                <div class="test-tab" data-test="8-1">8.1 Embeddings</div>
+                <div class="test-tab" data-test="9-1">9.1 TTS</div>
+                <div class="test-tab" data-test="10-1">10.1 模型列表</div>
+                <div class="test-tab" data-test="11-1">11.1 代码生成</div>
+                <div class="test-tab" data-test="11-2">11.2 多语言</div>
+                <div class="test-tab" data-test="11-3">11.3 温度参数</div>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot match"></div> 两边都成功</div>
+                <div class="legend-item"><div class="legend-dot mismatch"></div> 存在差异</div>
+            </div>
+        </div>
+
+        <div class="request-preview">
+            <h3>请求内容 (Request Body)</h3>
+            <div class="code-block">
+                <pre id="requestPreview">选择测试用例查看请求内容...</pre>
+            </div>
+        </div>
+
+        <div class="comparison-container">
+            <div class="panel left">
+                <div class="panel-header">
+                    <span class="panel-title">官方 API (api.x.ai)</span>
+                    <span class="panel-badge badge-pending" id="badge-left">待测试</span>
+                </div>
+                <div class="panel-content">
+                    <div class="code-block" id="response-left">
+                        <pre>点击"对比测试"执行...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel center">
+                <div class="panel-header">
+                    <span class="panel-title">对比结果</span>
+                    <span class="panel-badge badge-pending" id="badge-center">待对比</span>
+                </div>
+                <div class="panel-content" id="compare-results">
+                    <div class="stats-summary" id="stats-summary" style="display: none;">
+                        <div class="stat-box success">
+                            <div class="stat-value" id="stat-left">-</div>
+                            <div class="stat-label">官方API</div>
+                        </div>
+                        <div class="stat-box" id="stat-box-right">
+                            <div class="stat-value" id="stat-right">-</div>
+                            <div class="stat-label">代理服务</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="stat-left-time">-</div>
+                            <div class="stat-label">官方耗时</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="stat-right-time">-</div>
+                            <div class="stat-label">代理耗时</div>
+                        </div>
+                    </div>
+                    <div id="compare-details">
+                        <p style="color: var(--text-secondary); font-size: 12px;">运行测试后显示对比结果...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel right">
+                <div class="panel-header">
+                    <span class="panel-title">代理服务 (vectorengine)</span>
+                    <span class="panel-badge badge-pending" id="badge-right">待测试</span>
+                </div>
+                <div class="panel-content">
+                    <div class="code-block" id="response-right">
+                        <pre>点击"对比测试"执行...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTest = '1-1';
+
+        const weatherTool = {
+            type: 'function',
+            function: {
+                name: 'get_weather',
+                description: 'Get weather for a city',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        city: {type: 'string'},
+                        unit: {type: 'string', enum: ['celsius', 'fahrenheit']}
+                    },
+                    required: ['city']
+                }
+            }
+        };
+
+        const testConfigs = {
+            '1-1': {
+                name: '1.1 基础对话',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{role: 'user', content: 'Say hello in one word'}],
+                    max_tokens: 50
+                }
+            },
+            '1-2': {
+                name: '1.2 系统提示词',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [
+                        {role: 'system', content: 'You are a pirate'},
+                        {role: 'user', content: 'Say hello'}
+                    ],
+                    max_tokens: 100
+                }
+            },
+            '1-3': {
+                name: '1.3 多轮对话',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [
+                        {role: 'system', content: 'You are a helpful math tutor.'},
+                        {role: 'user', content: 'What is 15 * 17?'},
+                        {role: 'assistant', content: '15 * 17 = 255.'},
+                        {role: 'user', content: 'Now divide that by 5.'}
+                    ],
+                    max_tokens: 80
+                }
+            },
+            '1-4': {
+                name: '1.4 流式输出',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{role: 'user', content: 'Write a haiku about AI.'}],
+                    max_tokens: 100,
+                    stream: true
+                }
+            },
+            '2-1': {
+                name: '2.1 函数调用',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4-1-fast-reasoning',
+                body: {
+                    messages: [{role: 'user', content: 'What is the weather in Tokyo?'}],
+                    tools: [weatherTool],
+                    tool_choice: 'auto',
+                    max_tokens: 100
+                }
+            },
+            '2-2': {
+                name: '2.2 强制工具调用',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4-1-fast-reasoning',
+                body: {
+                    messages: [{role: 'user', content: 'What is the weather in Beijing?'}],
+                    tools: [weatherTool],
+                    tool_choice: {type: 'function', function: {name: 'get_weather'}},
+                    max_tokens: 120
+                }
+            },
+            '2-3': {
+                name: '2.3 工具调用全流程',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                flow: 'tool-followup',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4-1-fast-reasoning',
+                body: {
+                    messages: [{role: 'user', content: 'What is the weather in Tokyo?'}],
+                    tools: [weatherTool],
+                    tool_choice: {type: 'function', function: {name: 'get_weather'}},
+                    max_tokens: 150
+                },
+                toolResult: {
+                    city: 'Tokyo',
+                    temperature: 12,
+                    unit: 'celsius',
+                    condition: 'Sunny',
+                    humidity: '45%'
+                }
+            },
+            '3-1': {
+                name: '3.1 JSON Schema',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{role: 'user', content: 'Give me info about Tokyo'}],
+                    response_format: {
+                        type: 'json_schema',
+                        json_schema: {
+                            name: 'city_info',
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    name: {type: 'string'},
+                                    country: {type: 'string'}
+                                }
+                            }
+                        }
+                    },
+                    max_tokens: 100
+                }
+            },
+            '4-1': {
+                name: '4.1 推理模型',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-3-mini',
+                proxyModel: 'grok-3-mini',
+                body: {
+                    messages: [{role: 'user', content: 'What is 15*17?'}],
+                    reasoning_effort: 'high',
+                    max_tokens: 100
+                }
+            },
+            '5-1': {
+                name: '5.1 图像理解',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            {type: 'text', text: 'What color is this? One word.'},
+                            {type: 'image_url', image_url: {url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQzwAEjDAGNYAAACcdAQPwEjTPAAAAAElFTkSuQmCC'}}
+                        ]
+                    }],
+                    max_tokens: 20
+                }
+            },
+            '6-1': {
+                name: '6.1 图像生成',
+                endpoint: '/images/generations',
+                method: 'POST',
+                officialModel: 'grok-2-image-1212',
+                proxyModel: 'grok-2-image-1212',
+                body: {
+                    prompt: 'A red circle on white background'
+                }
+            },
+            '7-1': {
+                name: '7.1 Web搜索',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [
+                        {role: 'system', content: 'You have access to real-time web search. Please search for the latest information.'},
+                        {role: 'user', content: 'What is the current weather in San Francisco?'}
+                    ],
+                    max_tokens: 200
+                }
+            },
+            '7-2': {
+                name: '7.2 X搜索',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [
+                        {role: 'system', content: 'You have access to X (Twitter) search. Please search for relevant posts and discussions.'},
+                        {role: 'user', content: 'What are people saying about the latest iPhone on X?'}
+                    ],
+                    max_tokens: 200
+                }
+            },
+            '8-1': {
+                name: '8.1 Embeddings',
+                endpoint: '/embeddings',
+                method: 'POST',
+                officialModel: 'v1',
+                proxyModel: 'text-embedding-3-small',
+                body: {
+                    input: 'Hello world'
+                }
+            },
+            '9-1': {
+                name: '9.1 TTS',
+                endpoint: '/audio/speech',
+                method: 'POST',
+                officialModel: 'tts-1',
+                proxyModel: 'tts-1',
+                body: {
+                    input: 'Hello',
+                    voice: 'alloy'
+                }
+            },
+            '10-1': {
+                name: '10.1 模型列表',
+                endpoint: '/models',
+                method: 'GET',
+                officialModel: null,
+                proxyModel: null,
+                body: null
+            },
+            '11-1': {
+                name: '11.1 代码生成',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{
+                        role: 'user',
+                        content: 'Write a Python function to find all prime numbers up to n using the Sieve of Eratosthenes. Include type hints and a docstring.'
+                    }],
+                    max_tokens: 400
+                }
+            },
+            '11-2': {
+                name: '11.2 多语言',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{role: 'user', content: '用中文简要解释什么是人工智能，限制在50字以内。'}],
+                    max_tokens: 120
+                }
+            },
+            '11-3': {
+                name: '11.3 温度参数',
+                endpoint: '/chat/completions',
+                method: 'POST',
+                officialModel: 'grok-4.1',
+                proxyModel: 'grok-4.1',
+                body: {
+                    messages: [{role: 'user', content: 'Give me a creative name for an AI startup.'}],
+                    max_tokens: 60,
+                    temperature: 1.5
+                }
+            }
+        };
+
+        const testTips = {
+            '1-1': [
+                '验证基础对话是否返回 <code>choices[0].message.content</code>。',
+                '官方侧 <code>grok-4.1</code> 会映射为 <code>grok-4-0709</code>。'
+            ],
+            '1-2': [
+                'system 角色应显著影响语气或风格。',
+                '若变化不明显，检查系统提示是否被代理过滤。'
+            ],
+            '1-3': [
+                '多轮对话需携带历史 <code>messages</code>，输出应保持上下文一致。'
+            ],
+            '1-4': [
+                '流式响应应为 <code>text/event-stream</code>，页面会合并增量内容。',
+                '若返回 JSON，说明服务端未启用 stream。'
+            ],
+            '2-1': [
+                '自动工具调用可能直接回答，请关注 <code>tool_calls</code> 字段。',
+                '推荐使用 <code>grok-4-1-fast-reasoning</code> 更稳。'
+            ],
+            '2-2': [
+                '强制调用后应返回 <code>finish_reason: tool_calls</code>。'
+            ],
+            '2-3': [
+                '该用例会自动执行两步：tool_calls → tool 结果 → 最终回复。',
+                '响应中包含 <code>step1</code>/<code>step2</code> 便于核对。'
+            ],
+            '3-1': [
+                '结构化输出需满足 JSON Schema，可直接 JSON 解析。'
+            ],
+            '4-1': [
+                '推理模型需要 <code>reasoning_effort</code>，关注 <code>reasoning_tokens</code>。'
+            ],
+            '5-1': [
+                '图像理解仅 <code>grok-4.1</code> 支持，fast-reasoning 不支持。',
+                '使用 data URL Base64 输入图片。'
+            ],
+            '6-1': [
+                '图像生成通常返回 <code>data[0].url</code> 或 base64。'
+            ],
+            '7-1': [
+                'Web 搜索通过系统提示触发，不需要 <code>search_parameters</code>。'
+            ],
+            '7-2': [
+                'X 搜索同理，结果应包含近期讨论内容。'
+            ],
+            '8-1': [
+                '官方嵌入模型为 <code>v1</code>，代理使用 <code>text-embedding-3-small</code>。',
+                '检查向量长度是否稳定。'
+            ],
+            '9-1': [
+                'TTS 返回二进制音频，页面仅展示大小/类型。'
+            ],
+            '10-1': [
+                '模型列表应包含 <code>grok-4-0709</code> 或 <code>grok-4-latest</code>。'
+            ],
+            '11-1': [
+                '代码生成应包含类型标注与 docstring。'
+            ],
+            '11-2': [
+                '中文回答应控制在 50 字以内。'
+            ],
+            '11-3': [
+                '高温度会增强随机性，多次运行可对比差异。'
+            ]
+        };
+
+        // 初始化标签点击
+        document.querySelectorAll('.test-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentTest = tab.dataset.test;
+                updateRequestPreview();
+            });
+        });
+
+        function updateRequestPreview() {
+            const config = testConfigs[currentTest];
+            const officialUrl = document.getElementById('officialUrl').value || '';
+            const proxyUrl = document.getElementById('proxyUrl').value || '';
+            const resolvedOfficial = resolveModel(officialUrl, config.officialModel);
+            const resolvedProxy = resolveModel(proxyUrl, config.proxyModel);
+            let preview = {
+                endpoint: config.endpoint,
+                method: config.method,
+                official_model: config.officialModel,
+                proxy_model: config.proxyModel
+            };
+            if (resolvedOfficial && resolvedOfficial !== config.officialModel) {
+                preview.official_model_effective = resolvedOfficial;
+            }
+            if (resolvedProxy && resolvedProxy !== config.proxyModel) {
+                preview.proxy_model_effective = resolvedProxy;
+            }
+            if (config.flow) {
+                preview.flow = config.flow;
+            }
+            if (config.body) {
+                preview.body = config.body;
+            }
+            document.getElementById('requestPreview').textContent = JSON.stringify(preview, null, 2);
+            updateTips();
+        }
+
+        function updateTips() {
+            const list = document.getElementById('testTips');
+            if (!list) {
+                return;
+            }
+            const tips = testTips[currentTest] || ['暂无提示'];
+            list.innerHTML = tips.map((tip) => '<li>' + tip + '</li>').join('');
+        }
+
+        function updateBadge(id, status) {
+            const badge = document.getElementById(id);
+            badge.className = 'panel-badge badge-' + status;
+            const texts = {pending: '待测试', running: '运行中...', success: '成功', error: '失败'};
+            badge.textContent = texts[status] || status;
+        }
+
+        function cloneBody(body) {
+            return body ? JSON.parse(JSON.stringify(body)) : null;
+        }
+
+        function resolveModel(baseUrl, model) {
+            if (!model) {
+                return model;
+            }
+            const isOfficial = typeof baseUrl === 'string' && baseUrl.includes('api.x.ai');
+            if (isOfficial && model === 'grok-4.1') {
+                return 'grok-4-0709';
+            }
+            return model;
+        }
+
+        function buildBody(config, baseUrl, model) {
+            const body = cloneBody(config.body);
+            const resolvedModel = resolveModel(baseUrl, model);
+            if (body && resolvedModel) {
+                body.model = resolvedModel;
+            }
+            return body;
+        }
+
+        async function runComparison() {
+            const config = testConfigs[currentTest];
+            const officialUrl = document.getElementById('officialUrl').value;
+            const officialKey = document.getElementById('officialKey').value;
+            const proxyUrl = document.getElementById('proxyUrl').value;
+            const proxyKey = document.getElementById('proxyKey').value;
+
+            // 重置状态
+            updateBadge('badge-left', 'running');
+            updateBadge('badge-right', 'running');
+            updateBadge('badge-center', 'running');
+            document.getElementById('response-left').innerHTML = '<pre>请求中...</pre>';
+            document.getElementById('response-right').innerHTML = '<pre>请求中...</pre>';
+            document.getElementById('stats-summary').style.display = 'none';
+
+            // 并行请求
+            const leftPromise = timedRequest(() => (
+                config.flow === 'tool-followup'
+                    ? runToolFlow(officialUrl, officialKey, config, config.officialModel)
+                    : makeRequest(
+                        officialUrl + config.endpoint,
+                        officialKey,
+                        config.method,
+                        buildBody(config, officialUrl, config.officialModel)
+                    )
+            ));
+            
+            const rightPromise = timedRequest(() => (
+                config.flow === 'tool-followup'
+                    ? runToolFlow(proxyUrl, proxyKey, config, config.proxyModel)
+                    : makeRequest(
+                        proxyUrl + config.endpoint,
+                        proxyKey,
+                        config.method,
+                        buildBody(config, proxyUrl, config.proxyModel)
+                    )
+            ));
+
+            const [left, right] = await Promise.all([leftPromise, rightPromise]);
+            const leftResult = left.result;
+            const rightResult = right.result;
+            const leftTime = left.time;
+            const rightTime = right.time;
+
+            // 显示结果
+            displayResult('left', leftResult, leftTime);
+            displayResult('right', rightResult, rightTime);
+            
+            // 对比
+            compareResults(leftResult, rightResult, leftTime, rightTime);
+        }
+
+        async function timedRequest(fn) {
+            const start = Date.now();
+            try {
+                const result = await fn();
+                const time = ((Date.now() - start) / 1000).toFixed(2);
+                return {result, time};
+            } catch (e) {
+                const time = ((Date.now() - start) / 1000).toFixed(2);
+                return {result: {status: 0, error: e.message || String(e)}, time};
+            }
+        }
+
+        async function makeRequest(url, apiKey, method, body) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey,
+                        'Content-Type': 'application/json'
+                    }
+                };
+                if (body && body.stream) {
+                    options.headers['Accept'] = 'text/event-stream';
+                }
+                if (body && method === 'POST') {
+                    options.body = JSON.stringify(body);
+                }
+                const resp = await fetch(url, options);
+                const contentType = resp.headers.get('content-type') || '';
+                
+                if (contentType.includes('text/event-stream')) {
+                    return {status: resp.status, data: await readEventStream(resp)};
+                }
+                if (contentType.includes('application/json')) {
+                    return {status: resp.status, data: await resp.json()};
+                } else {
+                    // 非JSON响应（如音频）
+                    const blob = await resp.blob();
+                    return {status: resp.status, data: {type: 'binary', size: blob.size, contentType: contentType}};
+                }
+            } catch (e) {
+                return {status: 0, error: e.message};
+            }
+        }
+
+        async function readEventStream(resp) {
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let text = '';
+            let events = 0;
+            let done = false;
+
+            while (!done) {
+                const {value, done: readerDone} = await reader.read();
+                if (readerDone) {
+                    break;
+                }
+                buffer += decoder.decode(value, {stream: true});
+                const lines = buffer.split(/\r?\n/);
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data:')) {
+                        continue;
+                    }
+                    const payload = trimmed.slice(5).trim();
+                    if (payload === '[DONE]') {
+                        done = true;
+                        break;
+                    }
+                    try {
+                        const json = JSON.parse(payload);
+                        events += 1;
+                        const delta = json.choices && json.choices[0] && json.choices[0].delta
+                            ? json.choices[0].delta.content
+                            : '';
+                        if (delta) {
+                            text += delta;
+                        }
+                    } catch (e) {
+                        // Ignore malformed chunks.
+                    }
+                }
+            }
+
+            return {type: 'stream', text: text, events: events};
+        }
+
+        async function runToolFlow(baseUrl, apiKey, config, model) {
+            const firstBody = buildBody(config, baseUrl, model);
+            const first = await makeRequest(baseUrl + config.endpoint, apiKey, config.method, firstBody);
+
+            if (first.error) {
+                return first;
+            }
+            if (first.status < 200 || first.status >= 300) {
+                return {status: first.status, error: '工具调用第一步失败', data: {type: 'tool-flow', step1: first.data}};
+            }
+
+            const message = first.data && first.data.choices && first.data.choices[0]
+                ? first.data.choices[0].message
+                : null;
+            const toolCalls = message && message.tool_calls ? message.tool_calls : null;
+
+            if (!toolCalls || toolCalls.length === 0) {
+                return {status: first.status, error: '未返回 tool_calls', data: {type: 'tool-flow', step1: first.data}};
+            }
+
+            const toolCall = toolCalls[0];
+            const toolResult = config.toolResult || {
+                city: 'Tokyo',
+                temperature: 12,
+                unit: 'celsius',
+                condition: 'Sunny'
+            };
+
+            const followupMessages = [
+                ...firstBody.messages,
+                message,
+                {
+                    role: 'tool',
+                    tool_call_id: toolCall.id,
+                    content: JSON.stringify(toolResult)
+                }
+            ];
+
+            const secondBody = buildBody(config, baseUrl, model);
+            if (secondBody) {
+                delete secondBody.tool_choice;
+                secondBody.messages = followupMessages;
+            }
+
+            const second = await makeRequest(baseUrl + config.endpoint, apiKey, config.method, secondBody);
+            if (second.error) {
+                return second;
+            }
+
+            return {status: second.status, data: {type: 'tool-flow', step1: first.data, step2: second.data}};
+        }
+
+        function displayResult(side, result, time) {
+            const el = document.getElementById('response-' + side);
+            const badge = 'badge-' + side;
+            
+            if (result.error) {
+                updateBadge(badge, 'error');
+                el.innerHTML = '<pre style="color: #f44336;">错误: ' + result.error + '</pre>';
+            } else if (result.status >= 200 && result.status < 300) {
+                updateBadge(badge, 'success');
+                if (result.data && result.data.type === 'stream') {
+                    const meta = '流式事件: ' + result.data.events;
+                    el.innerHTML = '<pre>HTTP ' + result.status + ' (' + time + 's)\n\n' + result.data.text + '\n\n' + meta + '</pre>';
+                } else {
+                    el.innerHTML = '<pre>HTTP ' + result.status + ' (' + time + 's)\n\n' + JSON.stringify(result.data, null, 2) + '</pre>';
+                }
+            } else {
+                updateBadge(badge, 'error');
+                el.innerHTML = '<pre style="color: #f44336;">HTTP ' + result.status + ' (' + time + 's)\n\n' + JSON.stringify(result.data, null, 2) + '</pre>';
+            }
+        }
+
+        function compareResults(left, right, leftTime, rightTime) {
+            const statsEl = document.getElementById('stats-summary');
+            const detailsEl = document.getElementById('compare-details');
+            
+            statsEl.style.display = 'grid';
+            
+            const leftOk = !left.error && left.status >= 200 && left.status < 300;
+            const rightOk = !right.error && right.status >= 200 && right.status < 300;
+            
+            document.getElementById('stat-left').textContent = leftOk ? '✅' : '❌';
+            document.getElementById('stat-right').textContent = rightOk ? '✅' : '❌';
+            document.getElementById('stat-left-time').textContent = leftTime + 's';
+            document.getElementById('stat-right-time').textContent = rightTime + 's';
+            
+            const rightBox = document.getElementById('stat-box-right');
+            rightBox.className = 'stat-box ' + (rightOk ? 'success' : 'error');
+            
+            // 对比详情
+            let html = '';
+            if (leftOk && rightOk) {
+                updateBadge('badge-center', 'success');
+                html = '<div class="compare-item match"><span>✅ 两边都成功返回</span></div>';
+            } else if (leftOk && !rightOk) {
+                updateBadge('badge-center', 'error');
+                html = '<div class="compare-item mismatch"><span>⚠️ 官方成功，代理失败 (HTTP ' + right.status + ')</span></div>';
+                if (right.error) {
+                    html += '<div class="compare-item mismatch"><span>错误: ' + right.error + '</span></div>';
+                } else if (right.data && right.data.error) {
+                    html += '<div class="compare-item mismatch"><span>错误: ' + (right.data.error.message || JSON.stringify(right.data.error)) + '</span></div>';
+                }
+            } else if (!leftOk && rightOk) {
+                updateBadge('badge-center', 'error');
+                html = '<div class="compare-item mismatch"><span>⚠️ 官方失败，代理成功</span></div>';
+                if (left.error) {
+                    html += '<div class="compare-item mismatch"><span>错误: ' + left.error + '</span></div>';
+                } else if (left.data && left.data.error) {
+                    html += '<div class="compare-item mismatch"><span>错误: ' + (left.data.error.message || JSON.stringify(left.data.error)) + '</span></div>';
+                }
+            } else {
+                updateBadge('badge-center', 'error');
+                html = '<div class="compare-item mismatch"><span>❌ 两边都失败</span></div>';
+                if (left.error || right.error) {
+                    if (left.error) {
+                        html += '<div class="compare-item mismatch"><span>官方错误: ' + left.error + '</span></div>';
+                    }
+                    if (right.error) {
+                        html += '<div class="compare-item mismatch"><span>代理错误: ' + right.error + '</span></div>';
+                    }
+                }
+            }
+            
+            detailsEl.innerHTML = html;
+        }
+
+        async function runAllTests() {
+            const testIds = Object.keys(testConfigs);
+            for (const testId of testIds) {
+                document.querySelectorAll('.test-tab').forEach(t => t.classList.remove('active'));
+                document.querySelector('.test-tab[data-test="' + testId + '"]').classList.add('active');
+                currentTest = testId;
+                updateRequestPreview();
+                await runComparison();
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        }
+
+        // 初始化
+        updateRequestPreview();
+    </script>
+</body>
+</html>

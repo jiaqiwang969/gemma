@@ -112,3 +112,14 @@ infra/llama.cpp/
 *.parquet
 *.arrow
 *.feather
+
+# Server keys (sensitive)
+.server_keys.json
+*/.server_keys.json
+
+# Sandbox/test files
+sandbox/
+01.html
+
+# Temporary conversion scripts
+convert_encryption_pdf.py

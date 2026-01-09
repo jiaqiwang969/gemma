@@ -103,13 +103,18 @@ echo "▶ 上传 TinyBox DIY 指南..."
 scp -r apps/webui/static/tinybox/* $SERVER:/tmp/tinybox/ 2>/dev/null || true
 echo "✓ tinybox 已上传"
 
+echo "▶ 上传 Playground..."
+ssh $SERVER "mkdir -p /tmp/playground"
+scp -r apps/webui/static/playground/* $SERVER:/tmp/playground/ 2>/dev/null || true
+echo "✓ playground 已上传"
+
 echo "▶ 上传灵空聊天界面..."
 scp apps/webui/static/lingkong.html $SERVER:/tmp/lingkong.html 2>/dev/null || true
 echo "✓ lingkong.html 已上传"
 
 # 移动文件并设置权限
 echo "▶ 部署文件..."
-ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/models && \
+ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/models && \
     sudo mv /tmp/install.sh $REMOTE_DIR/install.sh && \
     sudo mv /tmp/webui.tar.gz $REMOTE_DIR/webui.tar.gz && \
     sudo mv /tmp/gemini_api.tar.gz $REMOTE_DIR/gemini_api.tar.gz && \
@@ -120,11 +125,11 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REM
     sudo mv /tmp/lingkong.html $REMOTE_DIR/static/lingkong.html 2>/dev/null || true && \
     sudo mv /tmp/chat-lite.html $REMOTE_DIR/static/chat-lite.html 2>/dev/null || true && \
     sudo mv /tmp/docs.html $REMOTE_DIR/static/docs.html 2>/dev/null || true && \
-    sudo mv /tmp/playground.html $REMOTE_DIR/static/playground.html 2>/dev/null || true && \
     sudo mv /tmp/pitch.html $REMOTE_DIR/static/pitch.html 2>/dev/null || true && \
     sudo mv /tmp/pitch.pdf $REMOTE_DIR/static/pitch.pdf 2>/dev/null || true && \
     sudo mv /tmp/pitch/*.jpg $REMOTE_DIR/static/pitch/ 2>/dev/null || true && \
     sudo cp -r /tmp/tinybox/* $REMOTE_DIR/static/tinybox/ 2>/dev/null || true && \
+    sudo cp -r /tmp/playground/* $REMOTE_DIR/static/playground/ 2>/dev/null || true && \
     sudo mv /tmp/i18n/*.json $REMOTE_DIR/static/i18n/ 2>/dev/null || true && \
     sudo mv /tmp/js/*.js $REMOTE_DIR/static/js/ 2>/dev/null || true && \
     sudo rm -rf /tmp/pitch /tmp/i18n /tmp/js /tmp/tinybox 2>/dev/null || true && \
@@ -144,13 +149,18 @@ echo "✓ 文件已部署"
 # 同步静态文件到 WebUI 目录 (nginx 从这里读取)
 echo "▶ 同步静态文件到 WebUI..."
 WEBUI_STATIC="/opt/lingkong-webui/static"
-ssh $SERVER "sudo cp $REMOTE_DIR/static/home.html $WEBUI_STATIC/ 2>/dev/null || true && \
+ssh $SERVER "sudo mkdir -p $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground && \
+    sudo cp $REMOTE_DIR/static/home.html $WEBUI_STATIC/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/downloads.html $WEBUI_STATIC/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/docs.html $WEBUI_STATIC/ 2>/dev/null || true && \
-    sudo cp $REMOTE_DIR/static/playground.html $WEBUI_STATIC/ 2>/dev/null || true && \
-    sudo cp -r $REMOTE_DIR/static/tinybox $WEBUI_STATIC/ 2>/dev/null || true && \
+    sudo cp -r $REMOTE_DIR/static/tinybox/* $WEBUI_STATIC/tinybox/ 2>/dev/null || true && \
+    sudo cp -r $REMOTE_DIR/static/playground/* $WEBUI_STATIC/playground/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/i18n/*.json $WEBUI_STATIC/i18n/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/js/*.js $WEBUI_STATIC/js/ 2>/dev/null || true && \
+    sudo chmod 755 $WEBUI_STATIC $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground && \
+    sudo chmod 644 $WEBUI_STATIC/*.html $WEBUI_STATIC/i18n/*.json $WEBUI_STATIC/js/*.js 2>/dev/null || true && \
+    sudo chmod 644 $WEBUI_STATIC/tinybox/*.html $WEBUI_STATIC/tinybox/js/*.js $WEBUI_STATIC/tinybox/assets/* 2>/dev/null || true && \
+    sudo chmod 644 $WEBUI_STATIC/playground/*.html 2>/dev/null || true && \
     sudo chown -R ubuntu:ubuntu $WEBUI_STATIC"
 echo "✓ WebUI 静态文件已同步"
 
