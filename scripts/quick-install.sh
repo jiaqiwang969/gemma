@@ -516,6 +516,11 @@ start_gemini_api() {
     export LLAMA_MMPROJ_VISION="$VISION"
     export LLAMA_MMPROJ_AUDIO="$AUDIO"
     export GEMINI_API_LLAMA_PORT="8090"
+    # GPU 配置 (可通过环境变量覆盖)
+    # LLAMA_GPU_DEVICES: 指定 GPU (例如 "0" 或 "0,1")，空=自动选择最大显存的 GPU
+    # LLAMA_SPLIT_MODE: 多 GPU 分割模式 (none, layer, row)
+    export LLAMA_GPU_DEVICES="${LLAMA_GPU_DEVICES:-}"
+    export LLAMA_SPLIT_MODE="${LLAMA_SPLIT_MODE:-layer}"
     export DYLD_LIBRARY_PATH="$LINGKONG_HOME/lib:${DYLD_LIBRARY_PATH:-}"
     export LD_LIBRARY_PATH="$LINGKONG_HOME/lib:${LD_LIBRARY_PATH:-}"
 

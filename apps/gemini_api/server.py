@@ -195,6 +195,12 @@ LLAMA_SERVER_BIN = os.environ.get("LLAMA_SERVER_BIN", str(REPO_ROOT / "infra/lla
 LLAMA_MTMD_BIN = os.environ.get("LLAMA_MTMD_BIN", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-mtmd-cli"))
 LLAMA_SERVER_PORT = int(os.environ.get("GEMINI_API_LLAMA_PORT", "8090"))
 
+# GPU 配置
+# LLAMA_GPU_DEVICES: 指定使用的 GPU 设备 (例如 "0" 或 "0,1")
+# LLAMA_SPLIT_MODE: 多 GPU 分割模式 (none, layer, row)
+LLAMA_GPU_DEVICES = os.environ.get("LLAMA_GPU_DEVICES", "")  # 空 = 自动选择
+LLAMA_SPLIT_MODE = os.environ.get("LLAMA_SPLIT_MODE", "layer")  # 默认按层分割
+
 # 自动查找模型
 LLAMA_MODEL = os.environ.get("LLAMA_MODEL", "")
 if not LLAMA_MODEL:
@@ -842,6 +848,14 @@ def start_llama_server():
         "-t", "8",
         "--ctx-size", "8192",
     ]
+
+    # GPU 配置
+    if LLAMA_GPU_DEVICES:
+        cmd.extend(["-dev", LLAMA_GPU_DEVICES])
+        logger.info(f"GPU 设备: {LLAMA_GPU_DEVICES}")
+    if LLAMA_SPLIT_MODE and LLAMA_SPLIT_MODE != "layer":
+        cmd.extend(["-sm", LLAMA_SPLIT_MODE])
+        logger.info(f"GPU 分割模式: {LLAMA_SPLIT_MODE}")
 
     # 多模态支持: llama-server 只支持单个 mmproj
     # 音频通过 llama-mtmd-cli 单独处理
