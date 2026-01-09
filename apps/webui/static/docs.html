@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-title-key="pageTitle.docs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LingKong AI API Documentation - Gemma 3N Local Inference</title>
     <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -48,14 +49,24 @@
             background: var(--bg-secondary);
             border-right: 1px solid var(--border-color);
             position: fixed;
-            height: 100vh;
+            top: 60px;
+            height: calc(100vh - 60px);
             overflow-y: auto;
             z-index: 100;
         }
 
         .sidebar-header {
-            padding: 1.5rem;
+            padding: 1.25rem 1.5rem;
             border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header .logo-text {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
         }
 
         .logo {
@@ -152,7 +163,7 @@
             border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
             position: sticky;
-            top: 0;
+            top: 60px;
             z-index: 50;
             display: flex;
             justify-content: space-between;
@@ -673,11 +684,8 @@
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-header">
-                <a href="/" class="logo">
-                    <div class="logo-icon">LK</div>
-                    <span class="logo-text">LingKong</span>
-                    <span class="logo-badge">v1.0</span>
-                </a>
+                <span class="logo-text" data-i18n="docs.title">API Documentation</span>
+                <span class="logo-badge">v1.0</span>
             </div>
 
             <div class="nav-section">
@@ -724,13 +732,9 @@
                 <div class="nav-title" data-i18n="docs.nav.resources">Resources</div>
                 <a class="nav-item" href="#errors" data-i18n="docs.nav.errors">Error Handling</a>
                 <a class="nav-item" href="#examples" data-i18n="docs.nav.examples">Code Examples</a>
-                <a class="nav-item" href="/static/playground.html">API Playground</a>
+                <a class="nav-item" href="/static/playground/index.html">API Playground</a>
                 <a class="nav-item" href="/static/tinybox/index.html">TinyBox DIY Guide</a>
                 <a class="nav-item" href="/static/index.html" data-i18n="docs.nav.demo">Live Demo</a>
-                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); margin-top: 1rem;">
-                    <button class="lang-btn" data-lang="en" onclick="switchLang('en')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-right: 5px;">EN</button>
-                    <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">中</button>
-                </div>
             </div>
         </nav>
 
@@ -1873,6 +1877,195 @@ restored = lk.DoubleRatchetSession.import_state(state_json)
 
         // Initialize i18n
         initI18n();
+
+        // Dynamic content translation for docs page
+        function translateDocsPage() {
+            const t = (key, fallback) => (i18n && i18n.t(key)) || fallback;
+
+            // Translation mappings for Chinese text
+            const translations = {
+                // Introduction section
+                '基于 Gemma 3N 的本地推理 API，完全兼容 Google Gemini 3 Pro Preview 格式，支持端到端加密通信。': t('docs.intro.desc', 'Local inference API based on Gemma 3N, fully compatible with Google Gemini 3 Pro Preview format, supports end-to-end encrypted communication.'),
+                '端到端加密': t('docs.intro.features.e2e.title', 'End-to-End Encryption'),
+                'ChaCha20-Poly1305 + X25519 ECDH，消息全程加密传输': t('docs.intro.features.e2e.desc', 'ChaCha20-Poly1305 + X25519 ECDH, messages encrypted throughout transmission'),
+                '本地推理': t('docs.intro.features.local.title', 'Local Inference'),
+                '基于 llama.cpp，GPU 加速，零网络延迟': t('docs.intro.features.local.desc', 'Based on llama.cpp, GPU accelerated, zero network latency'),
+                '多模态支持': t('docs.intro.features.multimodal.title', 'Multimodal Support'),
+                '支持图像理解和音频转录，视觉+听觉双模态': t('docs.intro.features.multimodal.desc', 'Supports image understanding and audio transcription, vision + audio dual modality'),
+                '思考模式': t('docs.intro.features.thinking.title', 'Thinking Mode'),
+                '支持 thinkingLevel 配置，模拟深度推理': t('docs.intro.features.thinking.desc', 'Supports thinkingLevel configuration, simulates deep reasoning'),
+                'API 兼容性': t('docs.intro.compatibility.title', 'API Compatibility'),
+                '本 API 完全兼容 Google Gemini API 格式，现有 Gemini 客户端只需修改 base URL 即可接入。': t('docs.intro.compatibility.desc', 'This API is fully compatible with Google Gemini API format. Existing Gemini clients only need to change the base URL to connect.'),
+
+                // Quick Start
+                '快速开始': t('docs.quickStart.title', 'Quick Start'),
+                '5 分钟内完成 API 调用': t('docs.quickStart.desc', 'Complete API call in 5 minutes'),
+                '生成文本内容的核心接口。支持纯文本、多模态输入，以及工具调用。': t('docs.quickStart.generateDesc', 'Core interface for generating text content. Supports plain text, multimodal input, and tool calling.'),
+                '# 基础文本生成': t('docs.quickStart.comment', '# Basic text generation'),
+                '复制': t('common.copy', 'Copy'),
+
+                // generateContent
+                '生成文本内容的核心接口': t('docs.generateContent.desc', 'Core interface for generating text content'),
+                '路径参数': t('docs.generateContent.pathParams', 'Path Parameters'),
+                '请求体参数': t('docs.generateContent.bodyParams', 'Request Body Parameters'),
+                '参数名': t('docs.generateContent.paramName', 'Parameter'),
+                '类型': t('docs.generateContent.paramType', 'Type'),
+                '必填': t('docs.generateContent.required', 'Required'),
+                '可选': t('docs.generateContent.optional', 'Optional'),
+                '说明': t('docs.generateContent.paramDesc', 'Description'),
+                '响应示例': t('docs.generateContent.responseExample', 'Response Example'),
+
+                // Thinking Mode
+                '思考模式 (thinkingConfig)': t('docs.thinking.title', 'Thinking Mode (thinkingConfig)'),
+                '启用深度推理，让模型在回答前进行思考': t('docs.thinking.desc', 'Enable deep reasoning, let the model think before answering'),
+                '思考模式说明': t('docs.thinking.info.title', 'Thinking Mode Description'),
+                'thinkingLevel 可选值': t('docs.thinking.levels.title', 'thinkingLevel Options'),
+                '值': t('docs.thinking.levels.value', 'Value'),
+                '思考深度': t('docs.thinking.levels.depth', 'Thinking Depth'),
+                '输出格式': t('docs.thinking.levels.output', 'Output Format'),
+                '适用场景': t('docs.thinking.levels.useCase', 'Use Case'),
+                '禁用': t('docs.thinking.levels.none.depth', 'Disabled'),
+                '直接输出答案': t('docs.thinking.levels.none.output', 'Direct answer'),
+                '简单问答、快速响应': t('docs.thinking.levels.none.useCase', 'Simple Q&A, fast response'),
+                '极简': t('docs.thinking.levels.minimal.depth', 'Minimal'),
+                '1-2 句思考': t('docs.thinking.levels.minimal.output', '1-2 sentences of thought'),
+                '简单任务': t('docs.thinking.levels.minimal.useCase', 'Simple tasks'),
+                '浅层': t('docs.thinking.levels.low.depth', 'Shallow'),
+                '简短思考（不显示）': t('docs.thinking.levels.low.output', 'Brief thinking (hidden)'),
+                '日常对话': t('docs.thinking.levels.low.useCase', 'Daily conversation'),
+                '中等（默认）': t('docs.thinking.levels.medium.depth', 'Medium (default)'),
+                '结构化思考': t('docs.thinking.levels.medium.output', 'Structured thinking'),
+                '一般问题': t('docs.thinking.levels.medium.useCase', 'General questions'),
+                '深度': t('docs.thinking.levels.high.depth', 'Deep'),
+                '详细推理过程': t('docs.thinking.levels.high.output', 'Detailed reasoning process'),
+                '复杂问题、数学、逻辑': t('docs.thinking.levels.high.useCase', 'Complex problems, math, logic'),
+                '请求示例': t('docs.thinking.requestExample', 'Request Example'),
+
+                // Tools
+                '工具调用 (Function Calling)': t('docs.tools.title', 'Tool Calling (Function Calling)'),
+                '让模型调用外部函数，支持并行调用': t('docs.tools.desc', 'Let the model call external functions, supports parallel calling'),
+                '工具声明示例': t('docs.tools.declarationExample', 'Tool Declaration Example'),
+                'toolConfig.mode 说明': t('docs.tools.modeTitle', 'toolConfig.mode Description'),
+                '模式': t('docs.tools.mode', 'Mode'),
+                '行为': t('docs.tools.behavior', 'Behavior'),
+                '模型自动决定是否调用工具（默认）': t('docs.tools.auto', 'Model automatically decides whether to call tools (default)'),
+                '强制调用工具，不返回纯文本': t('docs.tools.any', 'Force tool calling, no plain text returned'),
+                '禁用工具调用，只返回文本': t('docs.tools.noneMode', 'Disable tool calling, only return text'),
+
+                // Multimodal
+                '三模态支持': t('docs.multimodal.title', 'Trimodal Support'),
+                '支持文本、图像理解和音频转录': t('docs.multimodal.desc', 'Supports text, image understanding and audio transcription'),
+                '文本对话': t('docs.multimodal.text.title', 'Text Conversation'),
+                '图像理解': t('docs.multimodal.image.title', 'Image Understanding'),
+                '音频转录': t('docs.multimodal.audio.title', 'Audio Transcription'),
+                '图像理解示例': t('docs.multimodal.imageExample', 'Image Understanding Example'),
+                '音频转录示例': t('docs.multimodal.audioExample', 'Audio Transcription Example'),
+                '音频格式要求': t('docs.multimodal.audioFormat.title', 'Audio Format Requirements'),
+                '平台支持 (2025-01)': t('docs.multimodal.platformSupport.title', 'Platform Support (2025-01)'),
+
+                // Thought Signature
+                '思维签名 (Thought Signature)': t('docs.thoughtSignature.title', 'Thought Signature'),
+                'AI 的"工作记忆"，实现真正的有状态推理': t('docs.thoughtSignature.desc', 'AI\'s "working memory", enables true stateful reasoning'),
+                '核心概念': t('docs.thoughtSignature.concept.title', 'Core Concept'),
+                '推理生成': t('docs.thoughtSignature.flow.inference', 'Inference Generation'),
+                'KV Cache 捕获': t('docs.thoughtSignature.flow.kvCapture', 'KV Cache Capture'),
+                'Base64 签名': t('docs.thoughtSignature.flow.base64Sig', 'Base64 Signature'),
+                '状态恢复': t('docs.thoughtSignature.flow.stateRestore', 'State Restore'),
+                '多轮对话中使用 thoughtSignature': t('docs.thoughtSignature.example', 'Using thoughtSignature in Multi-turn Dialogue'),
+
+                // E2E Encryption
+                '端到端加密通信': t('docs.e2eEncryption.title', 'End-to-End Encrypted Communication'),
+                '确保 AI 对话的绝对隐私': t('docs.e2eEncryption.desc', 'Ensure absolute privacy of AI conversations'),
+                '为什么需要加密？': t('docs.e2eEncryption.why.title', 'Why Encryption?'),
+                'Ed25519 身份': t('docs.e2eEncryption.flow.identity', 'Ed25519 Identity'),
+                'X25519 KEM': t('docs.e2eEncryption.flow.kem', 'X25519 KEM'),
+                'ChaCha20 加密': t('docs.e2eEncryption.flow.encrypt', 'ChaCha20 Encryption'),
+                'Poly1305 认证': t('docs.e2eEncryption.flow.auth', 'Poly1305 Auth'),
+                'KEM 密钥封装': t('docs.e2eEncryption.features.kem.title', 'KEM Key Encapsulation'),
+                '非交互式密钥建立，无需多轮握手': t('docs.e2eEncryption.features.kem.desc', 'Non-interactive key establishment, no multi-round handshake needed'),
+                'AEAD 认证加密，机密性+完整性保障': t('docs.e2eEncryption.features.chacha.desc', 'AEAD authenticated encryption, confidentiality + integrity guarantee'),
+                'Ed25519 签名': t('docs.e2eEncryption.features.ed25519.title', 'Ed25519 Signature'),
+                '数字签名验证消息真实性，防篡改': t('docs.e2eEncryption.features.ed25519.desc', 'Digital signature verifies message authenticity, tamper-proof'),
+                '前向保密': t('docs.e2eEncryption.features.forward.title', 'Forward Secrecy'),
+                '每次请求使用临时密钥，历史消息不可破解': t('docs.e2eEncryption.features.forward.desc', 'Each request uses ephemeral keys, historical messages cannot be decrypted'),
+
+                // Crypto API
+                '加密 API 端点': t('docs.cryptoApi.title', 'Crypto API Endpoints'),
+                '检查加密功能状态': t('docs.cryptoApi.status', 'Check encryption feature status'),
+                '获取服务器公钥（用于加密请求）': t('docs.cryptoApi.publicKey', 'Get server public key (for encrypting requests)'),
+                '加密的内容生成 API': t('docs.cryptoApi.encryptedGenerate', 'Encrypted content generation API'),
+
+                // Key Exchange
+                '密钥交换流程': t('docs.keyExchange.title', 'Key Exchange Flow'),
+                '使用 LingKong Client SDK 进行端到端加密通信': t('docs.keyExchange.desc', 'Use LingKong Client SDK for end-to-end encrypted communication'),
+
+                // Message Encryption
+                '加密消息格式': t('docs.messageEncryption.title', 'Encrypted Message Format'),
+                '请求和响应的加密信封结构': t('docs.messageEncryption.desc', 'Encryption envelope structure for requests and responses'),
+                '加密请求结构 (EncryptedRequest)': t('docs.messageEncryption.requestStructure', 'Encrypted Request Structure (EncryptedRequest)'),
+                '加密响应结构 (EncryptedResponse)': t('docs.messageEncryption.responseStructure', 'Encrypted Response Structure (EncryptedResponse)'),
+                '安全提示': t('docs.messageEncryption.securityTip.title', 'Security Tip'),
+
+                // Double Ratchet
+                '双棘轮协议 (可选)': t('docs.doubleRatchet.title', 'Double Ratchet Protocol (Optional)'),
+                '长期会话的增强前向保密': t('docs.doubleRatchet.desc', 'Enhanced forward secrecy for long-term sessions'),
+                'KEM 初始化': t('docs.doubleRatchet.flow.kemInit', 'KEM Init'),
+                '链棘轮': t('docs.doubleRatchet.flow.chainRatchet', 'Chain Ratchet'),
+                'DH 棘轮': t('docs.doubleRatchet.flow.dhRatchet', 'DH Ratchet'),
+                '消息加密': t('docs.doubleRatchet.flow.msgEncrypt', 'Message Encrypt'),
+
+                // Errors
+                '错误处理': t('docs.errors.title', 'Error Handling'),
+                '状态码': t('docs.errors.statusCode', 'Status Code'),
+                '错误类型': t('docs.errors.errorType', 'Error Type'),
+                '成功': t('docs.errors.success', 'Success'),
+                '请求处理成功': t('docs.errors.successDesc', 'Request processed successfully'),
+                '请求错误': t('docs.errors.badRequest', 'Bad Request'),
+                '请求参数无效或缺失': t('docs.errors.badRequestDesc', 'Invalid or missing request parameters'),
+                '服务器错误': t('docs.errors.serverError', 'Server Error'),
+                '推理服务异常': t('docs.errors.serverErrorDesc', 'Inference service exception'),
+                '错误响应格式': t('docs.errors.responseFormat', 'Error Response Format'),
+
+                // Try It
+                '在线测试': t('docs.tryIt.title', 'Online Test'),
+                '发送请求': t('docs.tryIt.sendRequest', 'Send Request'),
+                '响应': t('docs.tryIt.response', 'Response'),
+                '点击"发送请求"查看响应...': t('docs.tryIt.clickToSend', 'Click "Send Request" to see response...'),
+                '请求中...': t('docs.tryIt.requesting', 'Requesting...'),
+
+                // Footer
+                'LingKong AI API v1.0 | 基于 Gemma 3N 本地推理': t('docs.footer.version', 'LingKong AI API v1.0 | Based on Gemma 3N Local Inference'),
+                '首页': t('docs.footer.home', 'Home'),
+                '在线演示': t('docs.footer.demo', 'Live Demo')
+            };
+
+            // Walk through all text nodes and replace
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            while (walker.nextNode()) {
+                textNodes.push(walker.currentNode);
+            }
+
+            textNodes.forEach(node => {
+                let text = node.textContent.trim();
+                if (translations[text]) {
+                    node.textContent = node.textContent.replace(text, translations[text]);
+                }
+            });
+
+            // Update lang buttons
+            if (i18n) i18n.updateLangButtons();
+        }
+
+        // Run translation on load and language change
+        window.addEventListener('i18n:ready', translateDocsPage);
+        if (i18n && i18n.loaded) translateDocsPage();
     </script>
 </body>
 </html>

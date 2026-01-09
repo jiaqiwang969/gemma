@@ -1,29 +1,36 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en" data-i18n-title-key="pageTitle.playground">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini API 严格对比测试</title>
+    <title>Gemini API Playground</title>
+    <!-- I18n must load before unified-nav.js -->
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
     <style>
         :root {
-            --primary: #4285f4;
-            --success: #34a853;
-            --warning: #fbbc05;
-            --error: #ea4335;
-            --bg: #f8f9fa;
-            --text: #202124;
-            --text-secondary: #5f6368;
-            --border: #dadce0;
-            --code-bg: #1e1e1e;
+            --primary: #8b5cf6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --bg: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --text: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #666;
+            --border: rgba(255, 255, 255, 0.1);
+            --code-bg: #0d1117;
             --code-text: #d4d4d4;
-            --left-color: #1a73e8;
-            --right-color: #34a853;
+            --left-color: #6366f1;
+            --right-color: #22c55e;
+            --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Google Sans', 'Roboto', -apple-system, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--bg);
             color: var(--text);
             line-height: 1.5;
@@ -31,11 +38,11 @@
         }
 
         .header {
-            background: white;
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
             padding: 12px 20px;
             position: sticky;
-            top: 0;
+            top: 60px;
             z-index: 100;
         }
 
@@ -51,7 +58,11 @@
 
         .header h1 {
             font-size: 1.3em;
-            color: var(--primary);
+            color: var(--text);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .config-group {
@@ -77,10 +88,27 @@
             border: 1px solid var(--border);
             border-radius: 4px;
             font-size: 12px;
+            background: var(--bg-card);
+            color: var(--text);
+        }
+
+        .config-item input:focus {
+            outline: none;
+            border-color: var(--primary);
         }
 
         .config-item input.url { width: 220px; }
         .config-item input.api-key { width: 180px; font-family: monospace; }
+
+        .config-item select {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+            background: var(--bg-card);
+            color: var(--text);
+            min-width: 150px;
+        }
 
         .btn {
             padding: 6px 14px;
@@ -92,9 +120,10 @@
             transition: all 0.2s;
         }
 
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: #1a73e8; }
+        .btn-primary { background: var(--accent-gradient); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
         .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { transform: translateY(-1px); }
 
         .main-container {
             max-width: 1900px;
@@ -103,11 +132,11 @@
         }
 
         .test-selector {
-            background: white;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px 15px;
             margin-bottom: 15px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
         .test-selector h3 {
@@ -128,15 +157,16 @@
             border-radius: 15px;
             cursor: pointer;
             font-size: 12px;
-            background: white;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
             transition: all 0.2s;
         }
 
-        .test-tab:hover { background: var(--bg); }
+        .test-tab:hover { background: var(--bg-card); color: var(--text); }
         .test-tab.active {
-            background: var(--primary);
+            background: var(--accent-gradient);
             color: white;
-            border-color: var(--primary);
+            border-color: transparent;
         }
 
         /* 三栏布局: 左边真实API, 中间对比结果, 右边本地服务 */
@@ -147,9 +177,9 @@
         }
 
         .panel {
-            background: white;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             overflow: hidden;
         }
 
@@ -162,17 +192,17 @@
         }
 
         .panel.left .panel-header {
-            background: linear-gradient(135deg, #e8f0fe, #f8f9fa);
+            background: rgba(99, 102, 241, 0.1);
             border-left: 3px solid var(--left-color);
         }
 
         .panel.right .panel-header {
-            background: linear-gradient(135deg, #e6f4ea, #f8f9fa);
+            background: rgba(34, 197, 94, 0.1);
             border-left: 3px solid var(--right-color);
         }
 
         .panel.center .panel-header {
-            background: linear-gradient(135deg, #fff3e0, #f8f9fa);
+            background: rgba(245, 158, 11, 0.1);
             border-left: 3px solid var(--warning);
         }
 
@@ -192,7 +222,7 @@
             font-weight: 500;
         }
 
-        .badge-pending { background: var(--border); color: var(--text-secondary); }
+        .badge-pending { background: var(--bg-secondary); color: var(--text-secondary); }
         .badge-running { background: var(--warning); color: #000; }
         .badge-success { background: var(--success); color: white; }
         .badge-error { background: var(--error); color: white; }
@@ -246,28 +276,28 @@
         }
 
         .compare-item.match {
-            background: #e6f4ea;
+            background: rgba(34, 197, 94, 0.15);
             border-left: 3px solid var(--success);
         }
 
         .compare-item.mismatch {
-            background: #fce8e6;
+            background: rgba(239, 68, 68, 0.15);
             border-left: 3px solid var(--error);
         }
 
         .compare-item.missing-left {
-            background: #fff3e0;
+            background: rgba(245, 158, 11, 0.15);
             border-left: 3px solid var(--warning);
         }
 
         .compare-item.missing-right {
-            background: #fce8e6;
+            background: rgba(239, 68, 68, 0.15);
             border-left: 3px solid var(--error);
         }
 
         .compare-item.order-diff {
-            background: #f3e5f5;
-            border-left: 3px solid #9c27b0;
+            background: rgba(139, 92, 246, 0.15);
+            border-left: 3px solid var(--primary);
         }
 
         .compare-icon {
@@ -301,12 +331,12 @@
             text-align: center;
             padding: 10px;
             border-radius: 6px;
-            background: var(--bg);
+            background: var(--bg-secondary);
         }
 
-        .stat-box.success { background: #e6f4ea; }
-        .stat-box.error { background: #fce8e6; }
-        .stat-box.warning { background: #fff3e0; }
+        .stat-box.success { background: rgba(34, 197, 94, 0.15); }
+        .stat-box.error { background: rgba(239, 68, 68, 0.15); }
+        .stat-box.warning { background: rgba(245, 158, 11, 0.15); }
 
         .stat-value {
             font-size: 20px;
@@ -324,11 +354,11 @@
 
         /* 请求预览 */
         .request-preview {
-            background: white;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px 15px;
             margin-bottom: 15px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
         .request-preview h3 {
@@ -356,6 +386,7 @@
             margin-top: 8px;
             font-size: 11px;
             flex-wrap: wrap;
+            color: var(--text-secondary);
         }
 
         .legend-item {
@@ -373,15 +404,15 @@
         .legend-dot.match { background: var(--success); }
         .legend-dot.mismatch { background: var(--error); }
         .legend-dot.missing { background: var(--warning); }
-        .legend-dot.order { background: #9c27b0; }
+        .legend-dot.order { background: var(--primary); }
 
         /* 音频测试专区 */
         .audio-test-section {
-            background: white;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             border-left: 4px solid #ff5722;
         }
 
@@ -419,7 +450,7 @@
         }
 
         .audio-preview {
-            background: var(--bg);
+            background: var(--bg-secondary);
             border-radius: 6px;
             padding: 12px;
         }
@@ -448,15 +479,17 @@
             border: 1px solid var(--border);
             border-radius: 4px;
             font-size: 12px;
+            background: var(--bg-card);
+            color: var(--text);
         }
 
         /* 测试历史 */
         .test-history {
-            background: white;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
         .history-header {
@@ -486,10 +519,11 @@
             margin-bottom: 4px;
             font-size: 12px;
             cursor: pointer;
+            color: var(--text-secondary);
         }
 
         .history-item:hover {
-            background: var(--bg);
+            background: var(--bg-secondary);
         }
 
         .history-item.pass {
@@ -501,7 +535,7 @@
         }
 
         .history-time {
-            color: var(--text-secondary);
+            color: var(--text-muted);
         }
 
         /* 进度条 */
@@ -553,10 +587,10 @@
                 </div>
                 <div class="config-item">
                     <label>GPU:</label>
-                    <select id="gpuSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; min-width: 150px;">
+                    <select id="gpuSelect">
                         <option value="auto">自动选择</option>
                     </select>
-                    <button class="btn" onclick="refreshGpuList()" title="刷新 GPU 列表" style="padding: 6px 8px;">🔄</button>
+                    <button class="btn" onclick="refreshGpuList()" title="刷新 GPU 列表">🔄</button>
                 </div>
                 <button class="btn btn-primary" onclick="runComparison()">对比测试</button>
                 <button class="btn btn-success" onclick="runAllComparisons()">全部测试</button>
@@ -1714,6 +1748,112 @@
 
         // 页面加载时获取 GPU 列表
         refreshGpuList();
+
+        // ========== I18n 翻译 ==========
+        function translatePlaygroundPage() {
+            const t = (key, fallback) => (i18n && i18n.t(key)) || fallback;
+
+            // 翻译映射
+            const translations = {
+                // Header
+                'Gemini API 严格对比测试': t('playground.title', 'Gemini API Comparison Test'),
+                '真实API:': t('playground.config.realApi', 'Real API:'),
+                'API Key:': t('playground.config.apiKey', 'API Key:'),
+                '输入你的 API Key': t('playground.config.apiKeyPlaceholder', 'Enter your API Key'),
+                '本地服务:': t('playground.config.localService', 'Local Service:'),
+                'GPU:': t('playground.config.gpu', 'GPU:'),
+                '自动选择': t('playground.config.autoSelect', 'Auto Select'),
+                '对比测试': t('playground.actions.runTest', 'Compare Test'),
+                '全部测试': t('playground.actions.runAll', 'Test All'),
+
+                // Test selector
+                '选择测试用例': t('playground.testSelector.title', 'Select Test Case'),
+                '1.1 纯文本': '1.1 ' + t('playground.testSelector.pureText', 'Pure Text'),
+                '1.2 思考low': '1.2 ' + t('playground.testSelector.thinkingLow', 'Thinking Low'),
+                '1.3 思考high': '1.3 ' + t('playground.testSelector.thinkingHigh', 'Thinking High'),
+                '1.5 系统指令': '1.5 ' + t('playground.testSelector.systemInstruction', 'System Instruction'),
+                '1.6 JSON Schema': '1.6 JSON Schema',
+                '3.1 工具调用': '3.1 ' + t('playground.testSelector.toolCall', 'Tool Call'),
+                '4.1 mode:ANY': '4.1 mode:ANY',
+                '4.2 mode:NONE': '4.2 mode:NONE',
+                '4.3 并行调用': '4.3 ' + t('playground.testSelector.parallelCall', 'Parallel Call'),
+                '5.1 多模态视觉': '5.1 ' + t('playground.testSelector.multimodalVision', 'Multimodal Vision'),
+                '5.2 音频转录': '5.2 ' + t('playground.testSelector.audioTranscription', 'Audio Transcription'),
+                '5.3 音频+思考': '5.3 ' + t('playground.testSelector.audioThinking', 'Audio+Thinking'),
+                '5.4 音频摘要': '5.4 ' + t('playground.testSelector.audioSummary', 'Audio Summary'),
+                '5.5 多图片': '5.5 ' + t('playground.testSelector.multiImage', 'Multi Image'),
+                '6.1 流式输出': '6.1 ' + t('playground.testSelector.streaming', 'Streaming'),
+
+                // Legend
+                '完全匹配': t('playground.legend.match', 'Match'),
+                '值不匹配': t('playground.legend.mismatch', 'Mismatch'),
+                '字段缺失': t('playground.legend.missing', 'Missing'),
+                '顺序不同': t('playground.legend.orderDiff', 'Order Diff'),
+
+                // Request preview
+                '请求内容 (Request Body)': t('playground.request.title', 'Request Body'),
+                '选择测试用例查看请求内容...': t('playground.request.selectToView', 'Select test case to view request...'),
+
+                // Audio section
+                '🎤 自定义音频测试': '🎤 ' + t('playground.audio.title', 'Custom Audio Test'),
+                '📁 上传音频': '📁 ' + t('playground.audio.uploadAudio', 'Upload Audio'),
+                '🔴 录音': '🔴 ' + t('playground.audio.record', 'Record'),
+                '自定义提示词:': t('playground.audio.customPrompt', 'Custom prompt:'),
+                '🚀 运行自定义音频测试': '🚀 ' + t('playground.audio.runCustomTest', 'Run Custom Audio Test'),
+
+                // History
+                '📊 测试历史': '📊 ' + t('playground.history.title', 'Test History'),
+                '清空': t('playground.history.clear', 'Clear'),
+
+                // Results panels
+                '真实 Gemini API': t('playground.results.realResponse', 'Real Gemini API'),
+                '本地 Gemma 3n': t('playground.results.localResponse', 'Local Gemma 3n'),
+                'JSON 字段逐项对比': t('playground.results.comparison', 'JSON Field Comparison'),
+                '待测试': t('playground.results.pending', 'Pending'),
+                '待对比': t('playground.results.pending', 'Pending'),
+                '点击"对比测试"执行...': t('playground.results.clickToRun', 'Click "Compare Test" to run...'),
+                '运行测试后显示逐项对比结果...': t('playground.results.waitingResponse', 'Waiting for response...'),
+
+                // Stats
+                '匹配': t('playground.stats.match', 'Match'),
+                '不匹配': t('playground.stats.mismatch', 'Mismatch'),
+                '真实API缺失': t('playground.stats.missingReal', 'Real API Missing'),
+                '本地缺失': t('playground.stats.missingLocal', 'Local Missing')
+            };
+
+            // 遍历所有文本节点并替换
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            while (walker.nextNode()) {
+                textNodes.push(walker.currentNode);
+            }
+
+            textNodes.forEach(node => {
+                let text = node.textContent.trim();
+                if (translations[text]) {
+                    node.textContent = node.textContent.replace(text, translations[text]);
+                }
+            });
+
+            // 更新 placeholder
+            const apiKeyInput = document.getElementById('apiKey');
+            if (apiKeyInput) {
+                apiKeyInput.placeholder = t('playground.config.apiKeyPlaceholder', 'Enter your API Key');
+            }
+
+            // 更新语言按钮状态
+            if (i18n) i18n.updateLangButtons();
+        }
+
+        // 在 i18n 加载完成后翻译页面
+        window.addEventListener('i18n:ready', translatePlaygroundPage);
+        if (i18n && i18n.loaded) translatePlaygroundPage();
     </script>
 </body>
 </html>
