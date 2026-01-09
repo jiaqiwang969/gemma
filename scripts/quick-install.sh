@@ -29,7 +29,8 @@ SANDBOX_DIR="$LINGKONG_HOME/sandbox"
 LINGKONG_SERVER="${LINGKONG_SERVER:-http://115.159.223.227}"
 BASE_URL="$LINGKONG_SERVER"
 BINARY_URL_MACOS="$BASE_URL/bin/llama-lingkong-macos-arm64.tar.gz"
-BINARY_URL_LINUX="$BASE_URL/bin/llama-lingkong-linux-x86_64.tar.gz"
+BINARY_URL_LINUX_CUDA="$BASE_URL/bin/llama-lingkong-linux-x86_64-cuda.tar.gz"
+BINARY_URL_LINUX_CPU="$BASE_URL/bin/llama-lingkong-linux-x86_64.tar.gz"
 WEBUI_URL="$BASE_URL/webui.tar.gz"
 SANDBOX_URL="$BASE_URL/sandbox.tar.gz"
 
@@ -79,15 +80,26 @@ detect_platform() {
     if [[ "$os" == "Darwin" && "$arch" == "arm64" ]]; then
         PLATFORM="macos-arm64"
         BINARY_URL="$BINARY_URL_MACOS"
-        log_success "检测到 macOS Apple Silicon"
+        log_success "检测到 macOS Apple Silicon (Metal GPU 加速)"
     elif [[ "$os" == "Darwin" && "$arch" == "x86_64" ]]; then
         PLATFORM="macos-x64"
         log_warn "macOS Intel - 将使用 Sandbox 模式"
         INSTALL_MODE="sandbox"
     elif [[ "$os" == "Linux" && "$arch" == "x86_64" ]]; then
         PLATFORM="linux-x64"
-        BINARY_URL="$BINARY_URL_LINUX"
-        log_success "检测到 Linux x86_64"
+        # 检测 NVIDIA GPU
+        if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
+            HAS_NVIDIA=true
+            BINARY_URL="$BINARY_URL_LINUX_CUDA"
+            local gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)
+            log_success "检测到 Linux x86_64 + NVIDIA GPU: $gpu_name"
+            log_info "将使用 CUDA 加速版本"
+        else
+            HAS_NVIDIA=false
+            BINARY_URL="$BINARY_URL_LINUX_CPU"
+            log_success "检测到 Linux x86_64 (CPU 模式)"
+            log_warn "未检测到 NVIDIA GPU，将使用 CPU 版本"
+        fi
     elif [[ "$os" == "Linux" && "$arch" == "aarch64" ]]; then
         PLATFORM="linux-arm64"
         log_warn "Linux ARM64 - 将使用 Sandbox 模式"
@@ -246,8 +258,18 @@ install_native_binaries() {
     log_step "下载灵空 AI 引擎..."
 
     local tmp_dir=$(mktemp -d)
-    local archive_name="llama-lingkong-${PLATFORM}.tar.gz"
 
+    # 根据平台选择正确的文件名
+    local archive_name
+    if [[ "$PLATFORM" == "macos-arm64" ]]; then
+        archive_name="llama-lingkong-macos-arm64.tar.gz"
+    elif [[ "$PLATFORM" == "linux-x64" && "$HAS_NVIDIA" == "true" ]]; then
+        archive_name="llama-lingkong-linux-x86_64-cuda.tar.gz"
+    else
+        archive_name="llama-lingkong-linux-x86_64.tar.gz"
+    fi
+
+    log_info "下载: $BINARY_URL"
     $DOWNLOAD_TO "$tmp_dir/$archive_name" "$BINARY_URL"
 
     log_info "解压文件..."
@@ -259,21 +281,26 @@ install_native_binaries() {
         cp "$extract_dir"/llama-server "$BIN_DIR/" 2>/dev/null || true
         cp "$extract_dir"/llama-mtmd-cli "$BIN_DIR/" 2>/dev/null || true
 
-        # macOS 动态库 - 同时复制到 lib/ 和 bin/ 目录
-        # 因为 llama.cpp 二进制的 @rpath 会查找 @executable_path (bin目录)
+        # 动态库 - 同时复制到 lib/ 和 bin/ 目录
         if [[ -d "$extract_dir/lib" ]]; then
+            # macOS dylib
             cp "$extract_dir"/lib/*.dylib "$LIB_DIR/" 2>/dev/null || true
-            cp "$extract_dir"/lib/*.so "$LIB_DIR/" 2>/dev/null || true
-            # 同时复制到 bin/ 目录确保 @rpath 能找到
             cp "$extract_dir"/lib/*.dylib "$BIN_DIR/" 2>/dev/null || true
-            cp "$extract_dir"/lib/*.so "$BIN_DIR/" 2>/dev/null || true
+            # Linux so
+            cp "$extract_dir"/lib/*.so* "$LIB_DIR/" 2>/dev/null || true
+            cp "$extract_dir"/lib/*.so* "$BIN_DIR/" 2>/dev/null || true
         fi
     fi
 
     chmod +x "$BIN_DIR"/* 2>/dev/null || true
 
     rm -rf "$tmp_dir"
-    log_success "引擎安装完成"
+
+    if [[ "$HAS_NVIDIA" == "true" ]]; then
+        log_success "引擎安装完成 (CUDA 加速)"
+    else
+        log_success "引擎安装完成"
+    fi
 }
 
 # 下载 WebUI
@@ -484,10 +511,12 @@ start_gemini_api() {
     export LLAMA_MTMD_BIN="$LINGKONG_HOME/bin/llama-mtmd-cli"
     export LLAMA_MODEL="$MODEL"
     export LLAMA_MODEL_AUDIO="$MODEL"
-    export MMPROJ_IMAGE="$VISION"
-    export MMPROJ_AUDIO="$AUDIO"
+    # 多模态支持: 视觉 + 音频
+    export LLAMA_MMPROJ_VISION="$VISION"
+    export LLAMA_MMPROJ_AUDIO="$AUDIO"
     export GEMINI_API_LLAMA_PORT="8090"
     export DYLD_LIBRARY_PATH="$LINGKONG_HOME/lib:${DYLD_LIBRARY_PATH:-}"
+    export LD_LIBRARY_PATH="$LINGKONG_HOME/lib:${LD_LIBRARY_PATH:-}"
 
     cd "$LINGKONG_HOME/apps/gemini_api"
 
@@ -526,6 +555,7 @@ start_webui() {
 
     # 设置环境变量 - WebUI 使用 Gemini API 的 llama-server (8090)
     export LLAMA_SERVER_PORT="8090"
+    export LLAMA_MMPROJ_SERVER_PORT="8090"
     export LLAMA_MM_MODEL="$MODEL"
     export LLAMA_MM_PROJ_IMAGE="$VISION"
     export LLAMA_MM_PROJ_AUDIO="$AUDIO"
