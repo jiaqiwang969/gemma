@@ -214,11 +214,11 @@
         <button class="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false">☰</button>
         <ul class="nav-links">
             <li><a href="/#features" data-i18n="nav.features">Features</a></li>
-            <li><a href="/#how-it-works" data-i18n="nav.installation">Installation</a></li>
             <li><a href="/static/downloads.html" data-i18n="nav.downloads">Downloads</a></li>
             <li><a href="/static/docs.html" data-i18n="nav.apiDocs">API Docs</a></li>
             <li><a href="/static/playground/index.html" data-i18n="nav.playground">Playground</a></li>
             <li><a href="/static/tinybox/index.html" data-i18n="nav.tinybox">TinyBox DIY</a></li>
+            <li><a href="/static/evolution/index.html" data-i18n="nav.evolution">Evolution</a></li>
             <li><a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></li>
             <li class="lang-switch">
                 <button class="lang-btn" data-lang="en" onclick="switchLang('en')">EN</button>

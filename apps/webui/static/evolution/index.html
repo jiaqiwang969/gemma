@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 日夜进化系统 - 灵空 AI</title>
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+            --border-color: rgba(255,255,255,0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .main {
+            min-height: 100vh;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 60px 2rem 40px;
+            text-align: center;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                var(--bg-primary);
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .hero-badges {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .badge.highlight {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.875rem 1.75rem;
+            background: var(--accent-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Slides Container */
+        .slides-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        .slide {
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s;
+        }
+
+        .slide:hover {
+            transform: scale(1.01);
+        }
+
+        .slide img {
+            width: 100%;
+            display: block;
+        }
+
+        .slide-number {
+            background: var(--bg-card);
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slide-number span {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Navigation Dots */
+        .nav-dots {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-dot:hover,
+        .nav-dot.active {
+            background: var(--accent-primary);
+            transform: scale(1.3);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 40px 1rem 30px;
+            }
+
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .hero p {
+                font-size: 0.95rem;
+            }
+
+            .slides-container {
+                padding: 0 1rem 3rem;
+            }
+
+            .nav-dots {
+                display: none;
+            }
+
+            .hero-badges {
+                gap: 0.5rem;
+            }
+
+            .badge {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="main">
+        <!-- Hero -->
+        <section class="hero">
+            <h1>AI 日夜进化系统</h1>
+            <p>像人脑一样学习：白天服务用户，夜间整合记忆、微调进化。让 AI 每天都比昨天更懂你。</p>
+
+            <div class="hero-badges">
+                <span class="badge highlight">类脑记忆</span>
+                <span class="badge highlight">睡眠微调</span>
+                <span class="badge">记忆碎片</span>
+                <span class="badge">知识图谱</span>
+                <span class="badge">持续进化</span>
+            </div>
+
+            <a href="/static/evolution/AI_Day_Night_Evolution.pdf" class="download-btn" download>
+                📥 下载完整 PDF (3.1MB)
+            </a>
+        </section>
+
+        <!-- Slides -->
+        <div class="slides-container">
+            <div class="slide" id="slide-1">
+                <img src="/static/evolution/page-01.png" alt="封面 - AI 日夜进化系统">
+                <div class="slide-number">
+                    <span>01 / 11</span>
+                    封面
+                </div>
+            </div>
+
+            <div class="slide" id="slide-2">
+                <img src="/static/evolution/page-02.png" alt="人脑记忆系统">
+                <div class="slide-number">
+                    <span>02 / 11</span>
+                    人脑记忆系统
+                </div>
+            </div>
+
+            <div class="slide" id="slide-3">
+                <img src="/static/evolution/page-03.png" alt="睡眠与记忆巩固">
+                <div class="slide-number">
+                    <span>03 / 11</span>
+                    睡眠与记忆巩固
+                </div>
+            </div>
+
+            <div class="slide" id="slide-4">
+                <img src="/static/evolution/page-04.png" alt="传统 RAG vs 类脑系统">
+                <div class="slide-number">
+                    <span>04 / 11</span>
+                    传统 RAG vs 类脑系统
+                </div>
+            </div>
+
+            <div class="slide" id="slide-5">
+                <img src="/static/evolution/page-05.png" alt="LingKong 记忆系统设计">
+                <div class="slide-number">
+                    <span>05 / 11</span>
+                    LingKong 记忆系统设计
+                </div>
+            </div>
+
+            <div class="slide" id="slide-6">
+                <img src="/static/evolution/page-06.png" alt="日夜循环架构">
+                <div class="slide-number">
+                    <span>06 / 11</span>
+                    日夜循环架构
+                </div>
+            </div>
+
+            <div class="slide" id="slide-7">
+                <img src="/static/evolution/page-07.png" alt="睡眠处理流程">
+                <div class="slide-number">
+                    <span>07 / 11</span>
+                    睡眠处理流程
+                </div>
+            </div>
+
+            <div class="slide" id="slide-8">
+                <img src="/static/evolution/page-08.png" alt="完整系统架构">
+                <div class="slide-number">
+                    <span>08 / 11</span>
+                    完整系统架构
+                </div>
+            </div>
+
+            <div class="slide" id="slide-9">
+                <img src="/static/evolution/page-09.png" alt="微调数据流">
+                <div class="slide-number">
+                    <span>09 / 11</span>
+                    微调数据流
+                </div>
+            </div>
+
+            <div class="slide" id="slide-10">
+                <img src="/static/evolution/page-10.png" alt="现有基础">
+                <div class="slide-number">
+                    <span>10 / 11</span>
+                    现有基础
+                </div>
+            </div>
+
+            <div class="slide" id="slide-11">
+                <img src="/static/evolution/page-11.png" alt="下一步计划">
+                <div class="slide-number">
+                    <span>11 / 11</span>
+                    下一步计划
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Dots -->
+        <nav class="nav-dots">
+            <div class="nav-dot active" data-slide="1"></div>
+            <div class="nav-dot" data-slide="2"></div>
+            <div class="nav-dot" data-slide="3"></div>
+            <div class="nav-dot" data-slide="4"></div>
+            <div class="nav-dot" data-slide="5"></div>
+            <div class="nav-dot" data-slide="6"></div>
+            <div class="nav-dot" data-slide="7"></div>
+            <div class="nav-dot" data-slide="8"></div>
+            <div class="nav-dot" data-slide="9"></div>
+            <div class="nav-dot" data-slide="10"></div>
+            <div class="nav-dot" data-slide="11"></div>
+        </nav>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>灵空 AI - 你的 AI. 你的数据. 你的掌控.</p>
+            <p><a href="/static/home.html">返回首页</a> · <a href="/static/pitch.html">商业计划书</a> · <a href="https://github.com/jiaqiwang969/gemma" target="_blank">GitHub</a></p>
+        </footer>
+    </main>
+
+    <script>
+        // Navigation dots
+        const dots = document.querySelectorAll('.nav-dot');
+        const slides = document.querySelectorAll('.slide');
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const slideNum = dot.dataset.slide;
+                document.getElementById(`slide-${slideNum}`).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Update active dot on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const slideNum = entry.target.id.split('-')[1];
+                    dots.forEach(d => d.classList.remove('active'));
+                    document.querySelector(`.nav-dot[data-slide="${slideNum}"]`).classList.add('active');
+                }
+            });
+        }, { threshold: 0.5 });
+
+        slides.forEach(slide => observer.observe(slide));
+    </script>
+</body>
+</html>

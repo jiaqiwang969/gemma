@@ -33,6 +33,7 @@
     "apiDocs": "API Docs",
     "playground": "Playground",
     "tinybox": "TinyBox DIY",
+    "evolution": "Evolution",
     "tinybox_page": {
       "title": "Tinybox DIY Guide - 6x RX 7900 XTX AI Workstation Assembly Guide",
       "subtitle": "From hardware selection to open-source optimization, a step-by-step guide to building a 6x RX 7900 XTX AI monster.",

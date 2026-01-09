@@ -33,6 +33,7 @@
     "apiDocs": "API 文档",
     "playground": "API测试",
     "tinybox": "算力 DIY",
+    "evolution": "进化系统",
     "tinybox_page": {
       "title": "Tinybox DIY 指南 - 6x RX 7900 XTX AI 工作站组装指南",
       "subtitle": "从硬件选型到开源优化，手把手教你组装一台 6x RX 7900 XTX 的 AI 算力怪兽",
