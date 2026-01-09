@@ -1613,46 +1613,68 @@
         async function refreshGpuList() {
             const localUrl = document.getElementById('localUrl').value;
             const select = document.getElementById('gpuSelect');
+            const gpuItem = select.parentElement;
 
             try {
                 const response = await fetch(`${localUrl}/gpu/list`);
                 const data = await response.json();
 
                 // 清空现有选项
-                select.innerHTML = '<option value="auto">自动选择</option>';
+                select.innerHTML = '';
 
-                if (data.gpus && data.gpus.length > 0) {
+                if (data.gpus && data.gpus.length > 1) {
+                    // 多 GPU: 显示选择框
+                    gpuItem.style.display = 'flex';
+
+                    // 添加自动选择
+                    const autoOption = document.createElement('option');
+                    autoOption.value = 'auto';
+                    autoOption.textContent = '自动选择';
+                    select.appendChild(autoOption);
+
                     // 添加单 GPU 选项
                     data.gpus.forEach(gpu => {
                         const option = document.createElement('option');
                         option.value = gpu.device_id || `CUDA${gpu.index}`;
-                        const memUsed = (gpu.memory_used_mb / 1024).toFixed(1);
+                        const memFree = (gpu.memory_free_mb / 1024).toFixed(1);
                         const memTotal = (gpu.memory_total_mb / 1024).toFixed(1);
-                        option.textContent = `${gpu.device_id || 'GPU ' + gpu.index}: ${gpu.name} (${memUsed}/${memTotal}GB)`;
+                        option.textContent = `${gpu.device_id}: ${gpu.name} (${memFree}/${memTotal}GB)`;
                         select.appendChild(option);
                     });
 
-                    // 如果有多个 GPU，添加多 GPU 选项
-                    if (data.gpus.length > 1) {
-                        const allOption = document.createElement('option');
-                        allOption.value = data.gpus.map(g => g.device_id || `CUDA${g.index}`).join(',');
-                        allOption.textContent = `全部 GPU (${data.gpus.length} 块)`;
-                        select.appendChild(allOption);
-                    }
+                    // 添加全部 GPU 选项
+                    const allOption = document.createElement('option');
+                    allOption.value = data.gpus.map(g => g.device_id || `CUDA${g.index}`).join(',');
+                    allOption.textContent = `全部 GPU (${data.gpus.length} 块)`;
+                    select.appendChild(allOption);
 
                     // 设置当前选中的值
                     if (data.current_device && data.current_device !== 'auto') {
                         select.value = data.current_device;
                     }
-                } else if (data.error) {
+                } else if (data.gpus && data.gpus.length === 1) {
+                    // 单 GPU: 隐藏选择框，显示 GPU 信息
+                    const gpu = data.gpus[0];
+                    const memFree = (gpu.memory_free_mb / 1024).toFixed(1);
+                    const memTotal = (gpu.memory_total_mb / 1024).toFixed(1);
+
                     const option = document.createElement('option');
-                    option.value = "auto";
-                    option.textContent = data.error;
+                    option.value = gpu.device_id || `CUDA${gpu.index}`;
+                    option.textContent = `${gpu.name} (${memFree}/${memTotal}GB)`;
                     select.appendChild(option);
+
+                    // 单 GPU 时禁用选择，只显示信息
+                    select.disabled = true;
+                    select.style.opacity = '0.8';
+                    gpuItem.style.display = 'flex';
+                } else {
+                    // 无 GPU 或 macOS Metal
+                    gpuItem.style.display = 'none';
                 }
             } catch (e) {
                 console.error('获取 GPU 列表失败:', e);
-                select.innerHTML = '<option value="auto">无法连接服务</option>';
+                // 连接失败时隐藏 GPU 选择
+                gpuItem.style.display = 'none';
             }
         }
 
