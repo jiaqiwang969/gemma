@@ -2115,11 +2115,49 @@ def gpu_list():
     获取可用 GPU 列表
 
     返回所有 NVIDIA GPU 的信息，包括名称、显存、使用情况等。
+    注意: llama.cpp 的设备编号可能与 nvidia-smi 不同，使用 CUDA0, CUDA1 格式
     """
     import subprocess
 
     try:
-        # 使用 nvidia-smi 获取 GPU 信息
+        # 使用 llama-server --list-devices 获取正确的设备列表
+        llama_result = subprocess.run(
+            [LLAMA_SERVER_BIN, "--list-devices"],
+            capture_output=True, text=True, timeout=10,
+            env={**os.environ, "LD_LIBRARY_PATH": f"{Path(LLAMA_SERVER_BIN).parent.parent / 'lib'}:{os.environ.get('LD_LIBRARY_PATH', '')}"}
+        )
+
+        llama_gpus = []
+        if llama_result.returncode == 0:
+            for line in llama_result.stdout.split("\n"):
+                # 解析: "  CUDA0: NVIDIA GeForce RTX 3090 (24124 MiB, 15353 MiB free)"
+                if line.strip().startswith("CUDA"):
+                    import re
+                    match = re.match(r'\s*(CUDA\d+):\s*(.+?)\s*\((\d+)\s*MiB,\s*(\d+)\s*MiB free\)', line)
+                    if match:
+                        device_id = match.group(1)
+                        name = match.group(2)
+                        total_mb = int(match.group(3))
+                        free_mb = int(match.group(4))
+                        llama_gpus.append({
+                            "device_id": device_id,
+                            "index": int(device_id.replace("CUDA", "")),
+                            "name": name,
+                            "memory_total_mb": total_mb,
+                            "memory_free_mb": free_mb,
+                            "memory_used_mb": total_mb - free_mb,
+                            "utilization_percent": 0
+                        })
+
+        if llama_gpus:
+            return jsonify({
+                "gpus": llama_gpus,
+                "current_device": LLAMA_GPU_DEVICES or "auto",
+                "split_mode": LLAMA_SPLIT_MODE,
+                "note": "使用 llama.cpp 设备编号 (CUDA0, CUDA1...)"
+            })
+
+        # 回退到 nvidia-smi
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=index,name,memory.total,memory.free,memory.used,utilization.gpu",
              "--format=csv,noheader,nounits"],
@@ -2136,6 +2174,7 @@ def gpu_list():
             parts = [p.strip() for p in line.split(",")]
             if len(parts) >= 6:
                 gpus.append({
+                    "device_id": f"CUDA{parts[0]}",
                     "index": int(parts[0]),
                     "name": parts[1],
                     "memory_total_mb": int(parts[2]),
@@ -2163,7 +2202,7 @@ def gpu_select():
 
     请求体:
     {
-        "devices": "0" 或 "0,1" 或 "auto",
+        "devices": "CUDA0" 或 "CUDA0,CUDA1" 或 "auto",
         "split_mode": "layer" 或 "row" 或 "none"
     }
     """
@@ -2175,12 +2214,19 @@ def gpu_select():
 
     # 验证参数
     if new_devices and new_devices != "auto":
-        # 验证设备 ID 格式
-        try:
-            for d in new_devices.split(","):
-                int(d.strip())
-        except ValueError:
-            return jsonify({"error": "无效的设备 ID 格式"}), 400
+        # 支持 "CUDA0" 或 "0" 格式
+        devices_list = []
+        for d in new_devices.split(","):
+            d = d.strip()
+            if d.upper().startswith("CUDA"):
+                devices_list.append(d.upper())
+            else:
+                try:
+                    int(d)
+                    devices_list.append(f"CUDA{d}")
+                except ValueError:
+                    return jsonify({"error": f"无效的设备 ID: {d}"}), 400
+        new_devices = ",".join(devices_list)
 
     if new_split_mode not in ["none", "layer", "row"]:
         return jsonify({"error": "无效的分割模式"}), 400

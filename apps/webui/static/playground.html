@@ -1625,17 +1625,17 @@
                     // 添加单 GPU 选项
                     data.gpus.forEach(gpu => {
                         const option = document.createElement('option');
-                        option.value = String(gpu.index);
+                        option.value = gpu.device_id || `CUDA${gpu.index}`;
                         const memUsed = (gpu.memory_used_mb / 1024).toFixed(1);
                         const memTotal = (gpu.memory_total_mb / 1024).toFixed(1);
-                        option.textContent = `GPU ${gpu.index}: ${gpu.name} (${memUsed}/${memTotal}GB)`;
+                        option.textContent = `${gpu.device_id || 'GPU ' + gpu.index}: ${gpu.name} (${memUsed}/${memTotal}GB)`;
                         select.appendChild(option);
                     });
 
                     // 如果有多个 GPU，添加多 GPU 选项
                     if (data.gpus.length > 1) {
                         const allOption = document.createElement('option');
-                        allOption.value = data.gpus.map(g => g.index).join(',');
+                        allOption.value = data.gpus.map(g => g.device_id || `CUDA${g.index}`).join(',');
                         allOption.textContent = `全部 GPU (${data.gpus.length} 块)`;
                         select.appendChild(allOption);
                     }
