@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-title-key="pageTitle.downloads">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LingKong AI - Download Center</title>
     <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,7 +16,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: #0a0a0f;
             min-height: 100vh;
             color: #e2e8f0;
         }
@@ -278,26 +280,21 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <header>
-            <div class="logo">&#128000;</div>
-            <h1 data-i18n="downloads.title">LingKong AI Download Center</h1>
-            <p class="subtitle" data-i18n="downloads.subtitle">Fast downloads - Your AI, your data, your control</p>
-            <div class="lang-switch" style="margin-top: 15px;">
-                <button class="lang-btn" data-lang="en" onclick="switchLang('en')" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-right: 5px;">EN</button>
-                <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">中</button>
-            </div>
-        </header>
 
         <div class="mirror-note">
             <span class="icon">&#9889;</span>
-            <p><strong data-i18n="downloads.mirror.title">China Mirror</strong> - <span data-i18n="downloads.mirror.desc">All files hosted on domestic servers, no VPN required, faster downloads</span></p>
+            <p><strong data-i18n="downloads.mirror.title">China Mirror</strong> - <span
+                    data-i18n="downloads.mirror.desc">All files hosted on domestic servers, no VPN required, faster
+                    downloads</span></p>
         </div>
 
         <!-- One-Click Install -->
         <div class="section quick-install">
-            <h2><span class="icon">&#128640;</span> <span data-i18n="downloads.oneClick.title">One-Click Install (Recommended)</span></h2>
+            <h2><span class="icon">&#128640;</span> <span data-i18n="downloads.oneClick.title">One-Click Install
+                    (Recommended)</span></h2>
             <p style="color: #94a3b8; margin-bottom: 15px;" data-i18n="downloads.oneClick.desc">
                 Run the following command in terminal to automatically download and configure everything:
             </p>
@@ -320,7 +317,8 @@
                             gemma-3n-E2B-it-Q4_K_M.gguf
                             <span class="status-badge required" data-i18n="downloads.models.required">Required</span>
                         </div>
-                        <div class="download-desc" data-i18n="downloads.models.mainModel.desc">Gemma 3n text model - 4-bit quantized, supports multi-turn chat</div>
+                        <div class="download-desc" data-i18n="downloads.models.mainModel.desc">Gemma 3n text model -
+                            4-bit quantized, supports multi-turn chat</div>
                         <div class="download-meta">
                             <span>&#128190; 2.6 GB</span>
                             <span>&#128202; Q4_K_M</span>
@@ -337,7 +335,8 @@
                             gemma-3n-vision-mmproj-f16.gguf
                             <span class="status-badge optional" data-i18n="downloads.models.optional">Optional</span>
                         </div>
-                        <div class="download-desc" data-i18n="downloads.models.visionModel.desc">Vision model - supports image analysis and description</div>
+                        <div class="download-desc" data-i18n="downloads.models.visionModel.desc">Vision model - supports
+                            image analysis and description</div>
                         <div class="download-meta">
                             <span>&#128190; 570 MB</span>
                             <span>&#127912; Vision</span>
@@ -354,7 +353,8 @@
                             gemma-3n-audio-mmproj-f16.gguf
                             <span class="status-badge optional" data-i18n="downloads.models.optional">Optional</span>
                         </div>
-                        <div class="download-desc" data-i18n="downloads.models.audioModel.desc">Audio model - supports speech transcription and audio analysis</div>
+                        <div class="download-desc" data-i18n="downloads.models.audioModel.desc">Audio model - supports
+                            speech transcription and audio analysis</div>
                         <div class="download-meta">
                             <span>&#128190; 1.3 GB</span>
                             <span>&#127908; Audio</span>
@@ -377,7 +377,8 @@
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">llama-lingkong-macos-arm64.tar.gz</div>
-                        <div class="download-desc" data-i18n="downloads.binaries.macos">macOS Apple Silicon (M1/M2/M3) inference engine</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.macos">macOS Apple Silicon (M1/M2/M3)
+                            inference engine</div>
                         <div class="download-meta">
                             <span>&#128190; ~50 MB</span>
                             <span>&#63743; macOS ARM64</span>
@@ -391,7 +392,8 @@
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">llama-lingkong-linux-x86_64.tar.gz</div>
-                        <div class="download-desc" data-i18n="downloads.binaries.linux">Linux x86_64 inference engine (CPU)</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.linux">Linux x86_64 inference engine
+                            (CPU)</div>
                         <div class="download-meta">
                             <span>&#128190; ~50 MB</span>
                             <span>&#128039; Linux x64</span>
@@ -406,9 +408,11 @@
                     <div class="download-info">
                         <div class="download-name">
                             llama-lingkong-linux-x86_64-cuda.tar.gz
-                            <span class="status-badge optional" style="background: rgba(102, 126, 234, 0.2); color: #a5b4fc;">CUDA</span>
+                            <span class="status-badge optional"
+                                style="background: rgba(102, 126, 234, 0.2); color: #a5b4fc;">CUDA</span>
                         </div>
-                        <div class="download-desc" data-i18n="downloads.binaries.linuxCuda">Linux x86_64 with NVIDIA CUDA acceleration (Ubuntu 22.04+)</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.linuxCuda">Linux x86_64 with NVIDIA
+                            CUDA acceleration (Ubuntu 22.04+)</div>
                         <div class="download-meta">
                             <span>&#128190; ~80 MB</span>
                             <span>&#128039; Linux x64</span>
@@ -423,7 +427,8 @@
                 <div class="download-item">
                     <div class="download-info">
                         <div class="download-name">webui.tar.gz</div>
-                        <div class="download-desc" data-i18n="downloads.binaries.webui">Web interface - includes chat UI and API service</div>
+                        <div class="download-desc" data-i18n="downloads.binaries.webui">Web interface - includes chat UI
+                            and API service</div>
                         <div class="download-meta">
                             <span>&#128190; ~80 MB</span>
                             <span>&#127760; Python Flask</span>
@@ -438,28 +443,35 @@
 
         <!-- Network Issues -->
         <div class="section" style="background: rgba(234, 179, 8, 0.08); border-color: rgba(234, 179, 8, 0.3);">
-            <h2><span class="icon">&#128268;</span> <span data-i18n="downloads.help.title">Network Issues? Manual Download</span></h2>
+            <h2><span class="icon">&#128268;</span> <span data-i18n="downloads.help.title">Network Issues? Manual
+                    Download</span></h2>
             <p style="color: #fcd34d; margin-bottom: 20px;" data-i18n="downloads.help.manualDownload">
-                If download is interrupted, use download tools (like wget) and manually place files in the specified directory:
+                If download is interrupted, use download tools (like wget) and manually place files in the specified
+                directory:
             </p>
 
             <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128193; <span data-i18n="downloads.help.modelsPath">Model Files Location</span></h3>
+                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128193; <span
+                        data-i18n="downloads.help.modelsPath">Model Files Location</span></h3>
                 <div class="code-block" style="margin: 0;">
                     <code style="color: #fcd34d;">~/.lingkong/models/</code>
                     <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
                 </div>
                 <p style="color: #94a3b8; margin-top: 10px; font-size: 0.9rem;" data-i18n="downloads.help.pathExample">
-                    i.e.: /Users/your-username/.lingkong/models/ (macOS) or /home/your-username/.lingkong/models/ (Linux)
+                    i.e.: /Users/your-username/.lingkong/models/ (macOS) or /home/your-username/.lingkong/models/
+                    (Linux)
                 </p>
             </div>
 
             <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 20px;">
-                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128203; <span data-i18n="downloads.help.steps">Steps</span></h3>
+                <h3 style="color: #f1f5f9; font-size: 1.1rem; margin-bottom: 15px;">&#128203; <span
+                        data-i18n="downloads.help.steps">Steps</span></h3>
                 <ol style="color: #94a3b8; line-height: 2; padding-left: 20px;">
-                    <li><span data-i18n="downloads.help.step1">Create directory:</span> <code style="color: #79c0ff;">mkdir -p ~/.lingkong/models</code></li>
+                    <li><span data-i18n="downloads.help.step1">Create directory:</span> <code
+                            style="color: #79c0ff;">mkdir -p ~/.lingkong/models</code></li>
                     <li data-i18n="downloads.help.step2">Download model files using your download tool</li>
-                    <li><span data-i18n="downloads.help.step3">Move downloaded .gguf files to</span> <code style="color: #79c0ff;">~/.lingkong/models/</code></li>
+                    <li><span data-i18n="downloads.help.step3">Move downloaded .gguf files to</span> <code
+                            style="color: #79c0ff;">~/.lingkong/models/</code></li>
                     <li><span data-i18n="downloads.help.step4">Keep file names unchanged:</span>
                         <ul style="margin-top: 5px; margin-left: 20px;">
                             <li><code>gemma-3n-E2B-it-Q4_K_M.gguf</code> (required)</li>
@@ -480,19 +492,10 @@
         <!-- Resume Download -->
         <div class="section">
             <h2><span class="icon">&#128260;</span> <span data-i18n="downloads.resume.title">Resume Download</span></h2>
-            <p style="color: #94a3b8; margin-bottom: 15px;" data-i18n="downloads.resume.desc">Use wget with resume support, can continue download after interruption:</p>
+            <p style="color: #94a3b8; margin-bottom: 15px;" data-i18n="downloads.resume.desc">Use wget with resume
+                support, can continue download after interruption:</p>
             <div class="code-block">
-                <code># Create directory
-mkdir -p ~/.lingkong/models && cd ~/.lingkong/models
-
-# Download text model (required, 2.6GB)
-wget -c https://lingkong.xyz/models/gemma-3n-E2B-it-Q4_K_M.gguf
-
-# Download vision model (optional, 570MB)
-wget -c https://lingkong.xyz/models/gemma-3n-vision-mmproj-f16.gguf
-
-# Download audio model (optional, 1.3GB)
-wget -c https://lingkong.xyz/models/gemma-3n-audio-mmproj-f16.gguf</code>
+                <code id="resume-code"></code>
                 <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
             </div>
             <p style="color: #64748b; margin-top: 15px; font-size: 0.9rem;" data-i18n="downloads.resume.tip">
@@ -502,30 +505,15 @@ wget -c https://lingkong.xyz/models/gemma-3n-audio-mmproj-f16.gguf</code>
 
         <!-- Directory Structure -->
         <div class="section">
-            <h2><span class="icon">&#128194;</span> <span data-i18n="downloads.structure.title">Complete Install Directory Structure</span></h2>
+            <h2><span class="icon">&#128194;</span> <span data-i18n="downloads.structure.title">Complete Install
+                    Directory Structure</span></h2>
             <div class="code-block">
-                <code>~/.lingkong/
-├── bin/                    # Inference engine
-│   ├── llama-server       # API server
-│   └── llama-cli          # CLI tool
-├── models/                 # ⬅️ Model files here
-│   ├── gemma-3n-E2B-it-Q4_K_M.gguf        # Text model (required)
-│   ├── gemma-3n-vision-mmproj-f16.gguf    # Vision model (optional)
-│   └── gemma-3n-audio-mmproj-f16.gguf     # Audio model (optional)
-├── apps/
-│   └── webui/              # Web interface
-└── lib/                    # Dependencies</code>
+                <code id="structure-code"></code>
                 <button class="copy-btn" onclick="copyCode(this)" data-i18n="common.copy">Copy</button>
             </div>
         </div>
 
-        <nav class="nav-links">
-            <a href="/static/home.html" class="nav-link">&#127968; <span data-i18n="nav.home">Home</span></a>
-            <a href="/" class="nav-link">&#128172; <span data-i18n="nav.chat">Chat</span></a>
-            <a href="/static/docs.html" class="nav-link">&#128218; <span data-i18n="nav.apiDocs">API Docs</span></a>
-            <a href="/static/tinybox/index.html" class="nav-link">&#128187; TinyBox DIY</a>
-            <a href="https://github.com/jiaqiwang969/gemma" class="nav-link" target="_blank">&#128736; GitHub</a>
-        </nav>
+
     </div>
 
     <script>
@@ -533,7 +521,7 @@ wget -c https://lingkong.xyz/models/gemma-3n-audio-mmproj-f16.gguf</code>
             const code = btn.parentElement.querySelector('code').textContent;
             navigator.clipboard.writeText(code).then(() => {
                 const originalText = btn.textContent;
-                btn.textContent = i18n ? i18n.t('common.copied') : 'Copied!';
+                btn.textContent = (i18n && i18n.t('common.copied')) || 'Copied!';
                 btn.style.background = 'rgba(34, 197, 94, 0.3)';
                 setTimeout(() => {
                     btn.textContent = originalText;
@@ -542,10 +530,49 @@ wget -c https://lingkong.xyz/models/gemma-3n-audio-mmproj-f16.gguf</code>
             });
         }
 
-        // Initialize i18n
+        // Update code blocks with translated comments
+        function updateCodeBlocks() {
+            const t = (key, fallback) => (i18n && i18n.t(key)) || fallback;
+
+            // Resume download code
+            const resumeCode = document.getElementById('resume-code');
+            if (resumeCode) {
+                resumeCode.textContent = `${t('downloads.resume.comment.createDir', '# Create directory')}
+mkdir -p ~/.lingkong/models && cd ~/.lingkong/models
+
+${t('downloads.resume.comment.textModel', '# Download text model (required, 2.6GB)')}
+wget -c https://lingkong.xyz/models/gemma-3n-E2B-it-Q4_K_M.gguf
+
+${t('downloads.resume.comment.visionModel', '# Download vision model (optional, 570MB)')}
+wget -c https://lingkong.xyz/models/gemma-3n-vision-mmproj-f16.gguf
+
+${t('downloads.resume.comment.audioModel', '# Download audio model (optional, 1.3GB)')}
+wget -c https://lingkong.xyz/models/gemma-3n-audio-mmproj-f16.gguf`;
+            }
+
+            // Directory structure code
+            const structureCode = document.getElementById('structure-code');
+            if (structureCode) {
+                structureCode.textContent = `~/.lingkong/
+├── bin/                    ${t('downloads.structure.comments.inferenceEngine', '# Inference engine')}
+│   ├── llama-server       ${t('downloads.structure.comments.apiServer', '# API server')}
+│   └── llama-cli          ${t('downloads.structure.comments.cliTool', '# CLI tool')}
+├── models/                 ${t('downloads.structure.comments.modelFiles', '# Model files here')}
+│   ├── gemma-3n-E2B-it-Q4_K_M.gguf        ${t('downloads.structure.comments.textModel', '# Text model (required)')}
+│   ├── gemma-3n-vision-mmproj-f16.gguf    ${t('downloads.structure.comments.visionModel', '# Vision model (optional)')}
+│   └── gemma-3n-audio-mmproj-f16.gguf     ${t('downloads.structure.comments.audioModel', '# Audio model (optional)')}
+├── apps/
+│   └── webui/              ${t('downloads.structure.comments.webInterface', '# Web interface')}
+└── lib/                    ${t('downloads.structure.comments.dependencies', '# Dependencies')}`;
+            }
+        }
+
+        // Initialize code blocks on load and language change
         document.addEventListener('DOMContentLoaded', () => {
-            initI18n();
+            updateCodeBlocks();
         });
+        window.addEventListener('i18n:ready', updateCodeBlocks);
     </script>
 </body>
+
 </html>
