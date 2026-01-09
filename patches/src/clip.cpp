@@ -3264,9 +3264,8 @@ int clip_n_output_tokens(const struct clip_ctx * ctx, struct clip_image_f32 * im
             } break;
         case PROJECTOR_TYPE_GEMMA3NA:
             {
-                // HF input sequence:
-                //   <start_of_audio> + 188 * <audio_soft_token> + <end_of_audio>
-                // Audio encoder outputs the 188 soft tokens; <end_of_audio> stays as a normal vocab token.
+                // Gemma 3n audio always outputs a fixed 188 soft tokens
+                // The conformer encoder pads/truncates to this fixed size
                 n_patches = 188;
             } break;
         default:
@@ -3389,13 +3388,8 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
         // audio input
         GGML_ASSERT(imgs.entries.size() == 1);
         const auto & mel_inp = imgs.entries[0];
-        int n_step = mel_inp->nx;
-        int n_mel  = mel_inp->ny;
-        if (imgs.is_audio && model.proj_type == PROJECTOR_TYPE_GEMMA3NA) {
-            // For Gemma3n audio we store nx = n_mel, ny = n_frames
-            n_step = mel_inp->ny;
-            n_mel  = mel_inp->nx;
-        }
+        const int n_step = mel_inp->nx;
+        const int n_mel  = mel_inp->ny;
         std::vector<float> inp_raw(n_step * n_mel);
         std::memcpy(inp_raw.data(), mel_inp->buf.data(), n_step * n_mel * sizeof(float));
         set_input_f32("inp_raw", inp_raw);
@@ -3604,6 +3598,7 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
             } break;
         case PROJECTOR_TYPE_GEMMA3:
         case PROJECTOR_TYPE_GEMMA3N:
+        case PROJECTOR_TYPE_GEMMA3NA:
         case PROJECTOR_TYPE_IDEFICS3:
         case PROJECTOR_TYPE_INTERNVL:
         case PROJECTOR_TYPE_QWEN2A:
@@ -3615,36 +3610,6 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
         case PROJECTOR_TYPE_COGVLM:
             {
                 // do nothing
-            } break;
-        case PROJECTOR_TYPE_GEMMA3NA:
-            {
-                // Gemma 3n audio relative position encoding
-                // Generate sinusoidal position embeddings for positions [12, 11, ..., 0]
-                // Shape: [n_channels, max_span] = [1536, 13]
-                constexpr int d_model = 1536;   // n_channels
-                constexpr int max_span = 13;    // max_backward + 1 = 12 + 1
-                constexpr int half_dim = d_model / 2;  // 768
-
-                std::vector<float> pos_emb(d_model * max_span);
-                std::vector<double> inv_timescales(half_dim);
-
-                // inv_timescales[i] = exp(-i * log(10000) / (half_dim - 1))
-                // This matches PyTorch: 1.0 / (10000 ** (torch.arange(0, half_dim) / (half_dim - 1)))
-                for (int i = 0; i < half_dim; ++i) {
-                    inv_timescales[i] = std::exp(-(std::log(10000.0) / (half_dim - 1)) * i);
-                }
-
-                // Generate sinusoidal embeddings for each position
-                // positions are [12, 11, 10, ..., 0] (max_backward down to 0)
-                for (int pos_idx = 0; pos_idx < max_span; ++pos_idx) {
-                    int rel_pos = (max_span - 1) - pos_idx;  // 12, 11, ..., 0
-                    for (int i = 0; i < half_dim; ++i) {
-                        float ang = rel_pos * inv_timescales[i];
-                        pos_emb[pos_idx * d_model + 2*i + 0] = sinf(ang);  // even indices: sin
-                        pos_emb[pos_idx * d_model + 2*i + 1] = cosf(ang);  // odd indices: cos
-                    }
-                }
-                set_input_f32("pos_emb", pos_emb);
             } break;
         case PROJECTOR_TYPE_LLAMA4:
             {
@@ -3713,28 +3678,6 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
             ggml_backend_tensor_get(t, data.data(), 0, ggml_nbytes(t));
             print_tensor_shape(t);
             print_tensor_data(t, data.data(), 3);
-
-            // Save specific tensors to files for comparison
-            std::string name = t->name;
-            const bool save_tensor =
-                name == "input" || name == "input_4d" || name == "conv0_padded" ||
-                name == "conv0_out" || name == "conv0_cum_mean" || name == "conv0_cum_var" ||
-                name == "conv0_norm" || name == "conv0_norm_relu" ||
-                name == "conv1_out" || name == "conv1_norm" || name == "conv1_norm_relu" ||
-                name == "flattened" || name == "input_proj" ||
-                name == "soft_embedding_norm" || name == "embedding_projection" ||
-                name == "embedding_post_projection_norm" || name == "temporal_reduction" ||
-                name.rfind("block_norm_", 0) == 0;
-
-            if (save_tensor) {
-                std::string filename = "/tmp/llamacpp_" + name + ".bin";
-                FILE * f = fopen(filename.c_str(), "wb");
-                if (f) {
-                    fwrite(data.data(), 1, data.size(), f);
-                    fclose(f);
-                    LOG_INF("  -> Saved %s to %s (%zu bytes)\n", name.c_str(), filename.c_str(), data.size());
-                }
-            }
         }
     }
 
@@ -3752,22 +3695,6 @@ bool clip_image_batch_encode(clip_ctx * ctx, const int n_threads, const clip_ima
     // copy the embeddings to the location passed by the user
     if (vec != nullptr) {
         ggml_backend_tensor_get(embeddings, vec, 0, ggml_nbytes(embeddings));
-
-        // Debug: dump embeddings to file for comparison with PyTorch
-        if (ctx->debug_graph && ctx->model.proj_type == PROJECTOR_TYPE_GEMMA3NA) {
-            std::vector<float> emb_data(ggml_nelements(embeddings));
-            ggml_backend_tensor_get(embeddings, emb_data.data(), 0, ggml_nbytes(embeddings));
-
-            FILE * f = fopen("/tmp/llamacpp_encoder_output.bin", "wb");
-            if (f) {
-                fwrite(emb_data.data(), sizeof(float), emb_data.size(), f);
-                fclose(f);
-                LOG_INF("%s: saved encoder output to /tmp/llamacpp_encoder_output.bin (%zu floats)\n", __func__, emb_data.size());
-                LOG_INF("%s: embeddings shape: [%lld, %lld], first 5: %.4f %.4f %.4f %.4f %.4f\n", __func__,
-                        embeddings->ne[0], embeddings->ne[1],
-                        emb_data[0], emb_data[1], emb_data[2], emb_data[3], emb_data[4]);
-            }
-        }
     }
 
     return true;
