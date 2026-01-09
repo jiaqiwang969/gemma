@@ -53,6 +53,39 @@ tools/mtmd/mtmd.cpp               | +11   (multi-mmproj loading)
 
 **Total: 12 files, +2163 lines**
 
+## Source Files (src/)
+
+For convenience, we also provide the **complete source files** (not just diffs) for the core components:
+
+```
+src/
+├── gemma3na.cpp      # Conformer audio encoder (716 lines) - CRITICAL
+├── mobilenetv5.cpp   # MobileNetV5 vision encoder (453 lines)
+├── models.h          # Model declarations
+├── clip.cpp          # CLIP implementation with Gemma3na support
+├── clip-impl.h       # Tensor name macros
+└── clip-model.h      # Model structures
+```
+
+**Why provide source files?**
+- The patch file requires exact base commit match
+- Source files can be directly copied to `tools/mtmd/models/` if patch fails
+- Easier to review and understand the implementation
+
+### Direct Copy Method (Alternative to Patch)
+
+If the patch doesn't apply cleanly:
+
+```bash
+# Copy source files directly
+cp src/gemma3na.cpp /path/to/llama.cpp/tools/mtmd/models/
+cp src/mobilenetv5.cpp /path/to/llama.cpp/tools/mtmd/models/
+cp src/models.h /path/to/llama.cpp/tools/mtmd/models/
+cp src/clip-impl.h /path/to/llama.cpp/tools/mtmd/
+cp src/clip-model.h /path/to/llama.cpp/tools/mtmd/
+cp src/clip.cpp /path/to/llama.cpp/tools/mtmd/
+```
+
 ## How to Apply
 
 ```bash
