@@ -30,6 +30,10 @@ BIN_DIR="${INSTALL_DIR}/bin"
 MODELS_DIR="${INSTALL_DIR}/models"
 BASE_URL="${LINGKONG_MIRROR:-https://lingkong.xyz}"
 HF_BASE_URL="https://huggingface.co/jiaqiwang969/gemma3n-gguf/resolve/main"
+EVOLUTION_DIR="${EVOLUTION_STORAGE_ROOT:-${INSTALL_DIR}/evolution}"
+EVOLUTION_SQLITE_PATH="${EVOLUTION_SQLITE_PATH:-${EVOLUTION_DIR}/evolution.db}"
+EVOLUTION_ARTIFACT_ROOT="${EVOLUTION_ARTIFACT_ROOT:-${EVOLUTION_DIR}/artifacts}"
+EVOLUTION_INDEX_PATH="${EVOLUTION_INDEX_PATH:-${EVOLUTION_DIR}/index}"
 
 # 默认模型
 DEFAULT_MODEL="gemma-3n-E2B-it-Q4_K_M.gguf"
@@ -165,6 +169,9 @@ create_directories() {
     mkdir -p "$MODELS_DIR"
     mkdir -p "$INSTALL_DIR/config"
     mkdir -p "$INSTALL_DIR/logs"
+    mkdir -p "$EVOLUTION_DIR"
+    mkdir -p "$EVOLUTION_ARTIFACT_ROOT"
+    mkdir -p "$EVOLUTION_INDEX_PATH"
 
     log_success "目录创建完成: $INSTALL_DIR"
 }
@@ -226,6 +233,14 @@ setup_path() {
     local shell_rc=""
     local path_export="export PATH=\"\$PATH:${BIN_DIR}\""
     local home_export="export LINGKONG_HOME=\"${INSTALL_DIR}\""
+    local evolution_exports=(
+        "export EVOLUTION_ENABLED=1"
+        "export EVOLUTION_STORAGE_ROOT=\"${EVOLUTION_DIR}\""
+        "export EVOLUTION_SQLITE_PATH=\"${EVOLUTION_SQLITE_PATH}\""
+        "export EVOLUTION_ARTIFACT_ROOT=\"${EVOLUTION_ARTIFACT_ROOT}\""
+        "export EVOLUTION_INDEX_PATH=\"${EVOLUTION_INDEX_PATH}\""
+        "export EVOLUTION_PERSIST_MEDIA=1"
+    )
 
     # 检测 shell
     if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
@@ -247,11 +262,28 @@ setup_path() {
         else
             log_info "环境变量已配置"
         fi
+
+        if ! grep -q "EVOLUTION_STORAGE_ROOT" "$shell_rc" 2>/dev/null; then
+            echo "" >> "$shell_rc"
+            echo "# LingKong Evolution" >> "$shell_rc"
+            for line in "${evolution_exports[@]}"; do
+                echo "$line" >> "$shell_rc"
+            done
+            log_success "已添加 Evolution 环境变量"
+        else
+            log_info "Evolution 环境变量已配置"
+        fi
     fi
 
     # 当前会话也设置
     export LINGKONG_HOME="$INSTALL_DIR"
     export PATH="$PATH:$BIN_DIR"
+    export EVOLUTION_ENABLED=1
+    export EVOLUTION_STORAGE_ROOT="$EVOLUTION_DIR"
+    export EVOLUTION_SQLITE_PATH="$EVOLUTION_SQLITE_PATH"
+    export EVOLUTION_ARTIFACT_ROOT="$EVOLUTION_ARTIFACT_ROOT"
+    export EVOLUTION_INDEX_PATH="$EVOLUTION_INDEX_PATH"
+    export EVOLUTION_PERSIST_MEDIA=1
 }
 
 # 创建默认配置
