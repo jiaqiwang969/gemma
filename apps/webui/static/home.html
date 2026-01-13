@@ -34,10 +34,27 @@
             justify-content: center;
             padding: 100px 2rem 60px;
             text-align: center;
-            background:
-                radial-gradient(ellipse at 50% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-                var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+            /* Default to Dark/Night City */
+            /* Default to Dark/Night City */
+            background-image: url('/static/assets/city_night.jpg');
+            background-size: cover;
+            background-position: center top;
+            /* Anchor to top to see horizon */
+            background-repeat: no-repeat;
+            background-attachment: scroll;
+            /* Maintain scroll on mobile */
+            transition: background-image 0.5s ease-in-out;
         }
+
+        /* Light Mode City */
+        [data-theme="light"] .hero {
+            background-image: url('/static/assets/city_day.jpg');
+        }
+
+        /* Overlay to ensure text readability */
+
 
         .hero-icon {
             font-size: 5rem;
@@ -65,6 +82,74 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            position: relative;
+            /* Ensure above canvas */
+            z-index: 2;
+        }
+
+        /* Light Mode Title Override */
+        [data-theme="light"] .hero h1 {
+            background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Light Mode Text Fixes for White City Background */
+        [data-theme="light"] .hero-tagline {
+            color: #374151;
+            /* Dark Gray */
+            font-weight: 500;
+        }
+
+        [data-theme="light"] .stat-label {
+            color: #4b5563;
+            /* Darker Gray */
+        }
+
+        [data-theme="light"] .stat-value {
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        [data-theme="light"] .quick-link {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1f2937;
+            border-color: #e5e7eb;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="light"] .quick-link:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        [data-theme="light"] .quick-link.primary {
+            color: white;
+            /* Keep primary button white text */
+        }
+
+        [data-theme="light"] .install-header span {
+            color: #9ca3af;
+            /* Slightly lighter gray for install header text */
+        }
+
+        [data-theme="light"] .install-box {
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            /* Softer shadow */
+        }
+
+        /* Ensure content is above particles */
+        .hero {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-icon,
+        .hero-tagline,
+        .install-box,
+        .quick-links,
+        .stats-row {
+            position: relative;
+            z-index: 2;
         }
 
         .hero-tagline {
@@ -369,7 +454,16 @@
             }
 
             .hero {
-                padding: 80px 1rem 40px;
+                padding: 120px 1rem 40px;
+                /* More top padding for taller navbar */
+                min-height: 100dvh;
+                /* Use dynamic viewport height for mobile */
+                background-attachment: scroll !important;
+                /* Force scroll to avoid distortion */
+                background-size: cover !important;
+                /* Ensure Aspect Ratio is kept */
+                background-position: center top !important;
+                /* Anchor top */
             }
 
             .hero-icon {
@@ -508,14 +602,13 @@
                 <div style="margin-bottom: 6px; color: var(--text-secondary);">✅ <span
                         data-i18n="home.install.testedPlatforms">Tested Platforms (2025-01):</span></div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <span
-                        style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; padding: 3px 10px; border-radius: 4px;">🍎
+                    <span class="platform-badge mac">🍎
                         <span data-i18n="home.install.platformMac">macOS 15 + Apple M4 Max (Metal)</span></span>
-                    <span
-                        style="background: rgba(34, 197, 94, 0.15); color: #86efac; padding: 3px 10px; border-radius: 4px;">🐧
+                    <span class="platform-badge ubuntu">🐧
                         <span data-i18n="home.install.platformUbuntu">Ubuntu 22.04 + RTX 4090 (CUDA 12)</span></span>
                 </div>
-                <div style="margin-top: 6px; font-size: 0.75rem;" data-i18n="home.install.platformNote">Text + Vision +
+                <div style="margin-top: 6px; font-size: 0.75rem; color: var(--text-muted);"
+                    data-i18n="home.install.platformNote">Text + Vision +
                     Audio (Speech-to-Text) fully working
                     on both platforms</div>
             </div>
@@ -551,14 +644,11 @@
         </div>
 
         <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <span
-                style="background: rgba(139, 92, 246, 0.2); color: #a5b4fc; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">🍎
+            <span class="platform-badge mac">🍎
                 <span data-i18n="home.platforms.macos">macOS (Apple Silicon)</span></span>
-            <span
-                style="background: rgba(34, 197, 94, 0.2); color: #86efac; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">🐧
+            <span class="platform-badge ubuntu">🐧
                 <span data-i18n="home.platforms.ubuntu">Ubuntu x86_64 (CUDA)</span></span>
-            <span
-                style="background: rgba(255, 255, 255, 0.1); color: #a0a0b0; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">💻
+            <span class="platform-badge linux">💻
                 <span data-i18n="home.platforms.linux">Linux x86_64 (CPU)</span></span>
         </div>
     </section>

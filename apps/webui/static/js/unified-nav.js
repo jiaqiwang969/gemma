@@ -16,27 +16,30 @@
 (function () {
     // 0. Theme CSS Variables
     const themeStyles = `
-    /* Dark Theme (Default) */
+    /* Dark Theme (Default) - Azure/Sky Aesthetic */
     :root, [data-theme="dark"] {
         --bg-primary: #0a0a0f;
-        --bg-secondary: #12121a;
-        --bg-tertiary: #18181b;
-        --bg-card: #1a1a25;
-        --bg-code: #0d1117;
-        --text-primary: #ffffff;
-        --text-secondary: #a0a0b0;
-        --text-muted: #666;
-        --accent-primary: #8b5cf6;
-        --accent-secondary: #6366f1;
+        --bg-secondary: #0f172a; /* Slate 900 */
+        --bg-tertiary: #1e293b; /* Slate 800 */
+        --bg-card: #111827; /* Gray 900 */
+        --bg-code: #0b1120;
+        --text-primary: #f8fafc; /* Slate 50 */
+        --text-secondary: #cbd5e1; /* Slate 300 */
+        --text-muted: #94a3b8; /* Slate 400 */
+        
+        /* New Brand Colors: Azure/Sky */
+        --accent-primary: #3b82f6; /* Blue 500 */
+        --accent-secondary: #0ea5e9; /* Sky 500 */
         --accent-green: #22c55e;
         --accent-blue: #3b82f6; 
         --accent-red: #ef4444;
-        --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+        --accent-gradient: linear-gradient(135deg, #3b82f6, #0ea5e9);
+        
         --border-color: rgba(255, 255, 255, 0.1);
         --shadow-color: rgba(0, 0, 0, 0.4);
-        --navbar-bg: rgba(20, 20, 25, 0.72);
-        --dropdown-bg: rgba(28, 28, 36, 0.85);
-        --bg-input: rgba(30, 30, 35, 0.6);
+        --navbar-bg: rgba(15, 23, 42, 0.72); /* Slate 900 with alpha */
+        --dropdown-bg: rgba(17, 24, 39, 0.95);
+        --bg-input: rgba(30, 41, 59, 0.6);
 
         --radius-sm: 8px;
         --radius-md: 12px;
@@ -56,46 +59,47 @@
         --warning: #f59e0b;
         --error: #ef4444;
         --code-bg: var(--bg-code);
-        --code-text: #d4d4d4;
-        --left-color: #6366f1;
+        --code-text: #e2e8f0;
+        --left-color: #3b82f6;
         --right-color: #22c55e;
-        --gradient-purple: var(--accent-gradient);
+        --gradient-purple: var(--accent-gradient); /* Kept var name for compatibility */
     }
 
-    /* Light Theme - Refined for Contrast & Grid */
+    /* Light Theme - High Contrast & Clean Sky Aesthetic */
     [data-theme="light"] {
-        --bg-primary: #ffffff; /* pure white base */
-        --bg-secondary: #f8fafc; /* Slate 50 */
-        --bg-tertiary: #f1f5f9; /* Slate 100 */
-        --bg-card: rgba(255, 255, 255, 0.9); /* slight transparency for grid overlap */
+        --bg-primary: #ffffff;
+        --bg-secondary: #f0f9ff; /* Alice Blue / Very faint sky */
+        --bg-tertiary: #e0f2fe; /* Sky 100 */
+        --bg-card: #ffffff;
         --bg-code: #f1f5f9;
-        --text-primary: #0f172a; 
-        --text-secondary: #334155; 
-        --text-muted: #64748b; 
-        --accent-primary: #4f46e5; 
-        --accent-secondary: #7c3aed; 
+        
+        /* High Contrast Text */
+        --text-primary: #020617; /* Slate 950 (Near Black) */
+        --text-secondary: #334155; /* Slate 700 (Dark Gray) */
+        --text-muted: #475569; /* Slate 600 */
+        
+        /* New Brand Colors: Azure/Sky in Light Mode */
+        --accent-primary: #2563eb; /* Blue 600 (Darker for readability) */
+        --accent-secondary: #0284c7; /* Sky 600 */
         --accent-green: #16a34a; 
         --accent-blue: #2563eb; 
         --accent-red: #dc2626; 
         --accent-yellow: #d97706; 
-        --accent-gradient: linear-gradient(135deg, #4f46e5, #7c3aed, #9333ea);
-        --border-color: #e2e8f0; 
-        --shadow-color: rgba(0, 0, 0, 0.05); 
-        --navbar-bg: rgba(255, 255, 255, 0.72); /* High transparency for frost effect */
-        --dropdown-bg: rgba(255, 255, 255, 0.85);
-        --bg-input: rgba(255, 255, 255, 0.6);
+        --accent-gradient: linear-gradient(135deg, #2563eb, #0284c7);
+        
+        --border-color: #cbd5e1; /* Slate 300 - clearly visible borders */
+        --shadow-color: rgba(0, 0, 0, 0.06); 
+        --navbar-bg: rgba(255, 255, 255, 0.85);
+        --dropdown-bg: rgba(255, 255, 255, 0.95);
+        --bg-input: #ffffff;
         
         --radius-sm: 8px;
         --radius-md: 12px;
         --radius-lg: 18px;
         
-        --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-        --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
-        --shadow-lg: 0 12px 24px rgba(0,0,0,0.08);
-
-        /* Remove hard border color for grid, use subtle opacity */
-        --border-color: rgba(0, 0, 0, 0.06);
-        --shadow-color: rgba(0, 0, 0, 0.03); 
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        --shadow-lg: 0 12px 24px rgba(0,0,0,0.12);
 
         /* Aliases & Extras */
         --bg: var(--bg-primary);
@@ -107,13 +111,13 @@
         --error: #dc2626;
         --code-bg: var(--bg-code);
         --code-text: #0f172a;
-        --left-color: #4f46e5;
+        --left-color: #2563eb;
         --right-color: #16a34a;
         --gradient-purple: var(--accent-gradient);
 
-        /* Grid Background Pattern */
+        /* Grid Background Pattern - Subtle Blue Tint */
         background-color: var(--bg-primary);
-        background-image: linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+        background-image: linear-gradient(#f0f9ff 1px, transparent 1px), linear-gradient(90deg, #f0f9ff 1px, transparent 1px);
         background-size: 40px 40px;
     }
 
@@ -263,7 +267,7 @@
     }
 
     .dropdown-menu a:hover {
-        background: rgba(139, 92, 246, 0.1);
+        background: rgba(59, 130, 246, 0.1);
         color: var(--text-primary);
     }
 
@@ -334,7 +338,7 @@
     .theme-toggle:hover {
         border-color: var(--accent-primary);
         color: var(--text-primary);
-        background: rgba(139, 92, 246, 0.1);
+        background: rgba(59, 130, 246, 0.1);
     }
 
     /* Mobile Menu Button */
@@ -350,8 +354,8 @@
         transition: all 0.2s;
     }
 
-    .mobile-menu-btn:hover {
-        background: rgba(139, 92, 246, 0.1);
+        .mobile-menu-btn:hover {
+        background: rgba(59, 130, 246, 0.1);
         border-color: var(--accent-primary);
     }
 
@@ -368,34 +372,57 @@
     /* Mobile Responsive - Phone */
     @media (max-width: 768px) {
         .nav-container {
-            padding: 0 1rem;
+            padding: 0 1.25rem;
+            height: 72px; /* Increased height for better touch target */
         }
 
         .navbar .logo {
-            font-size: 1rem;
+            font-size: 1.2rem;
         }
 
         .navbar .logo-icon {
-            font-size: 1.2rem;
+            font-size: 1.5rem;
         }
 
         .nav-links {
             display: none;
             position: fixed;
-            top: 60px;
+        .nav-links {
+            display: none;
+            position: fixed;
+            top: 72px; /* Match new navbar height */
             left: 0;
             right: 0;
-            bottom: 0;
-            background: var(--navbar-bg);
+            height: calc(100vh - 72px); /* Full screen height minus navbar */
+            background: var(--navbar-bg); /* Solid background from theme */
             flex-direction: column;
-            padding: 1.5rem;
+            padding: 1.5rem 2rem; /* More horizontal padding */
             gap: 0;
             overflow-y: auto;
             z-index: 999;
+             /* Stronger backdrop for legibility */
+            backdrop-filter: saturate(180%) blur(40px);
+            -webkit-backdrop-filter: saturate(180%) blur(40px);
         }
 
         .nav-links.open {
             display: flex;
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-links.open {
+            display: flex;
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .nav-links > li {
@@ -409,15 +436,16 @@
 
         .nav-links > li > a {
             display: block;
-            padding: 1rem 0;
-            font-size: 1rem;
+            padding: 1.1rem 0; /* Larger tap area */
+            font-size: 1.05rem;
         }
 
         /* Mobile Dropdown */
         .nav-dropdown > a::after {
             content: '+';
-            font-size: 1rem;
+            font-size: 1.2rem;
             margin-left: auto;
+            font-weight: 300;
         }
 
         .nav-dropdown.open > a::after {
@@ -429,7 +457,7 @@
             transform: none;
             opacity: 1;
             visibility: visible;
-            background: rgba(139, 92, 246, 0.05);
+            background: rgba(59, 130, 246, 0.05); /* Blue tint instead of purple */
             border: none;
             border-radius: 0;
             margin: 0;
@@ -437,13 +465,18 @@
             box-shadow: none;
             display: none;
         }
+        
+        .dropdown-menu a:hover {
+             background: rgba(59, 130, 246, 0.1);
+        }
 
         .nav-dropdown.open .dropdown-menu {
             display: block;
         }
 
         .dropdown-menu a {
-            padding: 0.8rem 1.5rem;
+            padding: 0.9rem 1.5rem;
+            color: var(--text-secondary);
         }
 
         .lang-switch {
@@ -454,23 +487,26 @@
             margin-top: 0.5rem;
             border-top: 1px solid var(--border-color);
             justify-content: center;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .lang-btn {
-            padding: 8px 16px;
-            font-size: 0.9rem;
+            padding: 10px 20px;
+            font-size: 1rem;
         }
 
         .theme-toggle {
-            padding: 8px 16px;
-            font-size: 1.1rem;
+            padding: 10px 20px;
+            font-size: 1.25rem;
         }
 
         .mobile-menu-btn {
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 44px;
+            height: 44px; /* Proper touch target size */
+            font-size: 1.4rem;
         }
     }
 
@@ -509,6 +545,12 @@
                         <a href="/static/encryption/index.html">
                             <span class="dropdown-icon">🔐</span>
                             <span class="dropdown-label" data-i18n="nav.encryption">Encryption</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/static/silent-compute/index.html">
+                            <span class="dropdown-icon">🤫</span>
+                            <span class="dropdown-label" data-i18n="nav.silent_compute">Silent Compute</span>
                         </a>
                     </li>
                     <li class="dropdown-divider"></li>

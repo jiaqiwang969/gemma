@@ -24,7 +24,8 @@
     "playgroundGrok": "Grok API Playground - 灵空 AI",
     "chat": "灵空 AI - 对话",
     "tinybox": "TinyBox DIY 指南 - 6x RX 7900 XTX AI 工作站",
-    "encryption": "端到端加密架构 - 灵空 AI"
+    "encryption": "端到端加密架构 - 灵空 AI",
+    "silent_compute": "静默计算设备 - 灵空 AI"
   },
   "nav": {
     "home": "首页",
@@ -37,6 +38,7 @@
     "evolution": "进化系统",
     "resources": "资源",
     "encryption": "加密策略",
+    "silent_compute": "静默计算",
     "pitch": "商业计划书",
     "tinybox_page": {
       "title": "Tinybox DIY 指南 - 6x RX 7900 XTX AI 工作站组装指南",
@@ -94,6 +96,30 @@
     "footer_home": "返回首页",
     "footer_evolution": "进化系统",
     "footer_pitch": "商业计划书"
+  },
+  "silent_compute_page": {
+    "title": "静默计算设备 - The Silent Compute Appliance",
+    "subtitle": "您的私有 AI 算力中心，静音、强大、且完全在您的掌控之中。",
+    "badge_privacy": "100% 隐私",
+    "badge_local": "本地运行",
+    "badge_silent": "静音设计",
+    "badge_powerful": "高性能",
+    "download_btn": "下载完整 PDF",
+    "slide_01": "封面",
+    "slide_02": "愿景",
+    "slide_03": "现状",
+    "slide_04": "问题",
+    "slide_05": "解决方案",
+    "slide_06": "硬件架构",
+    "slide_07": "散热设计",
+    "slide_08": "静音性能",
+    "slide_09": "软件生态",
+    "slide_10": "应用场景",
+    "slide_11": "企业部署",
+    "slide_12": "成本分析",
+    "slide_13": "路线图",
+    "slide_14": "团队",
+    "slide_15": "联系我们"
   },
   "home": {
     "hero": {

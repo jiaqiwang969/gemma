@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh" data-i18n-title-key="pageTitle.silent_compute">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>静默计算设备 - 灵空 AI</title>
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/unified-nav.js"></script>
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .main {
+            min-height: 100vh;
+        }
+
+        /* Hero */
+        .hero {
+            padding: 60px 2rem 40px;
+            text-align: center;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                var(--bg-primary);
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .hero-badges {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .badge.highlight {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.875rem 1.75rem;
+            background: var(--accent-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Slides Container */
+        .slides-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        .slide {
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s;
+        }
+
+        .slide:hover {
+            transform: scale(1.01);
+        }
+
+        .slide img {
+            width: 100%;
+            display: block;
+        }
+
+        .slide-number {
+            background: var(--bg-card);
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slide-number span {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Navigation Dots */
+        .nav-dots {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-dot:hover,
+        .nav-dot.active {
+            background: var(--accent-primary);
+            transform: scale(1.3);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 40px 1rem 30px;
+            }
+
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .hero p {
+                font-size: 0.95rem;
+            }
+
+            .slides-container {
+                padding: 0 1rem 3rem;
+            }
+
+            .nav-dots {
+                display: none;
+            }
+
+            .hero-badges {
+                gap: 0.5rem;
+            }
+
+            .badge {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="main">
+        <!-- Hero -->
+        <section class="hero">
+            <h1 data-i18n="silent_compute_page.title">静默计算设备 - The Silent Compute Appliance</h1>
+            <p data-i18n="silent_compute_page.subtitle">无需风扇噪音，无需数据中心。在您的办公桌上构建企业级私有 AI 算力中心。</p>
+
+            <div class="hero-badges">
+                <span class="badge highlight" data-i18n="silent_compute_page.badge_privacy">100% 隐私</span>
+                <span class="badge highlight" data-i18n="silent_compute_page.badge_local">本地运行</span>
+                <span class="badge" data-i18n="silent_compute_page.badge_silent">静音设计</span>
+                <span class="badge" data-i18n="silent_compute_page.badge_powerful">高性能</span>
+            </div>
+
+            <a href="/static/silent-compute/The_Silent_Compute_Appliance.pdf" class="download-btn" download>
+                📥 <span data-i18n="silent_compute_page.download_btn">下载完整 PDF</span>
+            </a>
+        </section>
+
+        <!-- Slides -->
+        <div class="slides-container">
+            <!-- Loop for 15 slides -->
+            <div class="slide" id="slide-1">
+                <img src="/static/silent-compute/page-01.png" alt="Slide 1">
+                <div class="slide-number"><span>01 / 15</span><span data-i18n="silent_compute_page.slide_01">封面</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-2">
+                <img src="/static/silent-compute/page-02.png" alt="Slide 2">
+                <div class="slide-number"><span>02 / 15</span><span data-i18n="silent_compute_page.slide_02">愿景</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-3">
+                <img src="/static/silent-compute/page-03.png" alt="Slide 3">
+                <div class="slide-number"><span>03 / 15</span><span data-i18n="silent_compute_page.slide_03">现状</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-4">
+                <img src="/static/silent-compute/page-04.png" alt="Slide 4">
+                <div class="slide-number"><span>04 / 15</span><span data-i18n="silent_compute_page.slide_04">问题</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-5">
+                <img src="/static/silent-compute/page-05.png" alt="Slide 5">
+                <div class="slide-number"><span>05 / 15</span><span data-i18n="silent_compute_page.slide_05">解决方案</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-6">
+                <img src="/static/silent-compute/page-06.png" alt="Slide 6">
+                <div class="slide-number"><span>06 / 15</span><span data-i18n="silent_compute_page.slide_06">硬件架构</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-7">
+                <img src="/static/silent-compute/page-07.png" alt="Slide 7">
+                <div class="slide-number"><span>07 / 15</span><span data-i18n="silent_compute_page.slide_07">散热设计</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-8">
+                <img src="/static/silent-compute/page-08.png" alt="Slide 8">
+                <div class="slide-number"><span>08 / 15</span><span data-i18n="silent_compute_page.slide_08">静音性能</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-9">
+                <img src="/static/silent-compute/page-09.png" alt="Slide 9">
+                <div class="slide-number"><span>09 / 15</span><span data-i18n="silent_compute_page.slide_09">软件生态</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-10">
+                <img src="/static/silent-compute/page-10.png" alt="Slide 10">
+                <div class="slide-number"><span>10 / 15</span><span data-i18n="silent_compute_page.slide_10">应用场景</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-11">
+                <img src="/static/silent-compute/page-11.png" alt="Slide 11">
+                <div class="slide-number"><span>11 / 15</span><span data-i18n="silent_compute_page.slide_11">企业部署</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-12">
+                <img src="/static/silent-compute/page-12.png" alt="Slide 12">
+                <div class="slide-number"><span>12 / 15</span><span data-i18n="silent_compute_page.slide_12">成本分析</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-13">
+                <img src="/static/silent-compute/page-13.png" alt="Slide 13">
+                <div class="slide-number"><span>13 / 15</span><span data-i18n="silent_compute_page.slide_13">路线图</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-14">
+                <img src="/static/silent-compute/page-14.png" alt="Slide 14">
+                <div class="slide-number"><span>14 / 15</span><span data-i18n="silent_compute_page.slide_14">团队</span>
+                </div>
+            </div>
+            <div class="slide" id="slide-15">
+                <img src="/static/silent-compute/page-15.png" alt="Slide 15">
+                <div class="slide-number"><span>15 / 15</span><span data-i18n="silent_compute_page.slide_15">联系我们</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Dots -->
+        <nav class="nav-dots">
+            <div class="nav-dot active" data-slide="1"></div>
+            <div class="nav-dot" data-slide="2"></div>
+            <div class="nav-dot" data-slide="3"></div>
+            <div class="nav-dot" data-slide="4"></div>
+            <div class="nav-dot" data-slide="5"></div>
+            <div class="nav-dot" data-slide="6"></div>
+            <div class="nav-dot" data-slide="7"></div>
+            <div class="nav-dot" data-slide="8"></div>
+            <div class="nav-dot" data-slide="9"></div>
+            <div class="nav-dot" data-slide="10"></div>
+            <div class="nav-dot" data-slide="11"></div>
+            <div class="nav-dot" data-slide="12"></div>
+            <div class="nav-dot" data-slide="13"></div>
+            <div class="nav-dot" data-slide="14"></div>
+            <div class="nav-dot" data-slide="15"></div>
+        </nav>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p data-i18n="encryption_page.footer_tagline">灵空 AI - 你的 AI. 你的数据. 你的掌控.</p>
+            <p><a href="/static/home.html" data-i18n="encryption_page.footer_home">返回首页</a> · <a
+                    href="/static/evolution/index.html" data-i18n="nav.evolution">进化系统</a> · <a
+                    href="/static/encryption/index.html" data-i18n="nav.encryption">加密策略</a></p>
+        </footer>
+    </main>
+
+    <script>
+        // Navigation dots
+        const dots = document.querySelectorAll('.nav-dot');
+        const slides = document.querySelectorAll('.slide');
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const slideNum = dot.dataset.slide;
+                document.getElementById(`slide-${slideNum}`).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Update active dot on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const slideNum = entry.target.id.split('-')[1];
+                    dots.forEach(d => d.classList.remove('active'));
+                    const activeDot = document.querySelector(`.nav-dot[data-slide="${slideNum}"]`);
+                    if (activeDot) activeDot.classList.add('active');
+                }
+            });
+        }, { threshold: 0.5 });
+
+        slides.forEach(slide => observer.observe(slide));
+    </script>
+</body>
+
+</html>

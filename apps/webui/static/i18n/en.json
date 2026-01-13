@@ -24,7 +24,8 @@
     "playgroundGrok": "Grok API Playground - LingKong AI",
     "chat": "LingKong AI - Chat",
     "tinybox": "TinyBox DIY Guide - 6x RX 7900 XTX AI Workstation",
-    "encryption": "E2E Encryption Architecture - LingKong AI"
+    "encryption": "E2E Encryption Architecture - LingKong AI",
+    "silent_compute": "The Silent Compute Appliance - LingKong AI"
   },
   "nav": {
     "home": "Home",
@@ -37,6 +38,7 @@
     "evolution": "Evolution",
     "resources": "Resources",
     "encryption": "Encryption",
+    "silent_compute": "Silent Compute",
     "pitch": "Business Plan",
     "tinybox_page": {
       "title": "Tinybox DIY Guide - 6x RX 7900 XTX AI Workstation Assembly Guide",
@@ -94,6 +96,30 @@
     "footer_home": "Home",
     "footer_evolution": "Evolution System",
     "footer_pitch": "Business Plan"
+  },
+  "silent_compute_page": {
+    "title": "The Silent Compute Appliance",
+    "subtitle": "No fan noise. No heavy datacenter bills. Enterprise-grade private AI built for your desk.",
+    "badge_privacy": "100% Privacy",
+    "badge_local": "Local Run",
+    "badge_silent": "Silent Design",
+    "badge_powerful": "High Performance",
+    "download_btn": "Download Full PDF",
+    "slide_01": "Cover",
+    "slide_02": "Vision",
+    "slide_03": "Current State",
+    "slide_04": "Problems",
+    "slide_05": "Solution",
+    "slide_06": "Hardware Arch",
+    "slide_07": "Thermal Design",
+    "slide_08": "Silent Performance",
+    "slide_09": "Software Eco",
+    "slide_10": "Use Cases",
+    "slide_11": "Enterprise",
+    "slide_12": "Cost Analysis",
+    "slide_13": "Roadmap",
+    "slide_14": "Team",
+    "slide_15": "Contact"
   },
   "home": {
     "hero": {
