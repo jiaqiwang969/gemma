@@ -103,6 +103,7 @@ jobs:
       - name: Test WebUI server starts
         run: |
           cd apps/webui
+          export SESSION_DIR=/tmp/sessions
           timeout 10 python -c "
           from server_lite import app
           print('Flask app created successfully')

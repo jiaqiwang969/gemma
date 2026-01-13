@@ -31,35 +31,35 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_KEY }}
 
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy WebUI
         if: github.event.inputs.target == 'webui' || github.event.inputs.target == 'all' || github.event_name == 'push'
         run: |
           echo "Deploying WebUI..."
-          scp apps/webui/server_lite.py ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lingkong-webui/server.py
-          scp -r apps/webui/static/* ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lingkong-webui/static/
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'sudo systemctl restart lingkong-webui'
+          scp apps/webui/server_lite.py ${{ vars.USERNAME }}@${{ vars.HOST }}:/opt/lingkong-webui/server.py
+          scp -r apps/webui/static/* ${{ vars.USERNAME }}@${{ vars.HOST }}:/opt/lingkong-webui/static/
+          ssh ${{ vars.USERNAME }}@${{ vars.HOST }} 'sudo systemctl restart lingkong-webui'
 
       - name: Deploy Gateway
         if: github.event.inputs.target == 'gateway' || github.event.inputs.target == 'all'
         run: |
           echo "Deploying Gateway..."
-          scp apps/gemini_api/gateway.py ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/lingkong-gateway/
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'sudo systemctl restart lingkong-gateway'
+          scp apps/gemini_api/gateway.py ${{ vars.USERNAME }}@${{ vars.HOST }}:/opt/lingkong-gateway/
+          ssh ${{ vars.USERNAME }}@${{ vars.HOST }} 'sudo systemctl restart lingkong-gateway'
 
       - name: Verify deployment
         run: |
           echo "Verifying deployment..."
           sleep 5
-          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} 'curl -s http://127.0.0.1:5000/api/status | head -5'
+          ssh ${{ vars.USERNAME }}@${{ vars.HOST }} 'curl -s http://127.0.0.1:5000/api/status | head -5'
 
       - name: Notify success
         run: |
           echo "✅ Deployment successful!"
-          echo "WebUI: http://${{ secrets.DEPLOY_HOST }}"
+          echo "WebUI: http://${{ vars.HOST }}"
