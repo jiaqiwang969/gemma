@@ -735,6 +735,145 @@
     "gpu": {
       "switched": "GPU switched:",
       "auto": "Auto"
+    },
+    "tinybox_page": {
+      "title": "Tinybox DIY Guide - 6x RX 7900 XTX AI Workstation Build Guide",
+      "subtitle": "From Hardware Selection to Open Source Optimization, Build Your 6x RX 7900 XTX AI Monster",
+      "hardware_selection": "Hardware Selection",
+      "assembly_config": "Assembly Config",
+      "software_solution": "Software Solution",
+      "stats": {
+        "vram": "Total VRAM",
+        "cost": "Actual Cost",
+        "gpu_count": "GPU Count"
+      },
+      "cta": {
+        "start": "💬 Start Building",
+        "software": "⭐ Software Config"
+      },
+      "hardware": {
+        "title": "Hardware Selection & BOM",
+        "desc": "We recommend the EPYC server platform for unmatched stability and PCIe bandwidth. Below is the full BOM list, total budget approx. ¥48,000 (~$6,700).",
+        "table": {
+          "component": "Component",
+          "model": "Model",
+          "qty": "Qty",
+          "price": "Price (¥)",
+          "note": "Note",
+          "rows": [
+            {
+              "name": "Mobo+CPU",
+              "model": "ROMED8-2T + EPYC 7532",
+              "price": "4,599",
+              "note": "Bundle",
+              "status": "Purchased"
+            },
+            {
+              "name": "Memory",
+              "model": "Samsung/Hynix DDR4 ECC",
+              "price": "6,000",
+              "note": "192GB (4x32+4x16)",
+              "status": "Owned"
+            },
+            {
+              "name": "GPUs (x6)",
+              "model": "XFX 7900XTX Overseas Pro",
+              "price": "25,144",
+              "note": "~¥4200 each",
+              "status": "Purchased"
+            },
+            {
+              "name": "Power",
+              "model": "2000W + 850W Dual PSU",
+              "price": "1,860",
+              "note": "Sync Cable inc.",
+              "status": "Purchased"
+            },
+            {
+              "name": "Case/Cooling",
+              "model": "Open Bench + 2U Cooler",
+              "price": "50",
+              "note": "Max Airflow",
+              "status": "To Buy"
+            },
+            {
+              "name": "Storage",
+              "model": "1TB SSD + 500GB Backup",
+              "price": "2,000",
+              "note": "",
+              "status": "Owned"
+            },
+            {
+              "name": "Water Cooling",
+              "model": "DIY 3D Print + Dual 480 Rads",
+              "price": "5,000",
+              "note": "Advanced",
+              "status": "Optional"
+            }
+          ],
+          "total_label": "Est. Total Cost",
+          "total_price": "¥44,653"
+        },
+        "tips": {
+          "storage_title": "💾 Storage Advice",
+          "storage_desc": "Your existing Intel 480GB SSD is sufficient for Ubuntu + tinygrad. If running 70B models later, consider adding a 1TB NVMe SSD (~¥400).",
+          "cooling_title": "🌀 Cooling Tips",
+          "cooling_desc": "Open bench frames offer the best airflow. Ensure spacing between GPUs and add extra case fans for airflow, critical for the 7900XTX."
+        }
+      },
+      "assembly": {
+        "title": "Assembly & Configuration",
+        "step1": {
+          "title": "Physical Assembly",
+          "desc": "<strong>Platform Setup:</strong> Install EPYC CPU and 8 RAM sticks on ROMED8-2T. Test post with 1 GPU direct.<br><br><strong>Rack Mounting:</strong> Secure mobo to bottom of open bench. Mount 6 GPUs on top bar.<br><br><strong>Risers:</strong> Connect 6 PCIe extension cables from mobo x16 slots to GPUs."
+        },
+        "step2": {
+          "title": "Dual PSU Wiring (Important)",
+          "desc": "Use 2000W Main + 850W Secondary. <strong>Must use sync cable</strong> to start simultaneous.",
+          "diagram_title": "PSU 1 (2000W Main)   PSU 2 (850W Sec)\n│                    │\n│ 24pin Cable        │ 24pin Cable\n▼                    ▼\n┌───────┐            ┌───────┐\n│ Head B│            │ Head C│\n│(Female)            │(Female)│\n└───┬───┘            └───┬───┘\n│                    │\n└──────────┬─────────┘\n           │ Sync Cable\n       ┌───▼───┐\n       │ Head A│\n       │(Male) │\n       └───┬───┘\n           │\n           ▼\n       Motherboard",
+          "notes": [
+            "⚡ <strong>PSU 1 (2000W) Handles:</strong> Mobo, CPU, GPUs 1-4, Fans.",
+            "⚡ <strong>PSU 2 (850W) Handles:</strong> GPUs 5-6.",
+            "⚠️ <strong>WARNING:</strong> Plug both PSUs into the SAME power strip to share ground!"
+          ]
+        },
+        "step3": {
+          "title": "BIOS Configuration",
+          "table": [
+            {
+              "setting": "Above 4G Decoding",
+              "value": "Enabled",
+              "purpose": "Enable >4GB VRAM addressing"
+            },
+            {
+              "setting": "Resizable BAR",
+              "value": "Enabled",
+              "purpose": "CPU accesses all VRAM at once"
+            },
+            {
+              "setting": "IOMMU",
+              "value": "Enabled",
+              "purpose": "Better P2P communication"
+            }
+          ],
+          "headers": [
+            "Setting",
+            "Value",
+            "Purpose"
+          ]
+        }
+      },
+      "software": {
+        "title": "Software Setup",
+        "option_a": {
+          "title": "Option A: Pure Tinygrad (Recommended)",
+          "desc": "Bypass full ROCm stack, use userspace driver. Lighter, more stable."
+        },
+        "option_b": {
+          "title": "Option B: Full ROCm Stack",
+          "desc": "Better compatibility for PyTorch/vLLM legacy apps."
+        }
+      }
     }
   }
 }

@@ -18,57 +18,26 @@
     rel="stylesheet">
 
   <style>
+    /* Define local variables utilizing global theme vars from unified-nav.js */
     :root {
-      --bg-primary: #050505;
-      --bg-secondary: #0a0a0a;
-      --bg-tertiary: #111111;
-      --bg-card: rgba(20, 20, 20, 0.8);
-      --bg-card-border: rgba(255, 255, 255, 0.1);
-
-      --accent-primary: #3b82f6;
-      /* Blue */
-      --accent-secondary: #8b5cf6;
-      /* Purple */
-      --accent-destructive: #ef4444;
-      /* Red */
-      --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-
-      --text-primary: #ffffff;
-      --text-secondary: #a3a3a3;
-      --text-muted: #737373;
-
-      --border-color: #262626;
-      --radius-md: 12px;
-      --radius-lg: 16px;
+      /* Inherit from global theme */
+      --bg-body: var(--bg-primary);
+      --bg-card-local: var(--bg-card);
+      --border-local: var(--border-color);
+      --text-main: var(--text-primary);
+      --text-sub: var(--text-secondary);
 
       --content-width: 1200px;
     }
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
+      background: var(--bg-body);
+      color: var(--text-main);
       line-height: 1.6;
       margin: 0;
       overflow-x: hidden;
-      /* Prevent horizontal scroll */
-    }
-
-    /* --- Animations --- */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .animate-fade-in {
-      animation: fadeIn 0.8s ease-out forwards;
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
     /* --- Hero Section --- */
@@ -78,15 +47,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
+      /* Day/Night aware overlay */
+      background: linear-gradient(to bottom,
+          rgba(var(--bg-primary-rgb), 0.9),
+          var(--bg-primary)),
+        url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
       padding: 80px 20px;
     }
 
-    .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, rgba(5, 5, 5, 0.3) 0%, rgba(5, 5, 5, 1) 100%);
+    /* Specific override for hero background to look good in both modes */
+    [data-theme="dark"] .hero {
+      background: linear-gradient(to bottom, rgba(5, 5, 5, 0.3), #0a0a0f), url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
+    }
+
+    [data-theme="light"] .hero {
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.85), #ffffff), url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
     }
 
     .hero-content {
@@ -100,8 +75,6 @@
       font-size: 5rem;
       margin-bottom: 1.5rem;
       display: inline-block;
-      animation: none;
-      /* Can add float animation later */
     }
 
     .hero h1 {
@@ -110,6 +83,7 @@
       font-weight: 900;
       line-height: 1.1;
       margin-bottom: 1rem;
+      color: var(--text-main);
     }
 
     .hero h1 .highlight {
@@ -120,7 +94,7 @@
 
     .hero p {
       font-size: 1.25rem;
-      color: var(--text-secondary);
+      color: var(--text-sub);
       margin-bottom: 2.5rem;
       max-width: 700px;
       margin-left: auto;
@@ -163,6 +137,7 @@
       text-decoration: none;
       transition: all 0.2s;
       font-family: 'Inter', sans-serif;
+      cursor: pointer;
     }
 
     .btn-primary {
@@ -178,14 +153,14 @@
 
     .btn-outline {
       background: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-secondary);
+      border: 1px solid var(--border-local);
+      color: var(--text-sub);
     }
 
     .btn-outline:hover {
-      border-color: var(--text-primary);
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--text-main);
+      color: var(--text-main);
+      background: var(--bg-secondary);
     }
 
     /* --- Container & Layout --- */
@@ -223,21 +198,22 @@
       font-family: 'Orbitron', sans-serif;
       font-size: 2rem;
       font-weight: 700;
-      color: var(--text-primary);
+      color: var(--text-main);
       margin: 0;
     }
 
     /* --- Cards --- */
     .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
+      background: var(--bg-card-local);
+      border: 1px solid var(--border-local);
       border-radius: var(--radius-lg);
       overflow: hidden;
+      transition: all 0.3s ease;
     }
 
     .card-dashed {
       background: transparent;
-      border: 1px dashed var(--border-color);
+      border: 1px dashed var(--border-local);
       border-radius: var(--radius-lg);
     }
 
@@ -254,25 +230,26 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.95rem;
+      text-align: left;
     }
 
     .bom-table th {
-      text-align: left;
       padding: 1rem;
-      background: rgba(255, 255, 255, 0.03);
-      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      color: var(--text-sub);
       font-weight: 600;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-local);
     }
 
     .bom-table td {
       padding: 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid var(--border-local);
       vertical-align: middle;
+      color: var(--text-main);
     }
 
     .bom-table tr:hover td {
-      background: rgba(255, 255, 255, 0.02);
+      background: var(--bg-tertiary);
     }
 
     .bom-row-main td {
@@ -292,19 +269,19 @@
       font-size: 0.75rem;
       font-weight: 600;
       background: rgba(16, 185, 129, 0.1);
-      color: #10b981;
+      color: var(--accent-green);
     }
 
     .status-badge.pending {
       background: rgba(245, 158, 11, 0.1);
-      color: #f59e0b;
+      color: var(--accent-yellow);
     }
 
     /* --- Assembly Steps --- */
     .timeline {
       position: relative;
       padding-left: 2rem;
-      border-left: 2px solid var(--border-color);
+      border-left: 2px solid var(--border-local);
       margin-left: 1rem;
     }
 
@@ -319,7 +296,7 @@
       top: 0;
       width: 1.25rem;
       height: 1.25rem;
-      background: var(--bg-primary);
+      background: var(--bg-body);
       border: 2px solid var(--accent-secondary);
       border-radius: 50%;
       z-index: 2;
@@ -332,11 +309,19 @@
       margin-right: 0.5rem;
     }
 
+    h3 {
+      color: var(--text-main);
+    }
+
+    p.text-muted {
+      color: var(--text-sub);
+    }
+
     /* --- Code Blocks --- */
     .code-block {
-      background: #0d0d0d;
+      background: var(--bg-code);
       border-radius: 8px;
-      border: 1px solid #333;
+      border: 1px solid var(--border-local);
       margin: 1rem 0;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.9rem;
@@ -347,8 +332,8 @@
       display: flex;
       justify-content: space-between;
       padding: 0.5rem 1rem;
-      background: #1a1a1a;
-      border-bottom: 1px solid #333;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-local);
       color: var(--text-muted);
       font-size: 0.8rem;
     }
@@ -356,7 +341,7 @@
     .code-content {
       padding: 1rem;
       overflow-x: auto;
-      color: #e5e5e5;
+      color: var(--text-main);
     }
 
     .ascii-art {
@@ -364,12 +349,12 @@
       font-size: 0.8rem;
       line-height: 1.2;
       white-space: pre;
-      color: var(--text-secondary);
+      color: var(--text-sub);
       overflow-x: auto;
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--bg-secondary);
       padding: 1rem;
       border-radius: 8px;
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-local);
     }
 
     @media (max-width: 768px) {
@@ -401,31 +386,31 @@
       <div class="hero-icon">🖥️</div>
       <h1>
         Tinybox<br>
-        <span class="highlight">DIY 终极指南</span>
+        <span class="highlight" data-i18n="tinybox_page.title">Tinybox DIY Guide</span>
       </h1>
-      <p>从硬件选型到开源优化，手把手教你组装一台 6x RX 7900 XTX 的 AI 算力怪兽</p>
+      <p data-i18n="tinybox_page.subtitle">Build your own 6x RX 7900 XTX AI Monster</p>
 
       <div class="stats-grid">
         <div class="stat-item">
           <div class="value">144GB</div>
-          <div class="label">总显存</div>
+          <div class="label" data-i18n="tinybox_page.stats.vram">Total VRAM</div>
         </div>
         <div class="stat-item">
           <div class="value">¥48K</div>
-          <div class="label">实际成本</div>
+          <div class="label" data-i18n="tinybox_page.stats.cost">Total Cost</div>
         </div>
         <div class="stat-item">
           <div class="value">6x</div>
-          <div class="label">GPU 数量</div>
+          <div class="label" data-i18n="tinybox_page.stats.gpu_count">GPU Count</div>
         </div>
       </div>
 
       <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
-        <a href="#hardware" class="btn btn-primary">
-          💬 开始组装
+        <a href="#hardware" class="btn btn-primary" data-i18n="tinybox_page.cta.start">
+          💬 Start Building
         </a>
-        <a href="#software" class="btn btn-outline">
-          ⭐ 软件配置
+        <a href="#software" class="btn btn-outline" data-i18n="tinybox_page.cta.software">
+          ⭐ Software Config
         </a>
       </div>
     </div>
@@ -437,7 +422,7 @@
     <section id="hardware" class="section">
       <div class="section-header">
         <div class="section-icon">⚙️</div>
-        <h2 class="section-title">硬件选型与采购清单 (BOM)</h2>
+        <h2 class="section-title" data-i18n="tinybox_page.hardware.title">Hardware Selection & BOM</h2>
       </div>
 
       <div class="card mb-8">
@@ -445,78 +430,38 @@
           <img src="/static/tinybox/images/motherboard-hero.jpg" alt="Motherboard"
             style="width:100%; height:300px; object-fit:cover;">
           <div style="padding:2rem;">
-            <p class="text-muted" style="margin-bottom:1.5rem;">
-              我们推荐采用 <strong>EPYC 服务器平台方案</strong>，它提供了无与伦比的稳定性和 PCIe 带宽。
-              以下是完整的 BOM 清单，总预算约为 <span style="color:var(--accent-primary); font-weight:700;">¥48,000</span>。
+            <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox_page.hardware.desc">
+              We recommend the EPYC server platform...
             </p>
 
             <div class="table-responsive">
               <table class="bom-table">
                 <thead>
                   <tr>
-                    <th>组件</th>
-                    <th>型号</th>
-                    <th style="text-align:center;">数量</th>
-                    <th style="text-align:right;">价格 (¥)</th>
-                    <th>备注</th>
+                    <th data-i18n="tinybox_page.hardware.table.component">Component</th>
+                    <th data-i18n="tinybox_page.hardware.table.model">Model</th>
+                    <th style="text-align:center;" data-i18n="tinybox_page.hardware.table.qty">Qty</th>
+                    <th style="text-align:right;" data-i18n="tinybox_page.hardware.table.price">Price</th>
+                    <th data-i18n="tinybox_page.hardware.table.note">Note</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="bom-row-main">
-                    <td>主板+CPU</td>
-                    <td>ROMED8-2T + EPYC 7532</td>
+                  <tr class="bom-row-main" data-i18n-loop="tinybox_page.hardware.table.rows">
+                    <!-- Template for loop -->
+                    <td data-i18n-key="name">Mobo+CPU</td>
+                    <td data-i18n-key="model">ROMED8-2T</td>
                     <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;">4,599</td>
-                    <td><span class="status-badge">已购</span> 板U套装</td>
-                  </tr>
-                  <tr class="bom-row-main">
-                    <td>内存</td>
-                    <td>Samsung/Hynix DDR4 ECC</td>
-                    <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;">6,000</td>
-                    <td><span class="status-badge">已有</span> 192GB (4x32+4x16)</td>
-                  </tr>
-                  <tr class="bom-row-main">
-                    <td>显卡 (x6)</td>
-                    <td>讯景 7900XTX 海外版 Pro</td>
-                    <td style="text-align:center;">6</td>
-                    <td class="price-tag" style="text-align:right;">25,144</td>
-                    <td><span class="status-badge">已购</span> 单价约 ¥4200</td>
-                  </tr>
-                  <tr class="bom-row-main">
-                    <td>电源系统</td>
-                    <td>2000W + 850W 双电源</td>
-                    <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;">1,860</td>
-                    <td><span class="status-badge">已购</span> 含同步线</td>
-                  </tr>
-                  <tr class="bom-row-main">
-                    <td>机箱/散热</td>
-                    <td>开放式矿架 + 2U 散热器</td>
-                    <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;">50</td>
-                    <td><span class="status-badge">待购</span> 极致风道</td>
-                  </tr>
-                  <tr class="bom-row-main">
-                    <td>存储</td>
-                    <td>1TB SSD + 500GB Backup</td>
-                    <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;">2,000</td>
-                    <td><span class="status-badge">已有</span></td>
-                  </tr>
-                  <!-- DIY Watercooling (Optional) -->
-                  <tr class="bom-row-main" style="opacity:0.6;">
-                    <td>水冷改造</td>
-                    <td>DIY 3D打印 + 双480冷排</td>
-                    <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;">5,000</td>
-                    <td><span class="status-badge pending">可选</span> 进阶方案</td>
+                    <td class="price-tag" style="text-align:right;" data-i18n-key="price">4,599</td>
+                    <td><span class="status-badge" data-i18n-key="status">Status</span> <span
+                        data-i18n-key="note">Note</span></td>
                   </tr>
                 </tbody>
                 <tfoot>
-                  <tr style="background:rgba(59, 130, 246, 0.1);">
-                    <td colspan="3" style="text-align:right; font-weight:700; padding:1.5rem;">项目总成本预估</td>
-                    <td style="text-align:right; font-weight:700; font-size:1.2rem; color:var(--accent-primary);">
+                  <tr style="background:var(--bg-secondary);">
+                    <td colspan="3" style="text-align:right; font-weight:700; padding:1.5rem;"
+                      data-i18n="tinybox_page.hardware.table.total_label">Total Cost</td>
+                    <td style="text-align:right; font-weight:700; font-size:1.2rem; color:var(--accent-primary);"
+                      data-i18n="tinybox_page.hardware.table.total_price">
                       ¥44,653</td>
                     <td></td>
                   </tr>
@@ -530,20 +475,18 @@
       <div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
         <div class="card-dashed" style="padding:1.5rem;">
           <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
-            <span>💾</span> 存储建议
+            <span>💾</span> <span data-i18n="tinybox_page.hardware.tips.storage_title">Storage Advice</span>
           </h4>
-          <p class="text-muted" style="font-size:0.9rem;">
-            您现有的 Intel 480GB SSD 可作为系统盘，足够运行 Ubuntu + tinygrad。
-            如果后续需要跑 70B 大模型，建议加购 1TB NVMe SSD (约¥400)。
+          <p class="text-muted" style="font-size:0.9rem;" data-i18n="tinybox_page.hardware.tips.storage_desc">
+            Storage tips...
           </p>
         </div>
         <div class="card-dashed" style="padding:1.5rem;">
           <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
-            <span>🌀</span> 散热提示
+            <span>🌀</span> <span data-i18n="tinybox_page.hardware.tips.cooling_title">Cooling Tips</span>
           </h4>
-          <p class="text-muted" style="font-size:0.9rem;">
-            开放式矿架提供最佳散热空间。确保显卡之间有足够间距，
-            并配备额外的机箱风扇形成良好的风道，这对 7900XTX 至关重要。
+          <p class="text-muted" style="font-size:0.9rem;" data-i18n="tinybox_page.hardware.tips.cooling_desc">
+            Cooling tips...
           </p>
         </div>
       </div>
@@ -553,7 +496,7 @@
     <section id="assembly" class="section">
       <div class="section-header">
         <div class="section-icon">🔧</div>
-        <h2 class="section-title">手把手组装与配置</h2>
+        <h2 class="section-title" data-i18n="tinybox_page.assembly.title">Assembly Guide</h2>
       </div>
 
       <div class="timeline">
@@ -562,11 +505,10 @@
           <div class="timeline-marker"></div>
           <div class="card">
             <div class="card-content">
-              <h3 style="margin-top:0;"><span class="step-number">01</span> 物理组装</h3>
-              <p class="text-muted">
-                <strong>平台搭建：</strong> 将 EPYC CPU 和 8 根内存安装到 ROMED8-2T 主板上。先用一张显卡直连主板，进行点亮测试。<br><br>
-                <strong>机架安装：</strong> 将主板固定在开放式矿架底层。将 6 块显卡均匀地固定在上层。<br><br>
-                <strong>连接延长线：</strong> 将 6 根 PCIe 延长线分别插入主板的 PCIe x16 插槽，另一端连接到显卡。
+              <h3 style="margin-top:0;"><span class="step-number">01</span> <span
+                  data-i18n="tinybox_page.assembly.step1.title">Physical Assembly</span></h3>
+              <p class="text-muted" data-i18n="tinybox_page.assembly.step1.desc">
+                Physical assembly steps...
               </p>
             </div>
           </div>
@@ -578,38 +520,23 @@
           <div class="card" style="border-left: 4px solid var(--accent-destructive);">
             <div class="card-content">
               <h3 style="margin-top:0; color:var(--accent-destructive);"><span class="step-number"
-                  style="color:var(--accent-destructive);">02</span> 双电源接线教程 (重要)</h3>
-              <p class="text-muted" style="margin-bottom:1.5rem;">
-                使用 2000W 主电源 + 850W 副电源。<strong>必须使用同步线</strong>确保同时启动。
+                  style="color:var(--accent-destructive);">02</span> <span
+                  data-i18n="tinybox_page.assembly.step2.title">Dual PSU Wiring</span></h3>
+              <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox_page.assembly.step2.desc">
+                Dual PSU setup...
               </p>
 
               <!-- Wiring Diagram -->
-              <div class="ascii-art" style="margin-bottom:1.5rem;">
-                电源1 (2000W 主) 电源2 (850W 副)
-                │ │
-                │ 24pin 线 │ 24pin 线
-                ▼ ▼
-                ┌───────┐ ┌───────┐
-                │ 头 B │ │ 头 C │
-                │(母头) │ │(母头) │
-                └───┬───┘ └───┬───┘
-                │ │
-                └──────────┬───────────────────┘
-                │ 同步线
-                ┌───▼───┐
-                │ 头 A │
-                │(公头) │
-                └───┬───┘
-                │
-                ▼
-                主板
+              <div class="ascii-art" style="margin-bottom:1.5rem;"
+                data-i18n="tinybox_page.assembly.step2.diagram_title">
+                ASCII Diagram
               </div>
 
               <ul class="text-muted" style="font-size:0.9rem; list-style:none; padding:0;">
-                <li style="margin-bottom:0.5rem;">⚡ <strong>电源1 (2000W) 负责：</strong> 主板、CPU、显卡 1-4、硬盘风扇。</li>
-                <li style="margin-bottom:0.5rem;">⚡ <strong>电源2 (850W) 负责：</strong> 显卡 5-6。</li>
-                <li style="margin-bottom:0.5rem; color:var(--accent-destructive);">⚠️ <strong>警告：</strong>
-                  两个电源必须插在同一个接线板上以保持共地！</li>
+                <li style="margin-bottom:0.5rem;" data-i18n="tinybox_page.assembly.step2.notes.0">PSU 1 Role</li>
+                <li style="margin-bottom:0.5rem;" data-i18n="tinybox_page.assembly.step2.notes.1">PSU 2 Role</li>
+                <li style="margin-bottom:0.5rem; color:var(--accent-destructive);"
+                  data-i18n="tinybox_page.assembly.step2.notes.2">Warning</li>
               </ul>
             </div>
           </div>
@@ -620,30 +547,21 @@
           <div class="timeline-marker"></div>
           <div class="card">
             <div class="card-content">
-              <h3 style="margin-top:0;"><span class="step-number">03</span> BIOS 终极配置</h3>
+              <h3 style="margin-top:0;"><span class="step-number">03</span> <span
+                  data-i18n="tinybox_page.assembly.step3.title">BIOS Config</span></h3>
               <table class="bom-table" style="margin-top:1rem;">
                 <thead>
                   <tr>
-                    <th>设置项</th>
-                    <th>推荐值</th>
-                    <th>目的</th>
+                    <th data-i18n="tinybox_page.assembly.step3.headers.0">Setting</th>
+                    <th data-i18n="tinybox_page.assembly.step3.headers.1">Value</th>
+                    <th data-i18n="tinybox_page.assembly.step3.headers.2">Purpose</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Above 4G Decoding</td>
-                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
-                    <td>启用大于 4GB 的显存寻址</td>
-                  </tr>
-                  <tr>
-                    <td>Resizable BAR</td>
-                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
-                    <td>允许 CPU 一次性访问全部显存</td>
-                  </tr>
-                  <tr>
-                    <td>IOMMU</td>
-                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
-                    <td>提升 P2P 通信效率</td>
+                  <tr data-i18n-loop="tinybox_page.assembly.step3.table">
+                    <td data-i18n-key="setting">Setting Name</td>
+                    <td style="color:var(--accent-primary); font-weight:700;" data-i18n-key="value">Value</td>
+                    <td data-i18n-key="purpose">Purpose</td>
                   </tr>
                 </tbody>
               </table>
@@ -657,27 +575,27 @@
     <section id="software" class="section">
       <div class="section-header">
         <div class="section-icon">📟</div>
-        <h2 class="section-title">软件配置方案</h2>
+        <h2 class="section-title" data-i18n="tinybox_page.software.title">Software Config</h2>
       </div>
 
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2rem;">
         <div class="card" style="border-top: 4px solid var(--accent-secondary);">
           <div class="card-content">
-            <h3 class="text-primary">方案 A: 纯 Tinygrad (推荐)</h3>
-            <p class="text-muted">绕过庞大的 ROCm 完整版，直接使用用户空间驱动，更轻量稳定。</p>
+            <h3 class="text-primary" data-i18n="tinybox_page.software.option_a.title">Option A: Tinygrad</h3>
+            <p class="text-muted" data-i18n="tinybox_page.software.option_a.desc">Tinygrad desc...</p>
 
             <div class="code-block">
               <div class="code-header"><span>BASH</span></div>
               <div class="code-content">
-                # 1. 安装依赖
+                # 1. Install Dependencies
                 sudo apt update && sudo apt install -y git python3-pip
 
-                # 2. 克隆项目
+                # 2. Clone Repo
                 git clone https://github.com/tinygrad/tinygrad.git
                 cd tinygrad
                 pip install -e .
 
-                # 3. 验证 (自动处理驱动)
+                # 3. Verify
                 AMD=1 python3 -c "from tinygrad import Tensor; print(Tensor.zeros(2,2).numpy())"
               </div>
             </div>
@@ -686,20 +604,20 @@
 
         <div class="card" style="border-top: 4px solid var(--accent-primary);">
           <div class="card-content">
-            <h3 class="text-primary">方案 B: 完整 ROCm</h3>
-            <p class="text-muted">兼容性好，适合需要使用 PyTorch、vLLM 等主流框架的场景。</p>
+            <h3 class="text-primary" data-i18n="tinybox_page.software.option_b.title">Option B: ROCm</h3>
+            <p class="text-muted" data-i18n="tinybox_page.software.option_b.desc">ROCm desc...</p>
 
             <div class="code-block">
               <div class="code-header"><span>BASH</span></div>
               <div class="code-content">
-                # 1. 下载安装脚本
+                # 1. Download Script
                 wget https://repo.radeon.com/amdgpu-install/6.0/ubuntu/jammy/amdgpu-install_6.0.60000-1_all.deb
                 sudo apt install ./amdgpu-install*.deb
 
-                # 2. 安装 ROCm
+                # 2. Install ROCm
                 amdgpu-install --usecase=rocm --accept-eula
 
-                # 3. 验证
+                # 3. Verify
                 rocm-smi
               </div>
             </div>
@@ -710,7 +628,7 @@
 
   </main>
 
-  <footer style="text-align:center; padding:4rem; border-top:1px solid var(--border-color); color:var(--text-muted);">
+  <footer style="text-align:center; padding:4rem; border-top:1px solid var(--border-local); color:var(--text-muted);">
     <p>LingKong AI - TinyBox DIY Guide</p>
     <p style="font-size:0.8rem;">Build your own AI ecosystem.</p>
   </footer>

@@ -735,6 +735,206 @@
     "gpu": {
       "switched": "GPU 已切换:",
       "auto": "自动"
+    },
+    "tinybox_page": {
+      "title": "Tinybox DIY 指南 - 6x RX 7900 XTX AI 工作站组装指南",
+      "subtitle": "从硬件选型到开源优化，手把手教你组装一台 6x RX 7900 XTX 的 AI 算力怪兽",
+      "hardware_selection": "硬件选型",
+      "assembly_config": "组装配置",
+      "software_solution": "软件方案",
+      "open_source_optimization": "开源优化",
+      "common_issues": "常见问题",
+      "open_source_resources": "开源资源",
+      "preface": "前言",
+      "why_diy": "为何选择 DIY Tinybox？",
+      "cost_effectiveness": "极致性价比",
+      "cost_desc": "约 ¥48,000 获得 144GB 显存（已有硬件省下 ¥4,000+）",
+      "fully_open_source": "完全开源",
+      "open_source_desc": "从 ROCm 到 tinygrad，全程拥抱开源生态",
+      "future_proof": "未来可期",
+      "future_desc": "具备向 UALink 互联标准升级的潜力",
+      "intro_text": "本指南复刻了 George Hotz (geohot) 的 Tinybox Red 核心理念，融入社区最佳实践和全方位开源优化方案。无论你是 AI 研究者、深度学习工程师，还是硬核 DIY 玩家，这份指南都将帮助你构建一台真正属于自己的 AI 算力怪兽。",
+      "hardware_intro": "我们推荐采用 EPYC 服务器平台方案，它提供了无与伦比的稳定性和 PCIe 带宽。以下是完整的 BOM 清单，总预算约为 ¥48,000。",
+      "component": "组件",
+      "model": "型号",
+      "quantity": "数量",
+      "subtotal": "小计 (¥)",
+      "status": "状态",
+      "total_cost": "项目总成本",
+      "owned_hardware": "您已有的硬件",
+      "memory": "内存",
+      "memory_desc": "192GB DDR4 ECC (4×32GB Samsung + 4×16GB SK Hynix)",
+      "system_disk": "系统盘",
+      "system_disk_desc": "Intel DC S3520 480GB (企业级 SATA SSD)",
+      "backup_storage": "备份存储",
+      "backup_storage_desc": "Toshiba 500GB + 移动硬盘 (用于模型备份/冷存储)",
+      "storage_suggestion": "存储建议",
+      "storage_suggestion_desc": "您现有的 Intel 480GB SSD 可作为系统盘，足够运行 Ubuntu + tinygrad。如果后续需要跑 70B 大模型，建议加购 1TB NVMe SSD (约¥400)。",
+      "cooling_tip": "散热提示",
+      "cooling_tip_desc": "开放式矿架提供最佳散热空间。确保显卡之间有足够间距，并配备额外的机箱风扇形成良好的风道。",
+      "physical_assembly": "物理组装",
+      "assembly_step_1": "正在组装物理组件：将 EPYC CPU 和 8 根内存安装到 ROMED8-2T 主板上。先用一张显卡直连主板，进行点亮测试。",
+      "assembly_step_2": "机架安装：将主板固定在开放式矿架底层。将 6 块显卡均匀地固定在上层。",
+      "assembly_step_3": "连接延长线：将 6 根 PCIe 延长线分别插入主板的 PCIe x16 插槽，另一端连接到显卡。",
+      "dual_psu_tutorial": "双电源接线教程 (2000W + 850W)",
+      "sync_cable_info": "同步线有 3 个头：头 A (24pin 公头) 插主板；头 B (24pin 母头) 接电源1 (2000W)；头 C (24pin 母头) 接电源2 (850W)。",
+      "psu_1_role": "电源1 (2000W) 负责：24pin 主板供电、CPU 供电、显卡 1-4 供电、硬盘风扇等。",
+      "psu_2_role": "电源2 (850W) 负责：显卡 5-6 供电。",
+      "power_warning": "安全警告：两个电源必须插在同一个接地良好的插排上，确保共地，防止电位差损坏设备！",
+      "bios_config": "BIOS 终极配置",
+      "setting_item": "设置项",
+      "recommended_value": "推荐值",
+      "purpose": "目的",
+      "above_4g": "Above 4G Decoding",
+      "enabled": "Enabled",
+      "above_4g_desc": "启用大于 4GB 的 BAR 寻址",
+      "resizable_bar": "Resizable BAR",
+      "resizable_bar_desc": "允许 CPU 一次性访问全部显存",
+      "iommu": "IOMMU",
+      "iommu_desc": "提升 P2P 效率",
+      "software_choice": "软件方案二选一",
+      "option_a": "方案 A：纯 Tinygrad 路径 (推荐)",
+      "option_a_desc": "绕过庞大的 ROCm 完整版，直接使用 tinygrad 的用户空间驱动，更轻量、更稳定。",
+      "option_b": "方案 B：完整 ROCm 路径",
+      "option_b_desc": "兼容性好，适合需要使用 PyTorch、TensorFlow 等主流框架的场景。",
+      "install_dep": "安装依赖",
+      "clone_repo": "克隆项目",
+      "verify_install": "验证安装",
+      "download_script": "下载安装脚本",
+      "install_rocm": "安装 ROCm",
+      "verify": "验证",
+      "stats": {
+        "vram": "总显存",
+        "cost": "实际成本",
+        "gpu_count": "GPU 数量"
+      },
+      "cta": {
+        "start": "💬 开始组装",
+        "software": "⭐ 软件配置"
+      },
+      "hardware": {
+        "title": "硬件选型与采购清单 (BOM)",
+        "desc": "我们推荐采用 EPYC 服务器平台方案，它提供了无与伦比的稳定性和 PCIe 带宽。以下是完整的 BOM 清单，总预算约为 ¥48,000。",
+        "table": {
+          "component": "组件",
+          "model": "型号",
+          "qty": "数量",
+          "price": "价格 (¥)",
+          "note": "备注",
+          "rows": [
+            {
+              "name": "主板+CPU",
+              "model": "ROMED8-2T + EPYC 7532",
+              "price": "4,599",
+              "note": "板U套装",
+              "status": "已购"
+            },
+            {
+              "name": "内存",
+              "model": "Samsung/Hynix DDR4 ECC",
+              "price": "6,000",
+              "note": "192GB (4x32+4x16)",
+              "status": "已有"
+            },
+            {
+              "name": "显卡 (x6)",
+              "model": "讯景 7900XTX 海外版 Pro",
+              "price": "25,144",
+              "note": "单价约 ¥4200",
+              "status": "已购"
+            },
+            {
+              "name": "电源系统",
+              "model": "2000W + 850W 双电源",
+              "price": "1,860",
+              "note": "含同步线",
+              "status": "已购"
+            },
+            {
+              "name": "机箱/散热",
+              "model": "开放式矿架 + 2U 散热器",
+              "price": "50",
+              "note": "极致风道",
+              "status": "待购"
+            },
+            {
+              "name": "存储",
+              "model": "1TB SSD + 500GB Backup",
+              "price": "2,000",
+              "note": "",
+              "status": "已有"
+            },
+            {
+              "name": "水冷改造",
+              "model": "DIY 3D打印 + 双480冷排",
+              "price": "5,000",
+              "note": "进阶方案",
+              "status": "可选"
+            }
+          ],
+          "total_label": "项目总成本预估",
+          "total_price": "¥44,653"
+        },
+        "tips": {
+          "storage_title": "💾 存储建议",
+          "storage_desc": "您现有的 Intel 480GB SSD 可作为系统盘，足够运行 Ubuntu + tinygrad。如果后续需要跑 70B 大模型，建议加购 1TB NVMe SSD (约¥400)。",
+          "cooling_title": "🌀 散热提示",
+          "cooling_desc": "开放式矿架提供最佳散热空间。确保显卡之间有足够间距，并配备额外的机箱风扇形成良好的风道，这对 7900XTX 至关重要。"
+        }
+      },
+      "assembly": {
+        "title": "手把手组装与配置",
+        "step1": {
+          "title": "物理组装",
+          "desc": "<strong>平台搭建：</strong> 将 EPYC CPU 和 8 根内存安装到 ROMED8-2T 主板上。先用一张显卡直连主板，进行点亮测试。<br><br><strong>机架安装：</strong> 将主板固定在开放式矿架底层。将 6 块显卡均匀地固定在上层。<br><br><strong>连接延长线：</strong> 将 6 根 PCIe 延长线分别插入主板的 PCIe x16 插槽，另一端连接到显卡。"
+        },
+        "step2": {
+          "title": "双电源接线教程 (重要)",
+          "desc": "使用 2000W 主电源 + 850W 副电源。<strong>必须使用同步线</strong>确保同时启动。",
+          "diagram_title": "电源1 (2000W 主) 电源2 (850W 副)\n│ │\n│ 24pin 线 │ 24pin 线\n▼ ▼\n┌───────┐ ┌───────┐\n│ 头 B │ │ 头 C │\n│(母头) │ │(母头) │\n└───┬───┘ └───┬───┘\n│ │\n└──────────┬───────────────────┘\n│ 同步线\n┌───▼───┐\n│ 头 A │\n│(公头) │\n└───┬───┘\n│\n▼\n主板",
+          "notes": [
+            "⚡ <strong>电源1 (2000W) 负责：</strong> 主板、CPU、显卡 1-4、硬盘风扇。",
+            "⚡ <strong>电源2 (850W) 负责：</strong> 显卡 5-6。",
+            "⚠️ <strong>警告：</strong> 两个电源必须插在同一个接线板上以保持共地！"
+          ]
+        },
+        "step3": {
+          "title": "BIOS 终极配置",
+          "table": [
+            {
+              "setting": "Above 4G Decoding",
+              "value": "Enabled",
+              "purpose": "启用大于 4GB 的显存寻址"
+            },
+            {
+              "setting": "Resizable BAR",
+              "value": "Enabled",
+              "purpose": "允许 CPU 一次性访问全部显存"
+            },
+            {
+              "setting": "IOMMU",
+              "value": "Enabled",
+              "purpose": "提升 P2P 通信效率"
+            }
+          ],
+          "headers": [
+            "设置项",
+            "推荐值",
+            "目的"
+          ]
+        }
+      },
+      "software": {
+        "title": "软件配置方案",
+        "option_a": {
+          "title": "方案 A: 纯 Tinygrad (推荐)",
+          "desc": "绕过庞大的 ROCm 完整版，直接使用用户空间驱动，更轻量稳定。"
+        },
+        "option_b": {
+          "title": "方案 B: 完整 ROCm",
+          "desc": "兼容性好，适合需要使用 PyTorch、vLLM 等主流框架的场景。"
+        }
+      }
     }
   }
 }
