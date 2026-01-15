@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en" data-i18n-title-key="pageTitle.tinybox">
 
 <head>
   <meta charset="UTF-8">
@@ -18,15 +18,12 @@
     rel="stylesheet">
 
   <style>
-    /* Define local variables utilizing global theme vars from unified-nav.js */
     :root {
-      /* Inherit from global theme */
       --bg-body: var(--bg-primary);
       --bg-card-local: var(--bg-card);
       --border-local: var(--border-color);
       --text-main: var(--text-primary);
       --text-sub: var(--text-secondary);
-
       --content-width: 1200px;
     }
 
@@ -40,22 +37,17 @@
       transition: background 0.3s ease, color 0.3s ease;
     }
 
-    /* --- Hero Section --- */
     .hero {
       position: relative;
       min-height: 90vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      /* Day/Night aware overlay */
-      background: linear-gradient(to bottom,
-          rgba(var(--bg-primary-rgb), 0.9),
-          var(--bg-primary)),
+      background: linear-gradient(to bottom, rgba(var(--bg-primary-rgb), 0.9), var(--bg-primary)),
         url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
       padding: 80px 20px;
     }
 
-    /* Specific override for hero background to look good in both modes */
     [data-theme="dark"] .hero {
       background: linear-gradient(to bottom, rgba(5, 5, 5, 0.3), #0a0a0f), url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
     }
@@ -101,13 +93,12 @@
       margin-right: auto;
     }
 
-    /* --- Stats Grid --- */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 2rem;
       margin-bottom: 3rem;
-      max-width: 800px;
+      max-width: 900px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -126,7 +117,6 @@
       letter-spacing: 1px;
     }
 
-    /* --- Buttons --- */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -163,7 +153,6 @@
       background: var(--bg-secondary);
     }
 
-    /* --- Container & Layout --- */
     .container {
       max-width: var(--content-width);
       margin: 0 auto;
@@ -172,7 +161,7 @@
 
     .section {
       scroll-margin-top: 100px;
-      margin-bottom: 8rem;
+      margin-bottom: 6rem;
     }
 
     .section-header {
@@ -202,7 +191,6 @@
       margin: 0;
     }
 
-    /* --- Cards --- */
     .card {
       background: var(--bg-card-local);
       border: 1px solid var(--border-local);
@@ -221,7 +209,6 @@
       padding: 2rem;
     }
 
-    /* --- BOM Table --- */
     .table-responsive {
       overflow-x: auto;
     }
@@ -256,6 +243,16 @@
       font-weight: 500;
     }
 
+    .bom-row-sub td {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      background: var(--bg-secondary);
+    }
+
+    .bom-row-sub td:first-child {
+      padding-left: 2.5rem;
+    }
+
     .price-tag {
       font-family: 'JetBrains Mono', monospace;
       color: var(--accent-primary);
@@ -277,7 +274,36 @@
       color: var(--accent-yellow);
     }
 
-    /* --- Assembly Steps --- */
+    .status-badge.optional {
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--accent-secondary);
+    }
+
+    .expand-btn {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .expand-btn::before {
+      content: "▶";
+      display: inline-block;
+      margin-right: 0.5rem;
+      font-size: 0.7rem;
+      transition: transform 0.2s;
+    }
+
+    .expand-btn.expanded::before {
+      transform: rotate(90deg);
+    }
+
+    .sub-rows {
+      display: none;
+    }
+
+    .sub-rows.show {
+      display: table-row-group;
+    }
+
     .timeline {
       position: relative;
       padding-left: 2rem;
@@ -317,7 +343,6 @@
       color: var(--text-sub);
     }
 
-    /* --- Code Blocks --- */
     .code-block {
       background: var(--bg-code);
       border-radius: 8px;
@@ -346,7 +371,7 @@
 
     .ascii-art {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       line-height: 1.2;
       white-space: pre;
       color: var(--text-sub);
@@ -355,6 +380,143 @@
       padding: 1rem;
       border-radius: 8px;
       border: 1px solid var(--border-local);
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .intro-card {
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      border: 1px dashed var(--border-local);
+      transition: all 0.3s ease;
+    }
+
+    .intro-card:hover {
+      border-color: var(--accent-primary);
+      background: var(--bg-secondary);
+    }
+
+    .intro-card .icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .intro-card h4 {
+      margin: 0 0 0.5rem 0;
+      color: var(--text-main);
+    }
+
+    .intro-card p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-sub);
+    }
+
+    .faq-item {
+      margin-bottom: 1.5rem;
+    }
+
+    .faq-question {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg-card-local);
+      border: 1px solid var(--border-local);
+      border-radius: var(--radius-lg);
+    }
+
+    .faq-icon {
+      flex-shrink: 0;
+      width: 2.5rem;
+      height: 2.5rem;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .faq-content h4 {
+      margin: 0 0 0.5rem 0;
+      color: var(--text-main);
+    }
+
+    .faq-content .cause {
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      margin-bottom: 0.75rem;
+    }
+
+    .faq-content ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .faq-content li {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      margin-bottom: 0.25rem;
+    }
+
+    .resources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .resource-card {
+      padding: 1.5rem;
+      background: var(--bg-card-local);
+      border: 1px solid var(--border-local);
+      border-radius: var(--radius-lg);
+    }
+
+    .resource-card h4 {
+      margin: 0 0 1rem 0;
+      color: var(--accent-primary);
+    }
+
+    .resource-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-main);
+      transition: all 0.2s;
+    }
+
+    .resource-link:hover {
+      background: var(--bg-tertiary);
+      color: var(--accent-primary);
+    }
+
+    .resource-link .name {
+      font-weight: 600;
+    }
+
+    .resource-link .desc {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .resource-link .arrow {
+      color: var(--text-muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
     }
 
     @media (max-width: 768px) {
@@ -374,11 +536,19 @@
       .bom-table td {
         padding: 0.75rem 0.5rem;
       }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .ascii-art {
+        font-size: 0.6rem;
+      }
     }
   </style>
 </head>
 
-<body data-i18n-context="tinybox_page">
+<body>
 
   <!-- Hero -->
   <header class="hero">
@@ -386,31 +556,35 @@
       <div class="hero-icon">🖥️</div>
       <h1>
         Tinybox<br>
-        <span class="highlight" data-i18n="tinybox_page.title">Tinybox DIY Guide</span>
+        <span class="highlight" data-i18n="tinybox.hero.title">DIY Ultimate Guide</span>
       </h1>
-      <p data-i18n="tinybox_page.subtitle">Build your own 6x RX 7900 XTX AI Monster</p>
+      <p data-i18n="tinybox.hero.subtitle">From hardware selection to open-source optimization, build your 6x RX 7900 XTX AI monster step by step</p>
 
       <div class="stats-grid">
         <div class="stat-item">
           <div class="value">144GB</div>
-          <div class="label" data-i18n="tinybox_page.stats.vram">Total VRAM</div>
+          <div class="label" data-i18n="tinybox.stats.vram">Total VRAM</div>
         </div>
         <div class="stat-item">
-          <div class="value">¥48K</div>
-          <div class="label" data-i18n="tinybox_page.stats.cost">Total Cost</div>
+          <div class="value">¥45K</div>
+          <div class="label" data-i18n="tinybox.stats.cost">Actual Cost</div>
         </div>
         <div class="stat-item">
           <div class="value">6x</div>
-          <div class="label" data-i18n="tinybox_page.stats.gpu_count">GPU Count</div>
+          <div class="label" data-i18n="tinybox.stats.gpu_count">GPU Count</div>
+        </div>
+        <div class="stat-item">
+          <div class="value">¥4K+</div>
+          <div class="label" data-i18n="tinybox.stats.saved">Saved</div>
         </div>
       </div>
 
       <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
-        <a href="#hardware" class="btn btn-primary" data-i18n="tinybox_page.cta.start">
-          💬 Start Building
+        <a href="#hardware" class="btn btn-primary">
+          <span data-i18n="tinybox.cta.start">Start Building</span>
         </a>
-        <a href="#software" class="btn btn-outline" data-i18n="tinybox_page.cta.software">
-          ⭐ Software Config
+        <a href="#software" class="btn btn-outline">
+          <span data-i18n="tinybox.cta.software">Software Config</span>
         </a>
       </div>
     </div>
@@ -418,52 +592,283 @@
 
   <main class="container">
 
+    <!-- Intro Section -->
+    <section id="intro" class="section">
+      <div class="section-header">
+        <div class="section-icon">🎯</div>
+        <h2 class="section-title" data-i18n="tinybox.intro.title">Why DIY Tinybox?</h2>
+      </div>
+
+      <div class="intro-grid">
+        <div class="intro-card">
+          <div class="icon">⚡</div>
+          <h4 data-i18n="tinybox.intro.cost_title">Ultimate Value</h4>
+          <p data-i18n="tinybox.intro.cost_desc">~¥48,000 for 144GB VRAM (saved ¥4,000+ with owned hardware)</p>
+        </div>
+        <div class="intro-card">
+          <div class="icon">🔓</div>
+          <h4 data-i18n="tinybox.intro.opensource_title">Fully Open Source</h4>
+          <p data-i18n="tinybox.intro.opensource_desc">From ROCm to tinygrad, embrace the open-source ecosystem</p>
+        </div>
+        <div class="intro-card">
+          <div class="icon">🔌</div>
+          <h4 data-i18n="tinybox.intro.future_title">Future Ready</h4>
+          <p data-i18n="tinybox.intro.future_desc">Potential upgrade path to UALink interconnect standard</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-content" style="padding:0;">
+          <img src="/static/tinybox/images/gpu-cluster.jpg" alt="GPU Cluster"
+            style="width:100%; height:280px; object-fit:cover;">
+          <div style="padding:1.5rem;">
+            <p class="text-muted" data-i18n="tinybox.intro.desc">
+              This guide replicates the core philosophy of George Hotz (geohot)'s Tinybox Red, incorporating community best practices and comprehensive open-source optimization.
+              Whether you're an AI researcher, deep learning engineer, or hardcore DIY enthusiast, this guide will help you build your own AI powerhouse.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Hardware Selection -->
     <section id="hardware" class="section">
       <div class="section-header">
         <div class="section-icon">⚙️</div>
-        <h2 class="section-title" data-i18n="tinybox_page.hardware.title">Hardware Selection & BOM</h2>
+        <h2 class="section-title" data-i18n="tinybox.hardware.title">Hardware Selection & BOM</h2>
       </div>
 
-      <div class="card mb-8">
+      <div class="card" style="margin-bottom:2rem;">
         <div class="card-content" style="padding:0;">
           <img src="/static/tinybox/images/motherboard-hero.jpg" alt="Motherboard"
-            style="width:100%; height:300px; object-fit:cover;">
+            style="width:100%; height:280px; object-fit:cover;">
           <div style="padding:2rem;">
-            <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox_page.hardware.desc">
-              We recommend the EPYC server platform...
+            <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox.hardware.desc">
+              We recommend the EPYC server platform for unmatched stability and PCIe bandwidth. Below is the complete BOM list.
             </p>
 
             <div class="table-responsive">
               <table class="bom-table">
                 <thead>
                   <tr>
-                    <th data-i18n="tinybox_page.hardware.table.component">Component</th>
-                    <th data-i18n="tinybox_page.hardware.table.model">Model</th>
-                    <th style="text-align:center;" data-i18n="tinybox_page.hardware.table.qty">Qty</th>
-                    <th style="text-align:right;" data-i18n="tinybox_page.hardware.table.price">Price</th>
-                    <th data-i18n="tinybox_page.hardware.table.note">Note</th>
+                    <th data-i18n="tinybox.table.component">Component</th>
+                    <th data-i18n="tinybox.table.model">Model</th>
+                    <th style="text-align:center;" data-i18n="tinybox.table.qty">Qty</th>
+                    <th style="text-align:right;" data-i18n="tinybox.table.subtotal">Subtotal (¥)</th>
+                    <th data-i18n="tinybox.table.status">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="bom-row-main" data-i18n-loop="tinybox_page.hardware.table.rows">
-                    <!-- Template for loop -->
-                    <td data-i18n-key="name">Mobo+CPU</td>
-                    <td data-i18n-key="model">ROMED8-2T</td>
+                  <!-- Row 1: Mobo+CPU -->
+                  <tr class="bom-row-main">
+                    <td data-i18n="tinybox.bom.mobo">Mobo+CPU Bundle</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">ROMED8-2T + EPYC 7532</td>
                     <td style="text-align:center;">1</td>
-                    <td class="price-tag" style="text-align:right;" data-i18n-key="price">4,599</td>
-                    <td><span class="status-badge" data-i18n-key="status">Status</span> <span
-                        data-i18n-key="note">Note</span></td>
+                    <td class="price-tag" style="text-align:right;">¥4,599</td>
+                    <td><span class="status-badge" data-i18n="tinybox.status.purchased">Purchased</span></td>
                   </tr>
+
+                  <!-- Row 2: Memory -->
+                  <tr class="bom-row-main">
+                    <td data-i18n="tinybox.bom.memory">Memory</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">Samsung + SK Hynix DDR4 ECC</td>
+                    <td style="text-align:center;">192GB</td>
+                    <td class="price-tag" style="text-align:right;">¥6,000</td>
+                    <td><span class="status-badge" data-i18n="tinybox.status.owned">Owned</span></td>
+                  </tr>
+
+                  <!-- Row 3: GPUs (Expandable) -->
+                  <tr class="bom-row-main">
+                    <td class="expand-btn" onclick="toggleSubRows('gpu-rows', this)" data-i18n="tinybox.bom.gpus">GPUs (6x)</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">XFX 7900XTX Overseas Pro</td>
+                    <td style="text-align:center;">6</td>
+                    <td class="price-tag" style="text-align:right;">¥25,144</td>
+                    <td><span class="status-badge" data-i18n="tinybox.status.purchased">Purchased</span></td>
+                  </tr>
+                  <tbody id="gpu-rows" class="sub-rows">
+                    <tr class="bom-row-sub">
+                      <td>├ GPU 1</td>
+                      <td>XFX 7900XTX Overseas Pro</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥4,088</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ GPU 2</td>
+                      <td>XFX 7900XTX Overseas Pro (99% new)</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥4,270</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ GPU 3</td>
+                      <td>XFX 7900XTX Overseas Pro</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥4,150</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ GPU 4</td>
+                      <td>XFX 7900XTX Overseas Pro</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥4,287</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ GPU 5</td>
+                      <td>XFX 7900XTX Overseas Pro (Boxed)</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥4,129</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>└ GPU 6</td>
+                      <td>XFX 7900XTX Overseas Pro</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥4,220</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                  </tbody>
+
+                  <!-- Row 4: PSU (Expandable) -->
+                  <tr class="bom-row-main">
+                    <td class="expand-btn" onclick="toggleSubRows('psu-rows', this)" data-i18n="tinybox.bom.psu">Power System</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">Dual PSU (2000W + 850W)</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">¥1,860</td>
+                    <td><span class="status-badge" data-i18n="tinybox.status.purchased">Purchased</span></td>
+                  </tr>
+                  <tbody id="psu-rows" class="sub-rows">
+                    <tr class="bom-row-sub">
+                      <td>├ PSU 1 (Main)</td>
+                      <td>2000W PSU</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥1,600</td>
+                      <td data-i18n="tinybox.status.owned">Owned</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ PSU 2 (Secondary)</td>
+                      <td>Cougar GEX850W Gold</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥240</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>└ Sync Cable</td>
+                      <td>24-pin Dual PSU Adapter</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥20</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                  </tbody>
+
+                  <!-- Row 5: Storage -->
+                  <tr class="bom-row-main">
+                    <td data-i18n="tinybox.bom.storage">Storage</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">1TB SSD + 500GB Backup</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">¥2,000</td>
+                    <td><span class="status-badge" data-i18n="tinybox.status.owned">Owned</span></td>
+                  </tr>
+
+                  <!-- Row 6: Case -->
+                  <tr class="bom-row-main">
+                    <td data-i18n="tinybox.bom.case">Case + Cooling</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">Open Bench + 2U Cooler</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">¥50</td>
+                    <td><span class="status-badge pending" data-i18n="tinybox.status.tobuy">To Buy</span></td>
+                  </tr>
+
+                  <!-- Row 7: Water Cooling (Optional, Expandable) -->
+                  <tr class="bom-row-main">
+                    <td class="expand-btn" onclick="toggleSubRows('wc-rows', this)" data-i18n="tinybox.bom.watercooling">Water Cooling Mod</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">DIY 3D Print Design</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">¥5,000</td>
+                    <td><span class="status-badge optional" data-i18n="tinybox.status.optional">Optional</span></td>
+                  </tr>
+                  <tbody id="wc-rows" class="sub-rows">
+                    <tr class="bom-row-sub">
+                      <td>├ 3D Printed Parts</td>
+                      <td>Water blocks/brackets custom</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥1,500</td>
+                      <td>Pending</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Radiators 480mm</td>
+                      <td>Dual 480 Radiators</td>
+                      <td style="text-align:center;">2</td>
+                      <td style="text-align:right;">¥600</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Radiator Fans</td>
+                      <td>120mm Fans</td>
+                      <td style="text-align:center;">8</td>
+                      <td style="text-align:right;">¥400</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Pumps</td>
+                      <td>D5 Pumps</td>
+                      <td style="text-align:center;">2</td>
+                      <td style="text-align:right;">¥500</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Reservoir</td>
+                      <td>Pump-Reservoir Combo</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥200</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Tubing</td>
+                      <td>Soft tubes + Fittings</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥400</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Coolant</td>
+                      <td>DIY Coolant</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥60</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Drain Valve</td>
+                      <td>Drain Valve</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥30</td>
+                      <td>To Buy</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>├ Nippers</td>
+                      <td>Jiuyang 629</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥47</td>
+                      <td data-i18n="tinybox.status.purchased">Purchased</td>
+                    </tr>
+                    <tr class="bom-row-sub">
+                      <td>└ Misc</td>
+                      <td>O-rings/Screws etc</td>
+                      <td style="text-align:center;">1</td>
+                      <td style="text-align:right;">¥263</td>
+                      <td>To Buy</td>
+                    </tr>
+                  </tbody>
+
                 </tbody>
                 <tfoot>
                   <tr style="background:var(--bg-secondary);">
                     <td colspan="3" style="text-align:right; font-weight:700; padding:1.5rem;"
-                      data-i18n="tinybox_page.hardware.table.total_label">Total Cost</td>
-                    <td style="text-align:right; font-weight:700; font-size:1.2rem; color:var(--accent-primary);"
-                      data-i18n="tinybox_page.hardware.table.total_price">
+                      data-i18n="tinybox.table.total">Total Cost</td>
+                    <td style="text-align:right; font-weight:700; font-size:1.3rem; color:var(--accent-primary);">
                       ¥44,653</td>
-                    <td></td>
+                    <td><span style="font-size:0.8rem; color:var(--text-sub);" data-i18n="tinybox.table.excl_wc">excl. water cooling</span></td>
                   </tr>
                 </tfoot>
               </table>
@@ -472,21 +877,50 @@
         </div>
       </div>
 
-      <div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+      <!-- Owned Hardware Info -->
+      <div class="card" style="border-left:4px solid var(--accent-green); margin-bottom:2rem;">
+        <div class="card-content">
+          <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
+            <span>✅</span> <span data-i18n="tinybox.owned.title">Your Existing Hardware</span>
+          </h4>
+          <div class="grid-2" style="gap:1.5rem;">
+            <div>
+              <p style="margin:0 0 0.25rem 0; color:var(--text-sub); font-size:0.9rem;"
+                data-i18n="tinybox.owned.memory">Memory</p>
+              <p style="margin:0; font-weight:600;">192GB DDR4 ECC</p>
+              <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">4×32GB Samsung + 4×16GB SK Hynix</p>
+            </div>
+            <div>
+              <p style="margin:0 0 0.25rem 0; color:var(--text-sub); font-size:0.9rem;"
+                data-i18n="tinybox.owned.system_disk">System Disk</p>
+              <p style="margin:0; font-weight:600;">Intel DC S3520 480GB</p>
+              <p style="margin:0; font-size:0.85rem; color:var(--text-muted);" data-i18n="tinybox.owned.enterprise_ssd">Enterprise SATA SSD</p>
+            </div>
+            <div>
+              <p style="margin:0 0 0.25rem 0; color:var(--text-sub); font-size:0.9rem;"
+                data-i18n="tinybox.owned.backup">Backup Storage</p>
+              <p style="margin:0; font-weight:600;">Toshiba 500GB + Portable HDD</p>
+              <p style="margin:0; font-size:0.85rem; color:var(--text-muted);" data-i18n="tinybox.owned.backup_desc">For model backup/cold storage</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
         <div class="card-dashed" style="padding:1.5rem;">
           <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
-            <span>💾</span> <span data-i18n="tinybox_page.hardware.tips.storage_title">Storage Advice</span>
+            <span>💾</span> <span data-i18n="tinybox.tips.storage_title">Storage Advice</span>
           </h4>
-          <p class="text-muted" style="font-size:0.9rem;" data-i18n="tinybox_page.hardware.tips.storage_desc">
-            Storage tips...
+          <p class="text-muted" style="font-size:0.9rem; margin:0;" data-i18n="tinybox.tips.storage_desc">
+            Your existing Intel 480GB SSD is sufficient for Ubuntu + tinygrad. If running 70B models later, consider adding a 1TB NVMe SSD (~¥400).
           </p>
         </div>
         <div class="card-dashed" style="padding:1.5rem;">
           <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
-            <span>🌀</span> <span data-i18n="tinybox_page.hardware.tips.cooling_title">Cooling Tips</span>
+            <span>🌀</span> <span data-i18n="tinybox.tips.cooling_title">Cooling Tips</span>
           </h4>
-          <p class="text-muted" style="font-size:0.9rem;" data-i18n="tinybox_page.hardware.tips.cooling_desc">
-            Cooling tips...
+          <p class="text-muted" style="font-size:0.9rem; margin:0;" data-i18n="tinybox.tips.cooling_desc">
+            Open bench frames offer the best airflow. Ensure spacing between GPUs and add extra case fans - critical for the 7900XTX.
           </p>
         </div>
       </div>
@@ -496,72 +930,148 @@
     <section id="assembly" class="section">
       <div class="section-header">
         <div class="section-icon">🔧</div>
-        <h2 class="section-title" data-i18n="tinybox_page.assembly.title">Assembly Guide</h2>
+        <h2 class="section-title" data-i18n="tinybox.assembly.title">Assembly & Configuration Guide</h2>
       </div>
 
       <div class="timeline">
-        <!-- Step 1 -->
+        <!-- Step 1: Physical Assembly -->
         <div class="timeline-item">
           <div class="timeline-marker"></div>
           <div class="card">
             <div class="card-content">
               <h3 style="margin-top:0;"><span class="step-number">01</span> <span
-                  data-i18n="tinybox_page.assembly.step1.title">Physical Assembly</span></h3>
-              <p class="text-muted" data-i18n="tinybox_page.assembly.step1.desc">
-                Physical assembly steps...
-              </p>
+                  data-i18n="tinybox.assembly.step1_title">Physical Assembly</span></h3>
+              <div class="text-muted">
+                <p><strong data-i18n="tinybox.assembly.platform">Platform Setup:</strong> <span data-i18n="tinybox.assembly.platform_desc">Install EPYC CPU and 8 RAM sticks on ROMED8-2T. Test POST with 1 GPU direct to mobo.</span></p>
+                <p><strong data-i18n="tinybox.assembly.rack">Rack Mounting:</strong> <span data-i18n="tinybox.assembly.rack_desc">Secure motherboard to bottom of open bench. Mount 6 GPUs on top bar.</span></p>
+                <p><strong data-i18n="tinybox.assembly.risers">Risers:</strong> <span data-i18n="tinybox.assembly.risers_desc">Connect 6 PCIe extension cables from mobo x16 slots to GPUs.</span></p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Step 2 -->
+        <!-- Step 2: Dual PSU -->
         <div class="timeline-item">
           <div class="timeline-marker" style="border-color:var(--accent-destructive);"></div>
           <div class="card" style="border-left: 4px solid var(--accent-destructive);">
             <div class="card-content">
               <h3 style="margin-top:0; color:var(--accent-destructive);"><span class="step-number"
                   style="color:var(--accent-destructive);">02</span> <span
-                  data-i18n="tinybox_page.assembly.step2.title">Dual PSU Wiring</span></h3>
-              <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox_page.assembly.step2.desc">
-                Dual PSU setup...
+                  data-i18n="tinybox.assembly.step2_title">Dual PSU Wiring (2000W + 850W)</span></h3>
+              <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox.assembly.step2_desc">
+                Use 2000W Main + 850W Secondary. <strong>Must use sync cable</strong> for simultaneous startup.
               </p>
 
-              <!-- Wiring Diagram -->
-              <div class="ascii-art" style="margin-bottom:1.5rem;"
-                data-i18n="tinybox_page.assembly.step2.diagram_title">
-                ASCII Diagram
+              <!-- Sync Cable Info -->
+              <div style="background:var(--bg-secondary); padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
+                <h4 style="margin:0 0 0.75rem 0;" data-i18n="tinybox.psu.sync_title">Sync cable has 3 heads:</h4>
+                <ul style="margin:0; padding-left:1.25rem; font-size:0.9rem;">
+                  <li><span
+                      style="display:inline-block; padding:0.15rem 0.5rem; background:var(--accent-primary); color:white; border-radius:4px; font-size:0.75rem; margin-right:0.5rem;">Head A</span> 24pin Male (more wires) → <strong data-i18n="tinybox.psu.to_mobo">Plug into Motherboard</strong></li>
+                  <li><span
+                      style="display:inline-block; padding:0.15rem 0.5rem; background:var(--accent-secondary); color:white; border-radius:4px; font-size:0.75rem; margin-right:0.5rem;">Head B</span> 24pin Female (more wires) → <strong data-i18n="tinybox.psu.to_psu1">Connect to PSU 1 (2000W)</strong></li>
+                  <li><span
+                      style="display:inline-block; padding:0.15rem 0.5rem; background:var(--accent-destructive); color:white; border-radius:4px; font-size:0.75rem; margin-right:0.5rem;">Head C</span> 24pin Female (fewer wires) → <strong data-i18n="tinybox.psu.to_psu2">Connect to PSU 2 (850W)</strong></li>
+                </ul>
               </div>
 
-              <ul class="text-muted" style="font-size:0.9rem; list-style:none; padding:0;">
-                <li style="margin-bottom:0.5rem;" data-i18n="tinybox_page.assembly.step2.notes.0">PSU 1 Role</li>
-                <li style="margin-bottom:0.5rem;" data-i18n="tinybox_page.assembly.step2.notes.1">PSU 2 Role</li>
-                <li style="margin-bottom:0.5rem; color:var(--accent-destructive);"
-                  data-i18n="tinybox_page.assembly.step2.notes.2">Warning</li>
-              </ul>
+              <!-- Wiring Diagram -->
+              <div class="ascii-art" style="margin-bottom:1.5rem;">
+  PSU 1 (2000W Main)              PSU 2 (850W Sec)
+       │                              │
+       │ 24pin Cable                  │ 24pin Cable
+       ▼                              ▼
+   ┌───────┐                      ┌───────┐
+   │ Head B│                      │ Head C│
+   │(Female)│                     │(Female)│
+   └───┬───┘                      └───┬───┘
+       │                              │
+       └──────────┬───────────────────┘
+                  │
+              ┌───▼───┐
+              │ Head A│
+              │ (Male)│
+              └───┬───┘
+                  │
+                  ▼
+            Motherboard
+           (24pin Socket)
+              </div>
+
+              <!-- Power Distribution -->
+              <div class="grid-2" style="gap:1rem; margin-bottom:1.5rem;">
+                <div style="background:var(--bg-secondary); padding:1rem; border-radius:8px;">
+                  <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.psu.psu1_title">⚡ PSU 1 (2000W) handles:</h4>
+                  <ul style="margin:0; padding-left:1.25rem; font-size:0.9rem; color:var(--text-sub);">
+                    <li data-i18n="tinybox.psu.psu1_1">24pin motherboard power (via sync cable)</li>
+                    <li data-i18n="tinybox.psu.psu1_2">8pin + 4pin CPU power</li>
+                    <li data-i18n="tinybox.psu.psu1_3">GPU 1, 2, 3, 4 power cables</li>
+                    <li data-i18n="tinybox.psu.psu1_4">HDDs, fans, etc.</li>
+                  </ul>
+                </div>
+                <div style="background:var(--bg-secondary); padding:1rem; border-radius:8px;">
+                  <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.psu.psu2_title">⚡ PSU 2 (850W) handles:</h4>
+                  <ul style="margin:0; padding-left:1.25rem; font-size:0.9rem; color:var(--text-sub);">
+                    <li data-i18n="tinybox.psu.psu2_1">24pin to sync cable (NOT directly to mobo!)</li>
+                    <li data-i18n="tinybox.psu.psu2_2">GPU 5, 6 power cables</li>
+                    <li data-i18n="tinybox.psu.psu2_3">Optional: 6pin to mobo GFX_12V1</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Boot Test -->
+              <div
+                style="background:rgba(59, 130, 246, 0.1); border:1px solid rgba(59, 130, 246, 0.3); padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                <h4 style="margin:0 0 0.5rem 0; color:var(--accent-primary);" data-i18n="tinybox.psu.boot_title">Boot Test:</h4>
+                <ol style="margin:0; padding-left:1.25rem; font-size:0.9rem;">
+                  <li data-i18n="tinybox.psu.boot_1">Plug in both PSUs, turn both switches ON</li>
+                  <li data-i18n="tinybox.psu.boot_2">Press motherboard power button</li>
+                  <li><strong data-i18n="tinybox.psu.boot_3">Both PSUs should start simultaneously</strong> (fans spin together)</li>
+                  <li data-i18n="tinybox.psu.boot_4">If PSU 2 doesn't start → Check sync cable connection</li>
+                </ol>
+              </div>
+
+              <!-- Warning -->
+              <div
+                style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); padding:1rem; border-radius:8px;">
+                <p style="margin:0; font-size:0.9rem; color:var(--accent-destructive);">
+                  <strong>⚠️ <span data-i18n="tinybox.psu.warning_title">Safety Warning:</span></strong> <span data-i18n="tinybox.psu.warning_desc">Both PSUs must be plugged into the SAME well-grounded power strip to share ground and prevent voltage differential damage!</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Step 3 -->
+        <!-- Step 3: BIOS Config -->
         <div class="timeline-item">
           <div class="timeline-marker"></div>
           <div class="card">
             <div class="card-content">
               <h3 style="margin-top:0;"><span class="step-number">03</span> <span
-                  data-i18n="tinybox_page.assembly.step3.title">BIOS Config</span></h3>
+                  data-i18n="tinybox.assembly.step3_title">BIOS Configuration</span></h3>
               <table class="bom-table" style="margin-top:1rem;">
                 <thead>
                   <tr>
-                    <th data-i18n="tinybox_page.assembly.step3.headers.0">Setting</th>
-                    <th data-i18n="tinybox_page.assembly.step3.headers.1">Value</th>
-                    <th data-i18n="tinybox_page.assembly.step3.headers.2">Purpose</th>
+                    <th data-i18n="tinybox.bios.setting">Setting</th>
+                    <th data-i18n="tinybox.bios.value">Recommended</th>
+                    <th data-i18n="tinybox.bios.purpose">Purpose</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr data-i18n-loop="tinybox_page.assembly.step3.table">
-                    <td data-i18n-key="setting">Setting Name</td>
-                    <td style="color:var(--accent-primary); font-weight:700;" data-i18n-key="value">Value</td>
-                    <td data-i18n-key="purpose">Purpose</td>
+                  <tr>
+                    <td style="font-family:'JetBrains Mono',monospace;">Above 4G Decoding</td>
+                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
+                    <td data-i18n="tinybox.bios.above4g">Enable >4GB BAR addressing</td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:'JetBrains Mono',monospace;">Resizable BAR</td>
+                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
+                    <td data-i18n="tinybox.bios.rebar">Allow CPU to access all VRAM at once</td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:'JetBrains Mono',monospace;">IOMMU</td>
+                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
+                    <td data-i18n="tinybox.bios.iommu">Better P2P communication</td>
                   </tr>
                 </tbody>
               </table>
@@ -575,63 +1085,334 @@
     <section id="software" class="section">
       <div class="section-header">
         <div class="section-icon">📟</div>
-        <h2 class="section-title" data-i18n="tinybox_page.software.title">Software Config</h2>
+        <h2 class="section-title" data-i18n="tinybox.software.title">Software Setup - Choose One</h2>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2rem;">
+      <div class="card" style="margin-bottom:2rem; padding:0; overflow:hidden;">
+        <img src="/static/tinybox/images/software-terminal.jpg" alt="Software Terminal"
+          style="width:100%; height:200px; object-fit:cover;">
+      </div>
+
+      <div class="grid-2">
+        <!-- Option A: Tinygrad -->
         <div class="card" style="border-top: 4px solid var(--accent-secondary);">
           <div class="card-content">
-            <h3 class="text-primary" data-i18n="tinybox_page.software.option_a.title">Option A: Tinygrad</h3>
-            <p class="text-muted" data-i18n="tinybox_page.software.option_a.desc">Tinygrad desc...</p>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
+              <span
+                style="padding:0.25rem 0.5rem; background:var(--accent-secondary); color:white; border-radius:4px; font-size:0.75rem; font-weight:600;" data-i18n="tinybox.software.recommended">Recommended</span>
+              <h3 style="margin:0;" data-i18n="tinybox.software.option_a_title">Option A: Pure Tinygrad</h3>
+            </div>
+            <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox.software.option_a_desc">
+              Bypass the full ROCm stack, use tinygrad's userspace driver directly. Lighter and more stable.
+            </p>
 
+            <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.software.step1">1. Configure Kernel Parameters</h4>
+            <div class="code-block">
+              <div class="code-header"><span>GRUB</span></div>
+              <div class="code-content">GRUB_CMDLINE_LINUX_DEFAULT="quiet splash amd_iommu=on iommu=pt"</div>
+            </div>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem;" data-i18n="tinybox.software.grub_note">Edit /etc/default/grub then run sudo update-grub and reboot</p>
+
+            <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.software.step2">2. Install Tinygrad</h4>
             <div class="code-block">
               <div class="code-header"><span>BASH</span></div>
-              <div class="code-content">
-                # 1. Install Dependencies
-                sudo apt update && sudo apt install -y git python3-pip
+              <div class="code-content">sudo apt update && sudo apt install -y git python3-pip
+git clone https://github.com/tinygrad/tinygrad.git
+cd tinygrad
+pip install -e .</div>
+            </div>
 
-                # 2. Clone Repo
-                git clone https://github.com/tinygrad/tinygrad.git
-                cd tinygrad
-                pip install -e .
+            <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.software.step3">3. Verify Installation</h4>
+            <div class="code-block">
+              <div class="code-header"><span>BASH</span></div>
+              <div class="code-content"># First run, tinygrad handles driver automatically
+AMD=1 python3 -c "from tinygrad import Tensor; print(Tensor.zeros(2,2).numpy())"
 
-                # 3. Verify
-                AMD=1 python3 -c "from tinygrad import Tensor; print(Tensor.zeros(2,2).numpy())"
-              </div>
+# Verify multi-GPU
+AMD=1 python3 -c "from tinygrad.runtime.ops_amd import AMDDevice; print(AMDDevice.device_ids)"</div>
             </div>
           </div>
         </div>
 
+        <!-- Option B: ROCm -->
         <div class="card" style="border-top: 4px solid var(--accent-primary);">
           <div class="card-content">
-            <h3 class="text-primary" data-i18n="tinybox_page.software.option_b.title">Option B: ROCm</h3>
-            <p class="text-muted" data-i18n="tinybox_page.software.option_b.desc">ROCm desc...</p>
+            <h3 style="margin:0 0 1rem 0;" data-i18n="tinybox.software.option_b_title">Option B: Full ROCm Stack</h3>
+            <p class="text-muted" style="margin-bottom:1.5rem;" data-i18n="tinybox.software.option_b_desc">
+              Better compatibility for PyTorch, TensorFlow, and other mainstream frameworks.
+            </p>
 
+            <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.software.step1">1. Configure Kernel Parameters</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem;" data-i18n="tinybox.software.same_as_a">Same as Option A</p>
+
+            <h4 style="margin:0 0 0.5rem 0;" data-i18n="tinybox.software.step2_rocm">2. Install ROCm</h4>
             <div class="code-block">
               <div class="code-header"><span>BASH</span></div>
-              <div class="code-content">
-                # 1. Download Script
-                wget https://repo.radeon.com/amdgpu-install/6.0/ubuntu/jammy/amdgpu-install_6.0.60000-1_all.deb
-                sudo apt install ./amdgpu-install*.deb
+              <div class="code-content"># Download amdgpu-install script from official site
+wget https://repo.radeon.com/amdgpu-install/6.0/ubuntu/jammy/amdgpu-install_6.0.60000-1_all.deb
+sudo apt install ./amdgpu-install*.deb
 
-                # 2. Install ROCm
-                amdgpu-install --usecase=rocm --accept-eula
+# Install ROCm
+amdgpu-install --usecase=rocm --accept-eula
 
-                # 3. Verify
-                rocm-smi
-              </div>
+# Verify installation
+rocm-smi</div>
+            </div>
+
+            <div
+              style="background:rgba(59, 130, 246, 0.1); border:1px solid rgba(59, 130, 246, 0.3); padding:1rem; border-radius:8px; margin-top:1rem;">
+              <p style="margin:0; font-size:0.9rem; color:var(--accent-primary);" data-i18n="tinybox.software.verify_note">
+                If you can see info for all 6 cards, installation was successful.
+              </p>
             </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Optimization Section -->
+    <section id="optimization" class="section">
+      <div class="section-header">
+        <div class="section-icon">⚡</div>
+        <h2 class="section-title" data-i18n="tinybox.optimization.title">Ultimate Open-Source Optimization</h2>
+      </div>
+
+      <div class="card" style="margin-bottom:2rem;">
+        <div class="card-content">
+          <h3 style="margin:0 0 1rem 0;" data-i18n="tinybox.optimization.lact_title">🔧 Power & Thermal Optimization (LACT)</h3>
+          <p class="text-muted" style="margin-bottom:1rem;" data-i18n="tinybox.optimization.lact_desc">
+            LACT is the most comprehensive GUI tool for managing GPU power limits and fan curves across all cards.
+          </p>
+          <div class="code-block">
+            <div class="code-header"><span>BASH</span></div>
+            <div class="code-content"># Recommended via Flatpak
+flatpak install flathub io.github.ilya_zlobintsev.LACT</div>
+          </div>
+          <ul style="margin:0; padding-left:1.25rem; color:var(--text-sub); font-size:0.9rem;">
+            <li><span data-i18n="tinybox.optimization.lact_tip1">Set power limit to</span> <strong style="color:var(--text-main);">280W-300W</strong> <span data-i18n="tinybox.optimization.per_card">per card</span></li>
+            <li><span data-i18n="tinybox.optimization.lact_tip2">Set aggressive fan curve, keep temps under</span> <strong style="color:var(--text-main);">85°C</strong> <span data-i18n="tinybox.optimization.under_load">under load</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:2rem;">
+        <div class="card-content">
+          <h3 style="margin:0 0 1rem 0;" data-i18n="tinybox.optimization.env_title">⚙️ Performance Environment Variables</h3>
+          <p class="text-muted" style="margin-bottom:1rem;" data-i18n="tinybox.optimization.env_desc">
+            Add these environment variables to your ~/.bashrc file:
+          </p>
+          <div class="code-block">
+            <div class="code-header"><span>BASH</span></div>
+            <div class="code-content"># --- ROCm Performance Optimization ---
+export HSA_FORCE_FINE_GRAIN_PCIE=1
+export HSA_ENABLE_PEER_SDMA=1
+export HIP_FORCE_DEV_KERNARG=1
+export NCCL_MIN_NCHANNELS=32
+
+# --- Tinygrad Specific ---
+export AMD=1
+export BEAM=4
+export DEFAULT_FLOAT=HALF</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card-dashed" style="padding:1.5rem;">
+          <h4 style="margin:0 0 0.75rem 0;">⚡ FlashAttention</h4>
+          <p class="text-muted" style="font-size:0.9rem; margin:0;" data-i18n="tinybox.optimization.flash_desc">
+            If using PyTorch, compile and install the ROCm version of FlashAttention from source to dramatically improve Transformer performance.
+          </p>
+        </div>
+        <div class="card-dashed" style="padding:1.5rem;">
+          <h4 style="margin:0 0 0.75rem 0;" data-i18n="tinybox.optimization.monitor_title">📊 Real-time Monitoring</h4>
+          <p class="text-muted" style="font-size:0.9rem; margin:0;" data-i18n="tinybox.optimization.monitor_desc">
+            During training, use <code style="color:var(--accent-primary);">amdgpu_top</code> to monitor all GPUs in real-time including temperature, power, and VRAM usage.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Troubleshooting Section -->
+    <section id="troubleshooting" class="section">
+      <div class="section-header">
+        <div class="section-icon">⚠️</div>
+        <h2 class="section-title" data-i18n="tinybox.troubleshooting.title">Common Issues & Solutions</h2>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">
+          <div class="faq-icon">⚠️</div>
+          <div class="faq-content">
+            <h4>PCIe AER Error</h4>
+            <p class="cause" data-i18n="tinybox.troubleshooting.aer_cause">Cause: Poor signal quality from PCIe 4.0 riser cables</p>
+            <ul>
+              <li data-i18n="tinybox.troubleshooting.aer_fix1">Replace with higher quality risers (Linkup, ADT-Link)</li>
+              <li data-i18n="tinybox.troubleshooting.aer_fix2">Downgrade PCIe to Gen3 in BIOS</li>
+              <li data-i18n="tinybox.troubleshooting.aer_fix3">Add pci=noaer parameter to GRUB</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">
+          <div class="faq-icon">⚠️</div>
+          <div class="faq-content">
+            <h4>P2P Mapping Failure</h4>
+            <p class="cause" data-i18n="tinybox.troubleshooting.p2p_cause">Cause: IOMMU misconfiguration</p>
+            <ul>
+              <li data-i18n="tinybox.troubleshooting.p2p_fix1">Ensure IOMMU is enabled in BIOS</li>
+              <li data-i18n="tinybox.troubleshooting.p2p_fix2">Check kernel parameters: amd_iommu=on iommu=pt</li>
+              <li data-i18n="tinybox.troubleshooting.p2p_fix3">Use rocm-bandwidth-test tool to diagnose</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">
+          <div class="faq-icon">⚠️</div>
+          <div class="faq-content">
+            <h4 data-i18n="tinybox.troubleshooting.power_title">Power Shutdown Under Load</h4>
+            <p class="cause" data-i18n="tinybox.troubleshooting.power_cause">Cause: Instantaneous peak power exceeds capacity</p>
+            <ul>
+              <li data-i18n="tinybox.troubleshooting.power_fix1">Use LACT to limit each card to 280W</li>
+              <li data-i18n="tinybox.troubleshooting.power_fix2">Check home circuit capacity (need 16A outlet)</li>
+              <li data-i18n="tinybox.troubleshooting.power_fix3">Ensure dual PSU is configured correctly</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resources Section -->
+    <section id="resources" class="section">
+      <div class="section-header">
+        <div class="section-icon">📚</div>
+        <h2 class="section-title" data-i18n="tinybox.resources.title">Open Source Resources</h2>
+      </div>
+
+      <div class="resources-grid">
+        <div class="resource-card">
+          <h4 data-i18n="tinybox.resources.core">Core Frameworks</h4>
+          <a href="https://github.com/tinygrad/tinygrad" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <div>
+              <div class="name">Tinygrad</div>
+              <div class="desc" data-i18n="tinybox.resources.tinygrad_desc">Lightweight deep learning framework</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+          <a href="https://github.com/ROCm" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <div>
+              <div class="name">ROCm</div>
+              <div class="desc" data-i18n="tinybox.resources.rocm_desc">AMD open-source compute platform</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+
+        <div class="resource-card">
+          <h4 data-i18n="tinybox.resources.gpu_tools">GPU Control Tools</h4>
+          <a href="https://github.com/ilya-zlobintsev/LACT" target="_blank" rel="noopener noreferrer"
+            class="resource-link">
+            <div>
+              <div class="name">LACT</div>
+              <div class="desc" data-i18n="tinybox.resources.lact_desc">GPU power/fan control</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+          <a href="https://gitlab.com/corectrl/corectrl" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <div>
+              <div class="name">CoreCtrl</div>
+              <div class="desc" data-i18n="tinybox.resources.corectrl_desc">Per-application profiles</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+          <a href="https://github.com/Umio-Yasuno/amdgpu_top" target="_blank" rel="noopener noreferrer"
+            class="resource-link">
+            <div>
+              <div class="name">amdgpu_top</div>
+              <div class="desc" data-i18n="tinybox.resources.amdgpu_desc">Real-time monitoring tool</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+
+        <div class="resource-card">
+          <h4 data-i18n="tinybox.resources.ai_libs">AI Acceleration Libraries</h4>
+          <a href="https://github.com/kailums/flash-attention-rocm" target="_blank" rel="noopener noreferrer"
+            class="resource-link">
+            <div>
+              <div class="name">FlashAttention (ROCm)</div>
+              <div class="desc" data-i18n="tinybox.resources.flash_desc">Transformer acceleration</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+          <a href="https://github.com/triton-lang/triton" target="_blank" rel="noopener noreferrer"
+            class="resource-link">
+            <div>
+              <div class="name">Triton</div>
+              <div class="desc" data-i18n="tinybox.resources.triton_desc">High-performance GPU programming</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+          <a href="https://github.com/amd/quark" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <div>
+              <div class="name">AMD Quark</div>
+              <div class="desc" data-i18n="tinybox.resources.quark_desc">Model quantization library</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+
+        <div class="resource-card">
+          <h4 data-i18n="tinybox.resources.inference">Inference & Fine-tuning</h4>
+          <a href="https://github.com/vllm-project/vllm" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <div>
+              <div class="name">vLLM</div>
+              <div class="desc" data-i18n="tinybox.resources.vllm_desc">LLM inference serving</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+          <a href="https://github.com/unslothai/unsloth" target="_blank" rel="noopener noreferrer" class="resource-link">
+            <div>
+              <div class="name">Unsloth</div>
+              <div class="desc" data-i18n="tinybox.resources.unsloth_desc">Efficient fine-tuning framework</div>
+            </div>
+            <span class="arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <footer style="text-align:center; padding:4rem; border-top:1px solid var(--border-local); color:var(--text-muted);">
-    <p>LingKong AI - TinyBox DIY Guide</p>
-    <p style="font-size:0.8rem;">Build your own AI ecosystem.</p>
+  <footer style="text-align:center; padding:4rem 2rem; border-top:1px solid var(--border-local);">
+    <p style="font-size:1.25rem; font-weight:700; color:var(--accent-primary); margin-bottom:0.5rem;">TINYBOX DIY GUIDE
+    </p>
+    <p style="color:var(--text-muted); margin-bottom:1.5rem;" data-i18n="tinybox.footer.tagline">Built on open-source spirit, for hardcore AI enthusiasts</p>
+    <div style="display:flex; justify-content:center; gap:2rem; margin-bottom:1.5rem;">
+      <a href="https://github.com/tinygrad/tinygrad" target="_blank" rel="noopener noreferrer"
+        style="color:var(--text-sub); text-decoration:none;">GitHub</a>
+      <span style="color:var(--text-muted);">|</span>
+      <a href="https://docs.tinygrad.org" target="_blank" rel="noopener noreferrer"
+        style="color:var(--text-sub); text-decoration:none;">Docs</a>
+      <span style="color:var(--text-muted);">|</span>
+      <a href="/" style="color:var(--text-sub); text-decoration:none;">LingKong AI</a>
+    </div>
+    <p style="font-size:0.8rem; color:var(--text-muted);" data-i18n="tinybox.footer.copyright">© 2026 · Based on community best practices</p>
   </footer>
+
+  <script>
+    function toggleSubRows(id, btn) {
+      const rows = document.getElementById(id);
+      if (rows) {
+        rows.classList.toggle('show');
+        btn.classList.toggle('expanded');
+      }
+    }
+  </script>
 
 </body>
 
