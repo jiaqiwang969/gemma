@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
   <title>Tinybox DIY Guide - LingKong AI</title>
 
-  <!-- Core JS -->
+  <!-- Core JS (Unified Nav) -->
   <script src="/static/js/i18n.js"></script>
   <script src="/static/js/unified-nav.js"></script>
 
@@ -23,13 +23,24 @@
       --bg-secondary: #0a0a0a;
       --bg-tertiary: #111111;
       --bg-card: rgba(20, 20, 20, 0.8);
+      --bg-card-border: rgba(255, 255, 255, 0.1);
+
       --accent-primary: #3b82f6;
+      /* Blue */
       --accent-secondary: #8b5cf6;
+      /* Purple */
+      --accent-destructive: #ef4444;
+      /* Red */
       --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+
       --text-primary: #ffffff;
       --text-secondary: #a3a3a3;
+      --text-muted: #737373;
+
       --border-color: #262626;
       --radius-md: 12px;
+      --radius-lg: 16px;
+
       --content-width: 1200px;
     }
 
@@ -39,18 +50,36 @@
       color: var(--text-primary);
       line-height: 1.6;
       margin: 0;
+      overflow-x: hidden;
+      /* Prevent horizontal scroll */
     }
 
-    /* Hero Section */
+    /* --- Animations --- */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.8s ease-out forwards;
+    }
+
+    /* --- Hero Section --- */
     .hero {
       position: relative;
-      height: 90vh;
-      min-height: 600px;
+      min-height: 90vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
       background: url('/static/tinybox/images/hero-bg.jpg') center/cover no-repeat;
+      padding: 80px 20px;
     }
 
     .hero::before {
@@ -64,218 +93,301 @@
       position: relative;
       z-index: 10;
       text-align: center;
-      max-width: 800px;
-      padding: 0 2rem;
-      margin-top: 60px;
-      /* Offset for navbar */
+      max-width: 1000px;
+    }
+
+    .hero-icon {
+      font-size: 5rem;
+      margin-bottom: 1.5rem;
+      display: inline-block;
+      animation: none;
+      /* Can add float animation later */
     }
 
     .hero h1 {
       font-family: 'Orbitron', sans-serif;
-      font-size: clamp(3rem, 8vw, 5rem);
-      font-weight: 800;
+      font-size: clamp(3rem, 6vw, 5rem);
+      font-weight: 900;
       line-height: 1.1;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 .highlight {
       background: var(--accent-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
     }
 
     .hero p {
       font-size: 1.25rem;
       color: var(--text-secondary);
-      margin-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
-    /* Container & Sections */
+    /* --- Stats Grid --- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .stat-item .value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+    }
+
+    .stat-item .label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* --- Buttons --- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: white;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* --- Container & Layout --- */
     .container {
       max-width: var(--content-width);
       margin: 0 auto;
-      padding: 2rem;
-      position: relative;
-      z-index: 10;
+      padding: 0 2rem 6rem 2rem;
     }
 
     .section {
+      scroll-margin-top: 100px;
       margin-bottom: 8rem;
     }
 
     .section-header {
-      margin-bottom: 3rem;
-      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-icon {
+      width: 3rem;
+      height: 3rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
     }
 
     .section-title {
       font-family: 'Orbitron', sans-serif;
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 700;
-      margin-bottom: 1rem;
-      display: inline-block;
-      background: linear-gradient(90deg, #fff, #a3a3a3);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-primary);
+      margin: 0;
     }
 
-    .section-separator {
-      width: 100px;
-      height: 4px;
-      background: var(--accent-gradient);
-      border-radius: 2px;
-    }
-
-    /* Grid Layouts */
-    .grid {
-      display: grid;
-      gap: 2rem;
-    }
-
-    .grid-2 {
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    }
-
-    .grid-3 {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-
-    /* Cards */
+    /* --- Cards --- */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .card-dashed {
+      background: transparent;
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-lg);
+    }
+
+    .card-content {
       padding: 2rem;
-      backdrop-filter: blur(10px);
-      transition: transform 0.3s ease, border-color 0.3s ease;
     }
 
-    .card:hover {
-      transform: translateY(-5px);
-      border-color: var(--accent-primary);
+    /* --- BOM Table --- */
+    .table-responsive {
+      overflow-x: auto;
     }
 
-    .card h3 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.5rem;
-      color: var(--text-primary);
-      margin-bottom: 1rem;
-    }
-
-    .card p,
-    .card li {
-      color: var(--text-secondary);
-      font-size: 1rem;
-    }
-
-    /* Spec Tables */
-    .spec-table {
+    .bom-table {
       width: 100%;
       border-collapse: collapse;
+      font-size: 0.95rem;
     }
 
-    .spec-table th,
-    .spec-table td {
-      padding: 1.25rem 1rem;
+    .bom-table th {
       text-align: left;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+      font-weight: 600;
       border-bottom: 1px solid var(--border-color);
     }
 
-    .spec-table th {
-      color: var(--text-secondary);
-      font-weight: 500;
-      width: 30%;
+    .bom-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
     }
 
-    .spec-table td {
-      color: var(--text-primary);
+    .bom-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .bom-row-main td {
+      font-weight: 500;
+    }
+
+    .price-tag {
       font-family: 'JetBrains Mono', monospace;
-      font-weight: 500;
+      color: var(--accent-primary);
+      font-weight: 700;
     }
 
-    /* Feature Large with Image */
-    .feature-large {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4rem;
-      align-items: center;
-      background: var(--bg-tertiary);
-      border-radius: 24px;
-      overflow: hidden;
-      border: 1px solid var(--border-color);
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
     }
 
-    .feature-image {
-      width: 100%;
-      height: 100%;
-      min-height: 400px;
-      object-fit: cover;
+    .status-badge.pending {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
     }
 
-    .feature-content {
-      padding: 3rem;
-    }
-
-    /* Timeline / Steps */
+    /* --- Assembly Steps --- */
     .timeline {
       position: relative;
       padding-left: 2rem;
       border-left: 2px solid var(--border-color);
+      margin-left: 1rem;
     }
 
     .timeline-item {
-      position: relative;
       margin-bottom: 3rem;
-      padding-left: 2rem;
+      position: relative;
     }
 
-    .timeline-item::before {
-      content: '';
+    .timeline-marker {
       position: absolute;
-      left: -2.6rem;
-      top: 0.5rem;
-      width: 1rem;
-      height: 1rem;
+      left: -2.65rem;
+      top: 0;
+      width: 1.25rem;
+      height: 1.25rem;
       background: var(--bg-primary);
       border: 2px solid var(--accent-secondary);
       border-radius: 50%;
+      z-index: 2;
     }
 
-    .timeline-title {
+    .step-number {
       font-family: 'Orbitron', sans-serif;
-      font-size: 1.5rem;
-      color: var(--accent-primary);
-      margin-bottom: 0.5rem;
+      color: var(--accent-secondary);
+      font-weight: 700;
+      margin-right: 0.5rem;
     }
 
-    /* Buttons */
-    .btn {
-      display: inline-block;
-      padding: 1rem 2rem;
-      background: var(--accent-gradient);
-      color: white;
-      text-decoration: none;
-      border-radius: 50px;
-      font-weight: 600;
-      font-family: 'Orbitron', sans-serif;
-      letter-spacing: 1px;
-      transition: opacity 0.2s;
-      margin-top: 2rem;
+    /* --- Code Blocks --- */
+    .code-block {
+      background: #0d0d0d;
+      border-radius: 8px;
+      border: 1px solid #333;
+      margin: 1rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      overflow: hidden;
     }
 
-    .btn:hover {
-      opacity: 0.9;
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background: #1a1a1a;
+      border-bottom: 1px solid #333;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .code-content {
+      padding: 1rem;
+      overflow-x: auto;
+      color: #e5e5e5;
+    }
+
+    .ascii-art {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.2;
+      white-space: pre;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
     }
 
     @media (max-width: 768px) {
-      .feature-large {
-        grid-template-columns: 1fr;
-      }
-
-      .feature-image {
-        min-height: 300px;
+      .hero-icon {
+        font-size: 3rem;
       }
 
       .hero h1 {
         font-size: 2.5rem;
+      }
+
+      .bom-table {
+        font-size: 0.8rem;
+      }
+
+      .bom-table th,
+      .bom-table td {
+        padding: 0.75rem 0.5rem;
       }
     }
   </style>
@@ -285,70 +397,154 @@
 
   <!-- Hero -->
   <header class="hero">
-    <div class="hero-content">
-      <h1 data-i18n="tinybox_page.title">Tinybox DIY Guide</h1>
-      <p data-i18n="tinybox_page.subtitle">Build your own 6x RX 7900 XTX AI Workstation</p>
-      <a href="#hardware" class="btn">START BUILDING</a>
+    <div class="hero-content animate-fade-in">
+      <div class="hero-icon">🖥️</div>
+      <h1>
+        Tinybox<br>
+        <span class="highlight">DIY 终极指南</span>
+      </h1>
+      <p>从硬件选型到开源优化，手把手教你组装一台 6x RX 7900 XTX 的 AI 算力怪兽</p>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="value">144GB</div>
+          <div class="label">总显存</div>
+        </div>
+        <div class="stat-item">
+          <div class="value">¥48K</div>
+          <div class="label">实际成本</div>
+        </div>
+        <div class="stat-item">
+          <div class="value">6x</div>
+          <div class="label">GPU 数量</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
+        <a href="#hardware" class="btn btn-primary">
+          💬 开始组装
+        </a>
+        <a href="#software" class="btn btn-outline">
+          ⭐ 软件配置
+        </a>
+      </div>
     </div>
   </header>
 
-  <div class="container">
+  <main class="container">
 
     <!-- Hardware Selection -->
     <section id="hardware" class="section">
       <div class="section-header">
-        <h2 class="section-title" data-i18n="tinybox_page.hardware_selection">Hardware Selection</h2>
-        <div class="section-separator"></div>
+        <div class="section-icon">⚙️</div>
+        <h2 class="section-title">硬件选型与采购清单 (BOM)</h2>
       </div>
 
-      <div class="feature-large">
-        <div class="feature-content">
-          <p data-i18n="tinybox_page.h_desc" style="margin-bottom:2rem; color:var(--text-secondary);">
-            Based on the open-source spec from TinyCorp, optimized for local LLM inference.
+      <div class="card mb-8">
+        <div class="card-content" style="padding:0;">
+          <img src="/static/tinybox/images/motherboard-hero.jpg" alt="Motherboard"
+            style="width:100%; height:300px; object-fit:cover;">
+          <div style="padding:2rem;">
+            <p class="text-muted" style="margin-bottom:1.5rem;">
+              我们推荐采用 <strong>EPYC 服务器平台方案</strong>，它提供了无与伦比的稳定性和 PCIe 带宽。
+              以下是完整的 BOM 清单，总预算约为 <span style="color:var(--accent-primary); font-weight:700;">¥48,000</span>。
+            </p>
+
+            <div class="table-responsive">
+              <table class="bom-table">
+                <thead>
+                  <tr>
+                    <th>组件</th>
+                    <th>型号</th>
+                    <th style="text-align:center;">数量</th>
+                    <th style="text-align:right;">价格 (¥)</th>
+                    <th>备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="bom-row-main">
+                    <td>主板+CPU</td>
+                    <td>ROMED8-2T + EPYC 7532</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">4,599</td>
+                    <td><span class="status-badge">已购</span> 板U套装</td>
+                  </tr>
+                  <tr class="bom-row-main">
+                    <td>内存</td>
+                    <td>Samsung/Hynix DDR4 ECC</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">6,000</td>
+                    <td><span class="status-badge">已有</span> 192GB (4x32+4x16)</td>
+                  </tr>
+                  <tr class="bom-row-main">
+                    <td>显卡 (x6)</td>
+                    <td>讯景 7900XTX 海外版 Pro</td>
+                    <td style="text-align:center;">6</td>
+                    <td class="price-tag" style="text-align:right;">25,144</td>
+                    <td><span class="status-badge">已购</span> 单价约 ¥4200</td>
+                  </tr>
+                  <tr class="bom-row-main">
+                    <td>电源系统</td>
+                    <td>2000W + 850W 双电源</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">1,860</td>
+                    <td><span class="status-badge">已购</span> 含同步线</td>
+                  </tr>
+                  <tr class="bom-row-main">
+                    <td>机箱/散热</td>
+                    <td>开放式矿架 + 2U 散热器</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">50</td>
+                    <td><span class="status-badge">待购</span> 极致风道</td>
+                  </tr>
+                  <tr class="bom-row-main">
+                    <td>存储</td>
+                    <td>1TB SSD + 500GB Backup</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">2,000</td>
+                    <td><span class="status-badge">已有</span></td>
+                  </tr>
+                  <!-- DIY Watercooling (Optional) -->
+                  <tr class="bom-row-main" style="opacity:0.6;">
+                    <td>水冷改造</td>
+                    <td>DIY 3D打印 + 双480冷排</td>
+                    <td style="text-align:center;">1</td>
+                    <td class="price-tag" style="text-align:right;">5,000</td>
+                    <td><span class="status-badge pending">可选</span> 进阶方案</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr style="background:rgba(59, 130, 246, 0.1);">
+                    <td colspan="3" style="text-align:right; font-weight:700; padding:1.5rem;">项目总成本预估</td>
+                    <td style="text-align:right; font-weight:700; font-size:1.2rem; color:var(--accent-primary);">
+                      ¥44,653</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+        <div class="card-dashed" style="padding:1.5rem;">
+          <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
+            <span>💾</span> 存储建议
+          </h4>
+          <p class="text-muted" style="font-size:0.9rem;">
+            您现有的 Intel 480GB SSD 可作为系统盘，足够运行 Ubuntu + tinygrad。
+            如果后续需要跑 70B 大模型，建议加购 1TB NVMe SSD (约¥400)。
           </p>
-          <table class="spec-table">
-            <tbody>
-              <tr>
-                <td>GPU</td>
-                <td>6x AMD Radeon RX 7900 XTX</td>
-              </tr>
-              <tr>
-                <td>CPU</td>
-                <td>AMD EPYC 9534 (32 Cores)</td>
-              </tr>
-              <tr>
-                <td>RAM</td>
-                <td>12x 32GB DDR5 RDIMM (384GB)</td>
-              </tr>
-              <tr>
-                <td>Motherboard</td>
-                <td>ASRock Rack GENOA2D24G-2L+</td>
-              </tr>
-              <tr>
-                <td>PSU</td>
-                <td>2x 1600W Platinum (EVGA/Corsair)</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
-        <img src="/static/tinybox/images/motherboard-hero.jpg" alt="Motherboard" class="feature-image">
-      </div>
-    </section>
-
-    <!-- Gallery / Features Grid -->
-    <section class="section">
-      <div class="grid-3">
-        <div class="card">
-          <h3 data-i18n="tinybox_page.cost_comparison">Cost Efficiency</h3>
-          <p>~ $15,000 Total Cost vs $300,000 H100 Cluster.</p>
-        </div>
-        <div class="card">
-          <h3 data-i18n="tinybox_page.performance">Performance</h3>
-          <p>~ 700 TFLOPS (FP16). Run Llama-3-70B @ 100+ tok/s.</p>
-        </div>
-        <div class="card">
-          <h3 data-i18n="tinybox_page.open_source">Open Software</h3>
-          <p>Native support for TinyGrad, vLLM, and llama.cpp.</p>
+        <div class="card-dashed" style="padding:1.5rem;">
+          <h4 style="margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
+            <span>🌀</span> 散热提示
+          </h4>
+          <p class="text-muted" style="font-size:0.9rem;">
+            开放式矿架提供最佳散热空间。确保显卡之间有足够间距，
+            并配备额外的机箱风扇形成良好的风道，这对 7900XTX 至关重要。
+          </p>
         </div>
       </div>
     </section>
@@ -356,66 +552,168 @@
     <!-- Assembly Guide -->
     <section id="assembly" class="section">
       <div class="section-header">
-        <h2 class="section-title" data-i18n="tinybox_page.assembly_config">Assembly Config</h2>
-        <div class="section-separator"></div>
+        <div class="section-icon">🔧</div>
+        <h2 class="section-title">手把手组装与配置</h2>
       </div>
 
-      <div class="grid-2">
-        <img src="/static/tinybox/images/power-supply.jpg" alt="Assembly"
-          style="width:100%; border-radius: var(--radius-md); border:1px solid var(--border-color);">
-        <div class="timeline">
-          <div class="timeline-item">
-            <div class="timeline-title">1. Preparation</div>
-            <p>Prepare the case (open bench recommended) and ensure adequate cooling airflow.</p>
+      <div class="timeline">
+        <!-- Step 1 -->
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="card">
+            <div class="card-content">
+              <h3 style="margin-top:0;"><span class="step-number">01</span> 物理组装</h3>
+              <p class="text-muted">
+                <strong>平台搭建：</strong> 将 EPYC CPU 和 8 根内存安装到 ROMED8-2T 主板上。先用一张显卡直连主板，进行点亮测试。<br><br>
+                <strong>机架安装：</strong> 将主板固定在开放式矿架底层。将 6 块显卡均匀地固定在上层。<br><br>
+                <strong>连接延长线：</strong> 将 6 根 PCIe 延长线分别插入主板的 PCIe x16 插槽，另一端连接到显卡。
+              </p>
+            </div>
           </div>
-          <div class="timeline-item">
-            <div class="timeline-title">2. CPU & RAM</div>
-            <p>Install the EPYC processor and populate all 12 memory channels for max bandwidth.</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="timeline-item">
+          <div class="timeline-marker" style="border-color:var(--accent-destructive);"></div>
+          <div class="card" style="border-left: 4px solid var(--accent-destructive);">
+            <div class="card-content">
+              <h3 style="margin-top:0; color:var(--accent-destructive);"><span class="step-number"
+                  style="color:var(--accent-destructive);">02</span> 双电源接线教程 (重要)</h3>
+              <p class="text-muted" style="margin-bottom:1.5rem;">
+                使用 2000W 主电源 + 850W 副电源。<strong>必须使用同步线</strong>确保同时启动。
+              </p>
+
+              <!-- Wiring Diagram -->
+              <div class="ascii-art" style="margin-bottom:1.5rem;">
+                电源1 (2000W 主) 电源2 (850W 副)
+                │ │
+                │ 24pin 线 │ 24pin 线
+                ▼ ▼
+                ┌───────┐ ┌───────┐
+                │ 头 B │ │ 头 C │
+                │(母头) │ │(母头) │
+                └───┬───┘ └───┬───┘
+                │ │
+                └──────────┬───────────────────┘
+                │ 同步线
+                ┌───▼───┐
+                │ 头 A │
+                │(公头) │
+                └───┬───┘
+                │
+                ▼
+                主板
+              </div>
+
+              <ul class="text-muted" style="font-size:0.9rem; list-style:none; padding:0;">
+                <li style="margin-bottom:0.5rem;">⚡ <strong>电源1 (2000W) 负责：</strong> 主板、CPU、显卡 1-4、硬盘风扇。</li>
+                <li style="margin-bottom:0.5rem;">⚡ <strong>电源2 (850W) 负责：</strong> 显卡 5-6。</li>
+                <li style="margin-bottom:0.5rem; color:var(--accent-destructive);">⚠️ <strong>警告：</strong>
+                  两个电源必须插在同一个接线板上以保持共地！</li>
+              </ul>
+            </div>
           </div>
-          <div class="timeline-item">
-            <div class="timeline-title">3. PCIe Risers</div>
-            <p>Connect high-quality PCIe 4.0/5.0 x16 risers. Critical for multi-GPU communication.</p>
-          </div>
-          <div class="timeline-item">
-            <div class="timeline-title">4. Power Cabling</div>
-            <p>Balance load across two PSUs. GPUs 1-3 on PSU A, GPUs 4-6 on PSU B.</p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="card">
+            <div class="card-content">
+              <h3 style="margin-top:0;"><span class="step-number">03</span> BIOS 终极配置</h3>
+              <table class="bom-table" style="margin-top:1rem;">
+                <thead>
+                  <tr>
+                    <th>设置项</th>
+                    <th>推荐值</th>
+                    <th>目的</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Above 4G Decoding</td>
+                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
+                    <td>启用大于 4GB 的显存寻址</td>
+                  </tr>
+                  <tr>
+                    <td>Resizable BAR</td>
+                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
+                    <td>允许 CPU 一次性访问全部显存</td>
+                  </tr>
+                  <tr>
+                    <td>IOMMU</td>
+                    <td style="color:var(--accent-primary); font-weight:700;">Enabled</td>
+                    <td>提升 P2P 通信效率</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Software Stack -->
-    <section class="section">
+    <!-- Software Section -->
+    <section id="software" class="section">
       <div class="section-header">
-        <h2 class="section-title" data-i18n="tinybox_page.software_solution">Software Solution</h2>
-        <div class="section-separator"></div>
+        <div class="section-icon">📟</div>
+        <h2 class="section-title">软件配置方案</h2>
       </div>
 
-      <div class="feature-large">
-        <img src="/static/tinybox/images/software-terminal.jpg" alt="Terminal" class="feature-image">
-        <div class="feature-content">
-          <div class="grid-2">
-            <div>
-              <h3 style="color:#fff;">OS</h3>
-              <p style="font-family:'JetBrains Mono'; color:var(--accent-primary);">Ubuntu 22.04 LTS</p>
-            </div>
-            <div>
-              <h3 style="color:#fff;">Drivers</h3>
-              <p style="font-family:'JetBrains Mono'; color:var(--accent-primary);">ROCm 6.0+</p>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem;">
+        <div class="card" style="border-top: 4px solid var(--accent-secondary);">
+          <div class="card-content">
+            <h3 class="text-primary">方案 A: 纯 Tinygrad (推荐)</h3>
+            <p class="text-muted">绕过庞大的 ROCm 完整版，直接使用用户空间驱动，更轻量稳定。</p>
+
+            <div class="code-block">
+              <div class="code-header"><span>BASH</span></div>
+              <div class="code-content">
+                # 1. 安装依赖
+                sudo apt update && sudo apt install -y git python3-pip
+
+                # 2. 克隆项目
+                git clone https://github.com/tinygrad/tinygrad.git
+                cd tinygrad
+                pip install -e .
+
+                # 3. 验证 (自动处理驱动)
+                AMD=1 python3 -c "from tinygrad import Tensor; print(Tensor.zeros(2,2).numpy())"
+              </div>
             </div>
           </div>
-          <br>
-          <p>Standard PyTorch works out of the box. Use <strong>vLLM</strong> for high-throughput serving.</p>
-          <code
-            style="display:block; background:#000; padding:1rem; border-radius:8px; margin-top:1rem; font-family:'JetBrains Mono'; color:#0f0;">
-                        pip install vllm<br>
-                        python -m vllm.entrypoints.openai.api_server
-                    </code>
+        </div>
+
+        <div class="card" style="border-top: 4px solid var(--accent-primary);">
+          <div class="card-content">
+            <h3 class="text-primary">方案 B: 完整 ROCm</h3>
+            <p class="text-muted">兼容性好，适合需要使用 PyTorch、vLLM 等主流框架的场景。</p>
+
+            <div class="code-block">
+              <div class="code-header"><span>BASH</span></div>
+              <div class="code-content">
+                # 1. 下载安装脚本
+                wget https://repo.radeon.com/amdgpu-install/6.0/ubuntu/jammy/amdgpu-install_6.0.60000-1_all.deb
+                sudo apt install ./amdgpu-install*.deb
+
+                # 2. 安装 ROCm
+                amdgpu-install --usecase=rocm --accept-eula
+
+                # 3. 验证
+                rocm-smi
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-  </div>
+  </main>
+
+  <footer style="text-align:center; padding:4rem; border-top:1px solid var(--border-color); color:var(--text-muted);">
+    <p>LingKong AI - TinyBox DIY Guide</p>
+    <p style="font-size:0.8rem;">Build your own AI ecosystem.</p>
+  </footer>
 
 </body>
 
