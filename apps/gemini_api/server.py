@@ -233,7 +233,16 @@ evolution_embedding_service = None
 # llama.cpp 后端配置
 LLAMA_SERVER_BIN = os.environ.get("LLAMA_SERVER_BIN", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-server"))
 LLAMA_MTMD_BIN = os.environ.get("LLAMA_MTMD_BIN", str(REPO_ROOT / "infra/llama.cpp/build/bin/llama-mtmd-cli"))
-LLAMA_SERVER_PORT = int(os.environ.get("GEMINI_API_LLAMA_PORT", "8090"))
+# llama-server 地址:
+# - 原生模式: 默认 127.0.0.1:8090 (Gemini API 内部拉起 llama-server)
+# - Docker/Sandbox: 通过环境变量注入 (例如 LLAMA_SERVER_HOST=llama-server, LLAMA_SERVER_PORT=8080)
+LLAMA_SERVER_HOST = os.environ.get("LLAMA_SERVER_HOST", "127.0.0.1")
+LLAMA_SERVER_PORT = int(os.environ.get("LLAMA_SERVER_PORT", os.environ.get("GEMINI_API_LLAMA_PORT", "8090")))
+LLAMA_SERVER_BASE_URL = f"http://{LLAMA_SERVER_HOST}:{LLAMA_SERVER_PORT}"
+# llama-server 上下文窗口:
+# - 0: 从模型元数据读取（Gemma 3n 为 32768）
+# - 更大 ctx 会提升长上下文能力，但会显著增加 KV cache 内存占用
+LLAMA_SERVER_CTX_SIZE = int(os.environ.get("LLAMA_SERVER_CTX_SIZE", os.environ.get("LLAMA_ARG_CTX_SIZE", "0")))
 
 # GPU 配置
 # LLAMA_GPU_DEVICES: 指定使用的 GPU 设备 (例如 "0" 或 "0,1")
@@ -846,6 +855,30 @@ def start_llama_server():
     改进: 开启 slot persistence 支持真正的 KV Cache 持久化
     参考: https://github.com/ggml-org/llama.cpp/discussions/13606
     """
+    # Docker/Sandbox: 使用外部 llama-server（不在本进程内拉起）
+    if LLAMA_SERVER_HOST not in ("127.0.0.1", "localhost"):
+        try:
+            import requests
+        except Exception as e:
+            logger.error(f"requests 导入失败，无法连接外部 llama-server: {e}")
+            return False
+
+        for i in range(120):
+            try:
+                resp = requests.get(f"{LLAMA_SERVER_BASE_URL}/health", timeout=2)
+                if resp.status_code == 200:
+                    logger.info(f"已连接外部 llama-server: {LLAMA_SERVER_BASE_URL}")
+                    _state.llama_server_ready = True
+                    return True
+            except requests.exceptions.RequestException:
+                pass
+            time.sleep(1)
+            if i % 15 == 0:
+                logger.info(f"等待外部 llama-server 就绪... {i}s")
+
+        logger.error(f"外部 llama-server 启动超时: {LLAMA_SERVER_BASE_URL}")
+        return False
+
     if not Path(LLAMA_SERVER_BIN).exists():
         logger.error(f"llama-server 不存在: {LLAMA_SERVER_BIN}")
         return False
@@ -857,7 +890,7 @@ def start_llama_server():
     # 检查是否已在运行
     try:
         import requests
-        resp = requests.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=2)
+        resp = requests.get(f"{LLAMA_SERVER_BASE_URL}/health", timeout=2)
         if resp.status_code == 200:
             logger.info(f"llama-server 已在端口 {LLAMA_SERVER_PORT} 运行")
             _state.llama_server_ready = True
@@ -886,7 +919,7 @@ def start_llama_server():
         "--host", "127.0.0.1",
         "-ngl", "999",
         "-t", "8",
-        "--ctx-size", "8192",
+        "--ctx-size", str(LLAMA_SERVER_CTX_SIZE),
     ]
 
     # GPU 配置
@@ -932,7 +965,7 @@ def start_llama_server():
     import requests
     for i in range(60):
         try:
-            resp = requests.get(f"http://127.0.0.1:{LLAMA_SERVER_PORT}/health", timeout=1)
+            resp = requests.get(f"{LLAMA_SERVER_BASE_URL}/health", timeout=1)
             if resp.status_code == 200:
                 logger.info("llama-server 启动成功")
                 _state.llama_server_ready = True
@@ -1003,7 +1036,7 @@ def query_llama_server(
         endpoint = "/completions" if (image_data and MULTIMODAL_ENABLED) else "/completion"
 
         resp = requests.post(
-            f"http://127.0.0.1:{LLAMA_SERVER_PORT}{endpoint}",
+            f"{LLAMA_SERVER_BASE_URL}{endpoint}",
             json=request_body,
             timeout=120
         )
@@ -1193,7 +1226,7 @@ def save_kv_cache(slot_id: int = 0) -> Optional[str]:
         cache_id = f"thought_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
 
         # 调用 llama-server 的 slot save API
-        url = f"http://127.0.0.1:{LLAMA_SERVER_PORT}/slots/{slot_id}?action=save&filename={cache_id}"
+        url = f"{LLAMA_SERVER_BASE_URL}/slots/{slot_id}?action=save&filename={cache_id}"
 
         req = urllib.request.Request(url, method="POST")
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -1237,7 +1270,7 @@ def restore_kv_cache(cache_id: str, slot_id: int = 0) -> bool:
             return False
 
         # 调用 llama-server 的 slot restore API
-        url = f"http://127.0.0.1:{LLAMA_SERVER_PORT}/slots/{slot_id}?action=restore&filename={cache_id}"
+        url = f"{LLAMA_SERVER_BASE_URL}/slots/{slot_id}?action=restore&filename={cache_id}"
 
         req = urllib.request.Request(url, method="POST")
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -3081,7 +3114,7 @@ def stream_generate_content(model_name: str):
 
                 # 使用 llama-server 的流式 API
                 resp = req.post(
-                    f"http://127.0.0.1:{LLAMA_SERVER_PORT}/completion",
+                    f"{LLAMA_SERVER_BASE_URL}/completion",
                     json={
                         "prompt": full_prompt,
                         "n_predict": max_tokens,
@@ -3804,7 +3837,7 @@ if __name__ == "__main__":
                 logger.info(f"  Audio Model: {Path(LLAMA_MODEL_AUDIO).name}")
     else:
         logger.info("多模态: 未启用")
-    logger.info(f"llama-server 端口: {LLAMA_SERVER_PORT}")
+    logger.info(f"llama-server: {LLAMA_SERVER_BASE_URL}")
 
     # 预启动 llama-server
     start_llama_server()

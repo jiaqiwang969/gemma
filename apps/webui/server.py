@@ -244,7 +244,13 @@ LLAMA_MM_PROJ_IMAGE = os.environ.get("LLAMA_MM_PROJ_IMAGE", _find_model("gemma-3
 LLAMA_MM_PROJ_AUDIO = os.environ.get("LLAMA_MM_PROJ_AUDIO", _find_model("gemma-3n-audio-mmproj-f16.gguf", str(REPO_ROOT / "artifacts/gguf/gemma-3n-audio-mmproj-f16.gguf")))
 LLAMA_MM_PROJ = os.environ.get("LLAMA_MM_PROJ", "")
 LLAMA_MM_PROJ_COMBINED = ",".join([p for p in [LLAMA_MM_PROJ_IMAGE, LLAMA_MM_PROJ_AUDIO] if p]) if (LLAMA_MM_PROJ_IMAGE or LLAMA_MM_PROJ_AUDIO) else LLAMA_MM_PROJ
-LLAMA_MM_N_PREDICT = int(os.environ.get("LLAMA_MM_N_PREDICT", "128"))
+# llama.cpp 的“输出 token”与“上下文窗口”是两个不同的上限：
+# - ctx_size: 输入+输出的总窗口（0 表示从模型元数据读取，Gemma 3n 为 32768）
+# - n_predict: 本次最多生成多少 token（-1 表示不额外限制，直到 EOS 或 ctx 满）
+LLAMA_MM_CTX_SIZE = int(os.environ.get("LLAMA_MM_CTX_SIZE", "0"))
+LLAMA_MM_N_PREDICT = int(os.environ.get("LLAMA_MM_N_PREDICT", "-1"))
+# 非流式请求的超时，输出更长时需要更大；可通过环境变量覆盖
+LLAMA_MM_TIMEOUT = int(os.environ.get("LLAMA_MM_TIMEOUT", "600"))
 LLAMA_MM_DEVICE = os.environ.get("LLAMA_MM_DEVICE", "none")
 LLAMA_MM_N_GPU_LAYERS = os.environ.get("LLAMA_MM_N_GPU_LAYERS", "0")
 
@@ -1070,7 +1076,7 @@ def load_model():
             "load_time": 0,
             "memory_gb": 0,
             "capabilities": ["文本对话", "图像理解", "音频转录", "多轮对话"],
-            "max_tokens": 8192,
+            "max_tokens": (LLAMA_MM_CTX_SIZE if LLAMA_MM_CTX_SIZE > 0 else 32768),
             "backend": "llama.cpp mmproj"
         }
         model_loaded = True
@@ -1163,7 +1169,7 @@ def start_llama_mmproj_server():
         "--host", "127.0.0.1",
         "-ngl", "999",
         "-t", "8",
-        "--ctx-size", "4096",
+        "--ctx-size", str(LLAMA_MM_CTX_SIZE),
     ]
 
     _process_state.llama_mmproj_server_process = subprocess.Popen(
@@ -1175,7 +1181,7 @@ def start_llama_mmproj_server():
 
     # 等待服务启动
     import requests
-    for _ in range(60):  # 最多等待 60 秒 (首次加载模型可能较慢)
+    for _ in range(120):  # 最多等待 120 秒 (首次加载模型可能较慢)
         try:
             resp = requests.get(f"http://127.0.0.1:{LLAMA_MMPROJ_SERVER_PORT}/health", timeout=1)
             if resp.status_code == 200:
@@ -1251,15 +1257,19 @@ def run_llama_mmproj(prompt, image_path=None, audio_path=None,
             })
         content.append({"type": "text", "text": full_prompt})
 
+        payload = {
+            "model": "gemma-3n",
+            "messages": [{"role": "user", "content": content}],
+            "temperature": 0.7,
+        }
+        # max_tokens <= 0 表示不额外限制（直到 EOS 或 ctx 满）
+        if LLAMA_MM_N_PREDICT > 0:
+            payload["max_tokens"] = LLAMA_MM_N_PREDICT
+
         resp = requests.post(
             f"http://127.0.0.1:{LLAMA_MMPROJ_SERVER_PORT}/v1/chat/completions",
-            json={
-                "model": "gemma-3n",
-                "messages": [{"role": "user", "content": content}],
-                "max_tokens": LLAMA_MM_N_PREDICT,
-                "temperature": 0.7,
-            },
-            timeout=120
+            json=payload,
+            timeout=LLAMA_MM_TIMEOUT,
         )
 
         elapsed = time.time() - start
@@ -1442,6 +1452,7 @@ def _run_mmproj_single(prompt, image_paths=None, audio_paths=None):
         "--mmproj", mmproj_combined,
         "-p", prompt,
         "-n", str(LLAMA_MM_N_PREDICT),
+        "--ctx-size", str(LLAMA_MM_CTX_SIZE),
         "--temp", "0.7",
     ]
     if image_paths:
@@ -1454,7 +1465,7 @@ def _run_mmproj_single(prompt, image_paths=None, audio_paths=None):
         env = os.environ.copy()
         bin_dir = str(Path(LLAMA_MTMD_BIN).parent)
         env["DYLD_LIBRARY_PATH"] = f"{bin_dir}:{env.get('DYLD_LIBRARY_PATH', '')}"
-        out = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=180, env=env)
+        out = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=LLAMA_MM_TIMEOUT, env=env)
         elapsed = time.time() - start
         lines = [ln for ln in out.stdout.splitlines() if ln.strip()]
         content_lines = [
@@ -1960,6 +1971,12 @@ def status():
         "hardware": hw_stats,
         "active_sessions": len(sessions),
         "default_backend": DEFAULT_BACKEND,
+        "generation": {
+            "llama_mm_ctx_size": LLAMA_MM_CTX_SIZE,
+            "llama_mm_n_predict": LLAMA_MM_N_PREDICT,
+            "llama_mm_timeout": LLAMA_MM_TIMEOUT,
+            "llama_mm_server_port": LLAMA_MMPROJ_SERVER_PORT,
+        },
         "mmproj_ready": all(mmproj_files.values()),
         "mmproj_files": mmproj_files,
         "llama_cpp_ready": llama_cpp_ready,
@@ -2462,6 +2479,9 @@ if __name__ == "__main__":
         logger.info(f"  模型: {LLAMA_MM_MODEL}")
         logger.info(f"  视觉: {LLAMA_MM_PROJ_IMAGE}")
         logger.info(f"  音频: {LLAMA_MM_PROJ_AUDIO}")
+        logger.info(f"  ctx_size: {LLAMA_MM_CTX_SIZE} (0=从模型读取)")
+        logger.info(f"  n_predict: {LLAMA_MM_N_PREDICT} (-1=不限制)")
+        logger.info(f"  llama-server: 127.0.0.1:{LLAMA_MMPROJ_SERVER_PORT}")
     logger.info(f"  存储: {GEMMA3N_HOME}")
     if DEFAULT_BACKEND == "mmproj":
         logger.info("  提示: 使用 llama.cpp 多模态后端，无需 PyTorch")

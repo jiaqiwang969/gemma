@@ -409,6 +409,13 @@ download_models() {
         "文本模型 (2.6GB)" \
         2789350528
 
+    # Sandbox 模式当前仅保证文本能力：docker 里使用的上游 llama.cpp server
+    # 不包含我们对 Gemma-3n 多模态 projector 的补丁，加载 mmproj 会导致容器退出并变为 unhealthy。
+    if [[ "$INSTALL_MODE" == "sandbox" ]]; then
+        log_info "Sandbox 模式当前仅下载文本模型 (视觉/音频请使用原生模式)"
+        return 0
+    fi
+
     # 视觉模型 - 570MB = 598999040 bytes
     download_file \
         "$MODELS_DIR/gemma-3n-vision-mmproj-f16.gguf" \
@@ -822,7 +829,11 @@ install_sandbox() {
 
     # 创建 docker-compose.yml
     cat > "$SANDBOX_DIR/docker-compose.yml" << 'COMPOSE'
-# 灵空 AI Sandbox - Docker Compose (多模态: 文本 + 视觉 + 音频)
+# 灵空 AI Sandbox - Docker Compose (文本 + Gemini API)
+#
+# 说明:
+# - Docker Sandbox 当前仅保证文本能力；图像/音频多模态请使用原生模式（macOS 可用 Metal 加速）。
+# - Gemini API 容器默认映射到宿主机 8080（容器内是 5001）。
 
 services:
   llama-server:
@@ -830,38 +841,41 @@ services:
     container_name: lingkong-llama
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # 可选：暴露原始 llama-server，便于调试
+      - "8081:8080"
     volumes:
       - ${LINGKONG_HOME:-~/.lingkong}/models:/models:ro
     command: >
       --model /models/gemma-3n-E2B-it-Q4_K_M.gguf
-      --mmproj /models/gemma-3n-vision-mmproj-f16.gguf,/models/gemma-3n-audio-mmproj-f16.gguf
       --host 0.0.0.0
       --port 8080
-      -ngl 99
-      --flash-attn on
       -c 8192
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 120s
+      retries: 10
+      start_period: 300s
 
   gemini-api:
     image: python:3.11-slim
     container_name: lingkong-gemini
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # Gemini API 服务器固定监听 5001，通过端口映射对外提供 8080
+      - "8080:5001"
     volumes:
       - ${LINGKONG_HOME:-~/.lingkong}/apps:/app:ro
+      - ${LINGKONG_HOME:-~/.lingkong}/models:/models:ro
     working_dir: /app/gemini_api
     environment:
       - LLAMA_SERVER_HOST=llama-server
       - LLAMA_SERVER_PORT=8080
+      - GEMINI_API_LLAMA_PORT=8080
+      - LLAMA_MODEL=/models/gemma-3n-E2B-it-Q4_K_M.gguf
+      - LLAMA_MODEL_AUDIO=/models/gemma-3n-E2B-it-Q4_K_M.gguf
     command: >
-      bash -c "pip install flask flask-cors requests -q && python server.py --port 8080"
+      bash -c "pip install flask flask-cors requests psutil -q && python server.py"
     depends_on:
       llama-server:
         condition: service_healthy
@@ -888,8 +902,8 @@ case "${1:-start}" in
         echo "🐉 启动 灵空 AI Sandbox..."
         docker compose up -d
         echo ""
-        echo "  WebUI:     http://localhost:8080"
-        echo "  Gemini API: http://localhost:8080"
+        echo "  Gemini API:  http://localhost:8080"
+        echo "  llama-server: http://localhost:8081 (可选)"
         echo ""
         echo "  查看日志: lingkong logs"
         echo "  停止服务: lingkong stop"
@@ -963,7 +977,11 @@ show_completion() {
     else
         echo -e "  安装模式: ${CYAN}原生${NC}"
     fi
-    echo -e "  功能: 文本对话 + 图像理解 + 音频转录 + 会话记忆 + Gemini API"
+    if [[ "$INSTALL_MODE" == "sandbox" ]]; then
+        echo -e "  功能: 文本对话 + Gemini API (图像/音频/会话记忆请使用原生模式)"
+    else
+        echo -e "  功能: 文本对话 + 图像理解 + 音频转录 + 会话记忆 + Gemini API"
+    fi
     echo ""
     echo -e "  ${CYAN}安装目录:${NC}"
     echo -e "    程序: ${YELLOW}~/.lingkong/bin/${NC}"
@@ -998,7 +1016,9 @@ start_service() {
         export LD_LIBRARY_PATH="$LIB_DIR:${LD_LIBRARY_PATH:-}"
 
         # 后台启动
-        "$BIN_DIR/lingkong" &
+        # 注意: 安装/更新会覆盖 ~/.lingkong/apps 下的代码文件，但运行中的进程不会自动加载新代码。
+        # 这里使用 restart，避免“已更新但仍按旧版本(如 max_tokens=128)运行”的困惑。
+        "$BIN_DIR/lingkong" restart &
         local pid=$!
 
         # 等待服务启动
@@ -1048,17 +1068,16 @@ main() {
 
     # 自动选择模式
     if [[ "$INSTALL_MODE" == "auto" ]]; then
-        if [[ "$DOCKER_AVAILABLE" == "true" ]]; then
-            # 有 Docker 优先使用 Sandbox
+        # 支持原生安装的平台：优先原生（更快/支持多模态；macOS 可用 Metal）
+        if [[ "$PLATFORM" == "macos-arm64" ]] || [[ "$PLATFORM" == "linux-x64" ]]; then
+            log_info "本平台支持原生模式，默认使用原生安装 (推荐)"
+            log_info "如需 Docker Sandbox: curl -fsSL $LINGKONG_SERVER/install.sh | bash -s sandbox"
+            INSTALL_MODE="native"
+        elif [[ "$DOCKER_AVAILABLE" == "true" ]]; then
             log_info "检测到 Docker，使用 Sandbox 模式"
             INSTALL_MODE="sandbox"
-        elif [[ "$PLATFORM" == "macos-arm64" ]] || [[ "$PLATFORM" == "linux-x64" ]]; then
-            # 支持原生安装的平台
-            log_info "使用原生安装模式"
-            INSTALL_MODE="native"
         else
-            # 其他平台必须用 Docker
-            log_info "此平台需要 Sandbox 模式"
+            log_info "此平台需要 Sandbox 模式，请先安装并启动 Docker"
             INSTALL_MODE="sandbox"
         fi
     fi
@@ -1067,6 +1086,8 @@ main() {
     download_models
 
     if [[ "$INSTALL_MODE" == "sandbox" ]]; then
+        # Sandbox 仍需要 Gemini API 代码（运行在容器里，通过挂载 /app 提供）
+        download_webui
         install_sandbox
     else
         install_native_binaries
