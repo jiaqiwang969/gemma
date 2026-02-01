@@ -20,6 +20,23 @@ DEPLOY_MODELS="${1:-}"
 DEPLOY_OPENCLAW="${DEPLOY_OPENCLAW:-1}"  # set to 0 to skip OpenClaw bundle upload
 DEPLOY_WHISPER="${DEPLOY_WHISPER:-1}"   # set to 0 to skip whisper-cli bundle upload
 
+# For non-interactive deploys (CI), we must not block on password prompts.
+# Local devs can opt out with: DEPLOY_SSH_BATCH=0 ./scripts/deploy-to-server.sh
+DEPLOY_SSH_BATCH="${DEPLOY_SSH_BATCH:-1}"
+DEPLOY_SSH_CONNECT_TIMEOUT="${DEPLOY_SSH_CONNECT_TIMEOUT:-10}"
+SSH_OPTS=(-o "ConnectTimeout=${DEPLOY_SSH_CONNECT_TIMEOUT}")
+if [[ "$DEPLOY_SSH_BATCH" == "1" ]]; then
+    SSH_OPTS+=(-o BatchMode=yes)
+fi
+
+run_ssh() {
+    ssh "${SSH_OPTS[@]}" "$SERVER" "$@"
+}
+
+run_scp() {
+    scp "${SSH_OPTS[@]}" "$@"
+}
+
 echo "🐉 灵空 AI - 部署更新到服务器"
 echo ""
 
@@ -110,8 +127,12 @@ maybe_download_node_runtime() {
 # 测试连接
 echo "▶ 测试服务器连接..."
 ensure_known_host
-if ! ssh -o ConnectTimeout=10 $SERVER "echo 'connected'" 2>/dev/null; then
+if ! run_ssh "echo 'connected'" >/dev/null 2>&1; then
     echo "❌ 无法连接服务器，请检查 SSH 配置"
+    if [[ "$DEPLOY_SSH_BATCH" == "1" ]]; then
+        echo "提示: 当前为非交互模式 (DEPLOY_SSH_BATCH=1)，请确保已配置免密 SSH key。"
+        echo "      如需交互式密码登录，可运行: DEPLOY_SSH_BATCH=0 ./scripts/deploy-to-server.sh"
+    fi
     exit 1
 fi
 
@@ -137,15 +158,15 @@ echo "✓ Gemini API 已打包 ($(du -h /tmp/gemini_api.tar.gz | cut -f1))"
 # 上传文件到临时目录
 echo "▶ 上传安装脚本..."
 cd "$PROJECT_DIR"
-scp scripts/quick-install.sh $SERVER:/tmp/install.sh
+run_scp scripts/quick-install.sh "$SERVER:/tmp/install.sh"
 echo "✓ install.sh 已上传"
 
 echo "▶ 上传 WebUI 包..."
-scp /tmp/webui.tar.gz $SERVER:/tmp/webui.tar.gz
+run_scp /tmp/webui.tar.gz "$SERVER:/tmp/webui.tar.gz"
 echo "✓ webui.tar.gz 已上传"
 
 echo "▶ 上传 Gemini API 包..."
-scp /tmp/gemini_api.tar.gz $SERVER:/tmp/gemini_api.tar.gz
+run_scp /tmp/gemini_api.tar.gz "$SERVER:/tmp/gemini_api.tar.gz"
 echo "✓ gemini_api.tar.gz 已上传"
 
 maybe_build_openclaw_bundle
@@ -154,86 +175,86 @@ maybe_download_node_runtime
 
 if [[ "$DEPLOY_OPENCLAW" == "1" && -f "$OPENCLAW_STABLE_TARBALL" ]]; then
   echo "▶ 上传 OpenClaw bundle..."
-  scp "$OPENCLAW_STABLE_TARBALL" $SERVER:/tmp/openclaw-macos-arm64.tar.gz
+  run_scp "$OPENCLAW_STABLE_TARBALL" "$SERVER:/tmp/openclaw-macos-arm64.tar.gz"
   echo "✓ openclaw-macos-arm64.tar.gz 已上传"
 fi
 
 if [[ "$DEPLOY_WHISPER" == "1" && -f "$WHISPER_STABLE_TARBALL" ]]; then
   echo "▶ 上传 whisper-cli bundle..."
-  scp "$WHISPER_STABLE_TARBALL" $SERVER:/tmp/whisper-cli-macos-arm64.tar.gz
+  run_scp "$WHISPER_STABLE_TARBALL" "$SERVER:/tmp/whisper-cli-macos-arm64.tar.gz"
   echo "✓ whisper-cli-macos-arm64.tar.gz 已上传"
 fi
 
 if [[ "$DEPLOY_OPENCLAW" == "1" && -f "$NODE_STABLE_TARBALL" ]]; then
   echo "▶ 上传 Node runtime..."
-  scp "$NODE_STABLE_TARBALL" $SERVER:/tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz
+  run_scp "$NODE_STABLE_TARBALL" "$SERVER:/tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz"
   echo "✓ node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz 已上传"
 fi
 
 echo "▶ 上传首页..."
-scp apps/webui/static/home.html $SERVER:/tmp/home.html
+run_scp apps/webui/static/home.html "$SERVER:/tmp/home.html"
 echo "✓ home.html 已上传"
 
 echo "▶ 上传聊天界面..."
-scp apps/webui/static/index.html $SERVER:/tmp/index.html
-scp apps/webui/static/chat.html $SERVER:/tmp/chat.html
-scp apps/webui/static/chat-lite.html $SERVER:/tmp/chat-lite.html 2>/dev/null || true
+run_scp apps/webui/static/index.html "$SERVER:/tmp/index.html"
+run_scp apps/webui/static/chat.html "$SERVER:/tmp/chat.html"
+run_scp apps/webui/static/chat-lite.html "$SERVER:/tmp/chat-lite.html" 2>/dev/null || true
 echo "✓ chat 界面已上传"
 
 echo "▶ 上传下载页面..."
-scp apps/webui/static/downloads.html $SERVER:/tmp/downloads.html
+run_scp apps/webui/static/downloads.html "$SERVER:/tmp/downloads.html"
 echo "✓ downloads.html 已上传"
 
 echo "▶ 上传 API 文档..."
-scp apps/webui/static/docs.html $SERVER:/tmp/docs.html
+run_scp apps/webui/static/docs.html "$SERVER:/tmp/docs.html"
 echo "✓ docs.html 已上传"
 
 echo "▶ 上传 Playground..."
-scp apps/webui/static/playground.html $SERVER:/tmp/playground.html 2>/dev/null || true
+run_scp apps/webui/static/playground.html "$SERVER:/tmp/playground.html" 2>/dev/null || true
 echo "✓ playground.html 已上传"
 
 echo "▶ 上传商业计划书..."
-scp apps/webui/static/pitch.html $SERVER:/tmp/pitch.html 2>/dev/null || true
-scp apps/webui/static/pitch.pdf $SERVER:/tmp/pitch.pdf 2>/dev/null || true
+run_scp apps/webui/static/pitch.html "$SERVER:/tmp/pitch.html" 2>/dev/null || true
+run_scp apps/webui/static/pitch.pdf "$SERVER:/tmp/pitch.pdf" 2>/dev/null || true
 echo "✓ pitch 文件已上传"
 
 echo "▶ 上传商业计划书图片..."
-ssh $SERVER "mkdir -p /tmp/pitch"
-scp apps/webui/static/pitch/*.jpg $SERVER:/tmp/pitch/ 2>/dev/null || true
+run_ssh "mkdir -p /tmp/pitch"
+run_scp apps/webui/static/pitch/*.jpg "$SERVER:/tmp/pitch/" 2>/dev/null || true
 echo "✓ pitch 图片已上传"
 
 echo "▶ 上传 i18n 国际化文件..."
-ssh $SERVER "mkdir -p /tmp/i18n /tmp/js /tmp/tinybox"
-scp apps/webui/static/i18n/*.json $SERVER:/tmp/i18n/ 2>/dev/null || true
-scp apps/webui/static/js/*.js $SERVER:/tmp/js/ 2>/dev/null || true
+run_ssh "mkdir -p /tmp/i18n /tmp/js /tmp/tinybox"
+run_scp apps/webui/static/i18n/*.json "$SERVER:/tmp/i18n/" 2>/dev/null || true
+run_scp apps/webui/static/js/*.js "$SERVER:/tmp/js/" 2>/dev/null || true
 echo "✓ i18n 文件已上传"
 
 echo "▶ 上传 TinyBox DIY 指南..."
-scp -r apps/webui/static/tinybox/* $SERVER:/tmp/tinybox/ 2>/dev/null || true
+run_scp -r apps/webui/static/tinybox/* "$SERVER:/tmp/tinybox/" 2>/dev/null || true
 echo "✓ tinybox 已上传"
 
 echo "▶ 上传 Playground..."
-ssh $SERVER "mkdir -p /tmp/playground"
-scp -r apps/webui/static/playground/* $SERVER:/tmp/playground/ 2>/dev/null || true
+run_ssh "mkdir -p /tmp/playground"
+run_scp -r apps/webui/static/playground/* "$SERVER:/tmp/playground/" 2>/dev/null || true
 echo "✓ playground 已上传"
 
 echo "▶ 上传进化系统..."
-ssh $SERVER "mkdir -p /tmp/evolution"
-scp -r apps/webui/static/evolution/* $SERVER:/tmp/evolution/ 2>/dev/null || true
+run_ssh "mkdir -p /tmp/evolution"
+run_scp -r apps/webui/static/evolution/* "$SERVER:/tmp/evolution/" 2>/dev/null || true
 echo "✓ evolution 已上传"
 
 echo "▶ 上传加密策略..."
-ssh $SERVER "mkdir -p /tmp/encryption"
-scp -r apps/webui/static/encryption/* $SERVER:/tmp/encryption/ 2>/dev/null || true
+run_ssh "mkdir -p /tmp/encryption"
+run_scp -r apps/webui/static/encryption/* "$SERVER:/tmp/encryption/" 2>/dev/null || true
 echo "✓ encryption 已上传"
 
 echo "▶ 上传灵空聊天界面..."
-scp apps/webui/static/lingkong.html $SERVER:/tmp/lingkong.html 2>/dev/null || true
+run_scp apps/webui/static/lingkong.html "$SERVER:/tmp/lingkong.html" 2>/dev/null || true
 echo "✓ lingkong.html 已上传"
 
 # 移动文件并设置权限
 echo "▶ 部署文件..."
-ssh $SERVER "sudo mkdir -p $REMOTE_DIR/bin $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/static/evolution $REMOTE_DIR/static/encryption $REMOTE_DIR/models && \
+run_ssh "sudo mkdir -p $REMOTE_DIR/bin $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/static/evolution $REMOTE_DIR/static/encryption $REMOTE_DIR/models && \
     sudo mv /tmp/install.sh $REMOTE_DIR/install.sh && \
     sudo mv /tmp/webui.tar.gz $REMOTE_DIR/webui.tar.gz && \
     sudo mv /tmp/gemini_api.tar.gz $REMOTE_DIR/gemini_api.tar.gz && \
@@ -278,7 +299,7 @@ echo "✓ 文件已部署"
 # 同步静态文件到 WebUI 目录 (nginx 从这里读取)
 echo "▶ 同步静态文件到 WebUI..."
 WEBUI_STATIC="/opt/lingkong-webui/static"
-ssh $SERVER "sudo mkdir -p $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground $WEBUI_STATIC/evolution $WEBUI_STATIC/encryption && \
+run_ssh "sudo mkdir -p $WEBUI_STATIC/i18n $WEBUI_STATIC/js $WEBUI_STATIC/tinybox/js $WEBUI_STATIC/tinybox/assets $WEBUI_STATIC/tinybox/images $WEBUI_STATIC/playground $WEBUI_STATIC/evolution $WEBUI_STATIC/encryption && \
     sudo cp $REMOTE_DIR/static/home.html $WEBUI_STATIC/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/downloads.html $WEBUI_STATIC/ 2>/dev/null || true && \
     sudo cp $REMOTE_DIR/static/docs.html $WEBUI_STATIC/ 2>/dev/null || true && \
@@ -303,7 +324,20 @@ rm -f /tmp/webui.tar.gz /tmp/gemini_api.tar.gz
 
 # 生成校验和文件 (用于客户端检测更新)
 echo "▶ 生成校验和文件..."
-ssh $SERVER "cd $REMOTE_DIR && sha256sum install.sh webui.tar.gz gemini_api.tar.gz bin/llama-lingkong-macos-arm64.tar.gz bin/openclaw-macos-arm64.tar.gz bin/whisper-cli-macos-arm64.tar.gz bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz 2>/dev/null | sudo tee checksums.sha256 > /dev/null && sudo chmod 644 checksums.sha256"
+run_ssh "cd $REMOTE_DIR && \
+  { \
+    for f in \
+      install.sh \
+      webui.tar.gz \
+      gemini_api.tar.gz \
+      bin/llama-lingkong-macos-arm64.tar.gz \
+      bin/openclaw-macos-arm64.tar.gz \
+      bin/whisper-cli-macos-arm64.tar.gz \
+      bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz \
+    ; do \
+      if [ -f \"\$f\" ]; then sha256sum \"\$f\"; fi; \
+    done; \
+  } | sudo tee checksums.sha256 > /dev/null && sudo chmod 644 checksums.sha256"
 echo "✓ checksums.sha256 已生成"
 
 # 上传模型文件 (可选)
@@ -313,14 +347,14 @@ if [[ "$DEPLOY_MODELS" == "models" ]]; then
     echo "  上传模型文件到服务器 (4.5GB，需要较长时间)"
     echo "════════════════════════════════════════════════════════════"
 
-    ssh $SERVER "sudo mkdir -p $REMOTE_DIR/models $REMOTE_DIR/models/whisper && sudo chown -R ubuntu:ubuntu $REMOTE_DIR/models"
+    run_ssh "sudo mkdir -p $REMOTE_DIR/models $REMOTE_DIR/models/whisper && sudo chown -R ubuntu:ubuntu $REMOTE_DIR/models"
 
     for model in gemma-3n-E2B-it-Q4_K_M.gguf gemma-3n-vision-mmproj-f16.gguf gemma-3n-audio-mmproj-f16.gguf; do
         if [[ -f "$MODELS_DIR/$model" ]]; then
             size=$(du -h "$MODELS_DIR/$model" | cut -f1)
             echo "▶ 上传 $model ($size)..."
-            scp "$MODELS_DIR/$model" "$SERVER:/tmp/$model"
-            ssh $SERVER "sudo mv /tmp/$model $REMOTE_DIR/models/$model && sudo chmod 644 $REMOTE_DIR/models/$model"
+            run_scp "$MODELS_DIR/$model" "$SERVER:/tmp/$model"
+            run_ssh "sudo mv /tmp/$model $REMOTE_DIR/models/$model && sudo chmod 644 $REMOTE_DIR/models/$model"
             echo "✓ $model 已上传"
         else
             echo "⚠ $MODELS_DIR/$model 不存在，跳过"
@@ -331,8 +365,8 @@ if [[ "$DEPLOY_MODELS" == "models" ]]; then
     if [[ -f "$MODELS_DIR/whisper/ggml-small.bin" ]]; then
         size=$(du -h "$MODELS_DIR/whisper/ggml-small.bin" | cut -f1)
         echo "▶ 上传 whisper/ggml-small.bin ($size)..."
-        scp "$MODELS_DIR/whisper/ggml-small.bin" "$SERVER:/tmp/ggml-small.bin"
-        ssh $SERVER "sudo mv /tmp/ggml-small.bin $REMOTE_DIR/models/whisper/ggml-small.bin && sudo chmod 644 $REMOTE_DIR/models/whisper/ggml-small.bin"
+        run_scp "$MODELS_DIR/whisper/ggml-small.bin" "$SERVER:/tmp/ggml-small.bin"
+        run_ssh "sudo mv /tmp/ggml-small.bin $REMOTE_DIR/models/whisper/ggml-small.bin && sudo chmod 644 $REMOTE_DIR/models/whisper/ggml-small.bin"
         echo "✓ whisper/ggml-small.bin 已上传"
     else
         echo "⚠ $MODELS_DIR/whisper/ggml-small.bin 不存在，跳过"
