@@ -127,6 +127,11 @@ copy_dir "$worktree_dir/openclaw.mjs" "$stage_dir/openclaw/"
 copy_dir "$worktree_dir/package.json" "$stage_dir/openclaw/"
 copy_dir "$worktree_dir/dist" "$stage_dir/openclaw/"
 copy_dir "$worktree_dir/node_modules" "$stage_dir/openclaw/"
+if [[ -d "$worktree_dir/extensions" ]]; then
+  # OpenClaw loads built-in plugins (e.g. memory-core, WhatsApp) from the monorepo
+  # extensions folder. Without this, default configs may fail validation.
+  copy_dir "$worktree_dir/extensions" "$stage_dir/openclaw/"
+fi
 if [[ -d "$worktree_dir/skills" ]]; then
   copy_dir "$worktree_dir/skills" "$stage_dir/openclaw/"
 fi

@@ -164,6 +164,8 @@ detect_docker() {
 create_directories() {
     log_step "创建安装目录..."
     mkdir -p "$BIN_DIR" "$LIB_DIR" "$MODELS_DIR" "$MODELS_DIR/whisper" "$SANDBOX_DIR" "$LINGKONG_HOME/apps" "$LINGKONG_HOME/logs" "$LINGKONG_HOME/run" "$OPENCLAW_APP_DIR" "$OPENCLAW_STATE_ROOT"
+    # OpenClaw state holds auth + tokens; keep it private by default.
+    chmod 700 "$OPENCLAW_STATE_ROOT" 2>/dev/null || true
     log_success "目录创建完成: $LINGKONG_HOME"
 }
 
@@ -637,6 +639,45 @@ write_openclaw_config() {
     log_success "OpenClaw 配置已写入: $config_path"
 }
 
+# 如果用户机器上已经有旧版/不兼容的 openclaw.json，OpenClaw 会进入 best-effort 模式，
+# 导致 WhatsApp/voice 等行为不可预期。这里做一次“自动备份 + 回退到最新离线模板”。
+repair_openclaw_config_if_invalid() {
+    local state_dir="$OPENCLAW_STATE_ROOT"
+    local config_path="$state_dir/openclaw.json"
+    local template_path="$state_dir/openclaw.offline.template.json5"
+
+    if [[ ! -f "$config_path" ]]; then
+        return 0
+    fi
+    if [[ ! -x "$BIN_DIR/openclaw" ]]; then
+        return 0
+    fi
+    if [[ ! -f "$template_path" ]]; then
+        write_openclaw_config_to "$template_path" "pairing" ""
+    fi
+
+    # Detect invalid config via the CLI startup banner.
+    # Note: OpenClaw prints this message even when running `--help`.
+    local out
+    out="$(
+        OPENCLAW_STATE_DIR="$state_dir" \
+        OPENCLAW_CONFIG_PATH="$config_path" \
+        OPENCLAW_OFFLINE=1 \
+        LINGKONG_OFFLINE=1 \
+        "$BIN_DIR/openclaw" --no-color --help 2>&1 || true
+    )"
+    if echo "$out" | grep -q "Invalid config at"; then
+        local ts
+        ts="$(date +%Y%m%d-%H%M%S)"
+        cp "$config_path" "$config_path.bak.$ts" 2>/dev/null || true
+        cp "$template_path" "$config_path"
+        chmod 600 "$config_path" 2>/dev/null || true
+        log_warn "检测到旧 OpenClaw 配置不兼容，已备份并替换为最新离线模板:"
+        log_warn "  - 备份: $config_path.bak.$ts"
+        log_warn "  - 新配置: $config_path"
+    fi
+}
+
 # 下载模型
 # 下载单个文件 (带断点续传和备用地址)
 download_file() {
@@ -765,6 +806,7 @@ VISION="$LINGKONG_HOME/models/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO="$LINGKONG_HOME/models/gemma-3n-audio-mmproj-f16.gguf"
 LLAMA_PORT="${LLAMA_PORT:-8081}"
 WEBUI_PORT="${WEBUI_PORT:-8080}"
+OPENCLAW_PORT="${OPENCLAW_PORT:-18789}"
 PID_DIR="$LINGKONG_HOME/run"
 LOG_DIR="$LINGKONG_HOME/logs"
 OPENCLAW_APP_DIR="$LINGKONG_HOME/apps/openclaw"
@@ -940,13 +982,22 @@ start_openclaw() {
         return 0
     fi
 
+    # If a previous moltbot/openclaw gateway is still bound, kill it to avoid port conflicts.
+    if command -v lsof >/dev/null 2>&1; then
+        if lsof -i :"$OPENCLAW_PORT" -t > /dev/null 2>&1; then
+            echo -e "${YELLOW}[清理]${NC} OpenClaw 端口 $OPENCLAW_PORT"
+            lsof -i :"$OPENCLAW_PORT" -t 2>/dev/null | xargs kill -9 2>/dev/null || true
+            sleep 0.3
+        fi
+    fi
+
     # Offline-first guardrails: allow WhatsApp transport, block other outbound networking where possible.
     export OPENCLAW_STATE_DIR="$OPENCLAW_STATE_DIR"
     export OPENCLAW_CONFIG_PATH="$OPENCLAW_CONFIG_PATH"
     export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
     export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
 
-    nohup "$LINGKONG_HOME/bin/openclaw" gateway run --force --allow-unconfigured > "$LOG_DIR/openclaw.log" 2>&1 &
+    nohup "$LINGKONG_HOME/bin/openclaw" gateway run --port "$OPENCLAW_PORT" --force --allow-unconfigured > "$LOG_DIR/openclaw.log" 2>&1 &
     echo $! > "$PID_DIR/openclaw.pid"
     echo -e "${GREEN}[启动]${NC} OpenClaw (PID: $(cat "$PID_DIR/openclaw.pid"))"
 }
@@ -1378,6 +1429,30 @@ export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
 export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+
+# Gateway token is required even for loopback-only deployments.
+# Keep it on disk so launchd/background runs can reconnect consistently.
+token_file="$STATE_DIR/gateway.token"
+chmod 700 "$STATE_DIR" 2>/dev/null || true
+if [[ -z "${OPENCLAW_GATEWAY_TOKEN:-}" ]]; then
+  if [[ -f "$token_file" ]]; then
+    export OPENCLAW_GATEWAY_TOKEN="$(tr -d '\r\n' < "$token_file" | head -c 200)"
+  else
+    token=""
+    if command -v openssl >/dev/null 2>&1; then
+      umask 077
+      token="$(openssl rand -hex 16)"
+    elif command -v uuidgen >/dev/null 2>&1; then
+      umask 077
+      token="$(uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]')"
+    fi
+    if [[ -n "$token" ]]; then
+      printf "%s" "$token" > "$token_file"
+      chmod 600 "$token_file" 2>/dev/null || true
+      export OPENCLAW_GATEWAY_TOKEN="$token"
+    fi
+  fi
+fi
 export WHISPER_CPP_MODEL="${WHISPER_CPP_MODEL:-$LINGKONG_HOME/models/whisper/ggml-small.bin}"
 export WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-auto}"
 
@@ -1528,13 +1603,14 @@ cat >"$req_json" <<EOF
     {
       "role": "user",
       "parts": [
-        { "text": "You are a voice assistant. Reply in one short sentence. User said: ${transcript}" }
+        { "text": "你是语音助手。只输出最终答案：言简意赅，不要解释，不要带前缀，不要换行。用户说：${transcript}" }
       ]
     }
   ],
   "generationConfig": {
     "maxOutputTokens": 96,
-    "temperature": 0.2
+    "temperature": 0.2,
+    "thinkingConfig": { "thinkingLevel": "none", "includeThoughts": false }
   }
 }
 EOF
@@ -1544,15 +1620,19 @@ curl -fsS "$GEMINI_BASE_URL/v1beta/models/$MODEL_ID:generateContent" \
   -d "@$req_json" >"$resp_json"
 t4="$(now_ms)"
 
-reply="$("$PYTHON_BIN" - <<'PY' <"$resp_json"
+reply="$("$PYTHON_BIN" - "$resp_json" <<'PY'
 import json, sys
-j = json.load(sys.stdin)
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as f:
+    j = json.load(f)
 cands = j.get("candidates") or []
 content = (cands[0].get("content") if cands else {}) or {}
 parts = content.get("parts") or []
 out = []
 for p in parts:
     if isinstance(p, dict) and isinstance(p.get("text"), str):
+        if p.get("thought") is True:
+            continue
         out.append(p["text"])
 print("".join(out).strip())
 PY
@@ -1905,6 +1985,7 @@ main() {
         detect_python || install_python
         install_python_deps
         create_native_scripts
+        repair_openclaw_config_if_invalid || true
     fi
 
     setup_path
