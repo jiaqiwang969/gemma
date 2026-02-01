@@ -918,6 +918,14 @@ def start_llama_server():
     except requests.exceptions.RequestException:
         pass
 
+    # KV cache slot save/restore is currently unsupported by llama-server when running
+    # in multimodal mode (-mm). Disable it proactively to avoid repeated HTTP 5xx noise.
+    # (See: llama.cpp server error: "This feature is not supported by multimodal")
+    global KV_CACHE_ENABLED
+    if KV_CACHE_ENABLED and LLAMA_SERVER_MMPROJ:
+        logger.info("KV Cache 持久化在多模态 llama-server(-mm) 下不支持，已自动禁用")
+        KV_CACHE_ENABLED = False
+
     # 创建 KV Cache 目录
     if KV_CACHE_ENABLED:
         KV_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -1235,29 +1243,42 @@ def save_kv_cache(slot_id: int = 0) -> Optional[str]:
     Returns:
         保存的文件名 (用作 thoughtSignature)，失败返回 None
     """
+    global KV_CACHE_ENABLED
     if not KV_CACHE_ENABLED:
         return None
 
     try:
         import urllib.request
-        import urllib.parse
+        import urllib.error
 
         # 生成唯一的缓存文件名
         cache_id = f"thought_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
 
         # 调用 llama-server 的 slot save API
-        url = f"{LLAMA_SERVER_BASE_URL}/slots/{slot_id}?action=save&filename={cache_id}"
+        # Note: llama.cpp expects JSON body with { filename }, not a query param.
+        url = f"{LLAMA_SERVER_BASE_URL}/slots/{slot_id}?action=save"
+        payload = json.dumps({"filename": cache_id}).encode("utf-8")
 
-        req = urllib.request.Request(url, method="POST")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(req, timeout=30) as resp:
             if resp.status == 200:
                 logger.debug(f"KV Cache: saved slot {slot_id} to {cache_id}")
                 return cache_id
 
+    except urllib.error.HTTPError as e:
+        # Disable permanently for this process when server doesn't support slot persistence.
+        if e.code in (404, 501):
+            KV_CACHE_ENABLED = False
+            logger.info(f"KV Cache save 不支持 (HTTP {e.code})，已自动禁用 KV_CACHE_ENABLED")
+        else:
+            logger.warning(f"KV Cache save HTTP error {e.code}: {e.reason}")
     except urllib.error.URLError as e:
         logger.warning(f"KV Cache save network error: {e}")
-    except urllib.error.HTTPError as e:
-        logger.warning(f"KV Cache save HTTP error {e.code}: {e.reason}")
     except TimeoutError:
         logger.warning("KV Cache save timeout")
 
@@ -1277,11 +1298,13 @@ def restore_kv_cache(cache_id: str, slot_id: int = 0) -> bool:
     Returns:
         是否恢复成功
     """
+    global KV_CACHE_ENABLED
     if not KV_CACHE_ENABLED or not cache_id:
         return False
 
     try:
         import urllib.request
+        import urllib.error
 
         # 检查缓存文件是否存在
         cache_file = KV_CACHE_DIR / f"{cache_id}.bin"
@@ -1290,18 +1313,28 @@ def restore_kv_cache(cache_id: str, slot_id: int = 0) -> bool:
             return False
 
         # 调用 llama-server 的 slot restore API
-        url = f"{LLAMA_SERVER_BASE_URL}/slots/{slot_id}?action=restore&filename={cache_id}"
+        url = f"{LLAMA_SERVER_BASE_URL}/slots/{slot_id}?action=restore"
+        payload = json.dumps({"filename": cache_id}).encode("utf-8")
 
-        req = urllib.request.Request(url, method="POST")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            method="POST",
+            headers={"Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(req, timeout=30) as resp:
             if resp.status == 200:
                 logger.debug(f"KV Cache: restored slot {slot_id} from {cache_id}")
                 return True
 
+    except urllib.error.HTTPError as e:
+        if e.code in (404, 501):
+            KV_CACHE_ENABLED = False
+            logger.info(f"KV Cache restore 不支持 (HTTP {e.code})，已自动禁用 KV_CACHE_ENABLED")
+        else:
+            logger.warning(f"KV Cache restore HTTP error {e.code}: {e.reason}")
     except urllib.error.URLError as e:
         logger.warning(f"KV Cache restore network error: {e}")
-    except urllib.error.HTTPError as e:
-        logger.warning(f"KV Cache restore HTTP error {e.code}: {e.reason}")
     except TimeoutError:
         logger.warning("KV Cache restore timeout")
 
