@@ -39,6 +39,9 @@ SANDBOX_URL="$BASE_URL/sandbox.tar.gz"
 # Note: today we ship macOS arm64 only; keep URLs overridable for local testing.
 OPENCLAW_BUNDLE_URL_MACOS="${OPENCLAW_BUNDLE_URL_MACOS:-$BASE_URL/bin/openclaw-macos-arm64.tar.gz}"
 
+# Whisper.cpp (offline STT) bundle (macOS arm64).
+WHISPER_BUNDLE_URL_MACOS="${WHISPER_BUNDLE_URL_MACOS:-$BASE_URL/bin/whisper-cli-macos-arm64.tar.gz}"
+
 # Optional Node runtime (used when system Node is missing).
 NODE_VERSION_DEFAULT="${NODE_VERSION_DEFAULT:-22.20.0}"
 NODE_TARBALL_URL_MACOS="${NODE_TARBALL_URL_MACOS:-$BASE_URL/bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz}"
@@ -49,12 +52,14 @@ MODELS_BASE="$BASE_URL/models"
 MODEL_URL="$MODELS_BASE/gemma-3n-E2B-it-Q4_K_M.gguf"
 VISION_URL="$MODELS_BASE/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO_URL="$MODELS_BASE/gemma-3n-audio-mmproj-f16.gguf"
+WHISPER_URL="$MODELS_BASE/whisper/ggml-small.bin"
 
 # HuggingFace 备用地址
 HF_BASE="https://huggingface.co/nicepkg/gemma-3n-gguf/resolve/main"
 MODEL_URL_HF="$HF_BASE/gemma-3n-E2B-it-Q4_K_M.gguf"
 VISION_URL_HF="$HF_BASE/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO_URL_HF="$HF_BASE/gemma-3n-audio-mmproj-f16.gguf"
+WHISPER_URL_HF="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin"
 
 # Python 依赖
 PYTHON_DEPS="flask flask-cors pillow psutil librosa soundfile requests"
@@ -153,7 +158,7 @@ detect_docker() {
 # 创建目录
 create_directories() {
     log_step "创建安装目录..."
-    mkdir -p "$BIN_DIR" "$LIB_DIR" "$MODELS_DIR" "$SANDBOX_DIR" "$LINGKONG_HOME/apps" "$LINGKONG_HOME/logs" "$LINGKONG_HOME/run" "$OPENCLAW_APP_DIR" "$OPENCLAW_STATE_ROOT"
+    mkdir -p "$BIN_DIR" "$LIB_DIR" "$MODELS_DIR" "$MODELS_DIR/whisper" "$SANDBOX_DIR" "$LINGKONG_HOME/apps" "$LINGKONG_HOME/logs" "$LINGKONG_HOME/run" "$OPENCLAW_APP_DIR" "$OPENCLAW_STATE_ROOT"
     log_success "目录创建完成: $LINGKONG_HOME"
 }
 
@@ -437,6 +442,68 @@ download_openclaw() {
     log_success "OpenClaw 安装完成: $OPENCLAW_APP_DIR"
 }
 
+# 下载 whisper.cpp CLI (whisper-cli) - 用于离线语音转写 (STT)
+download_whisper_cli() {
+    if [[ "$PLATFORM" != "macos-arm64" ]]; then
+        # 目前发行目标只覆盖 macOS arm64
+        return 0
+    fi
+
+    # 已安装则跳过
+    if [[ -x "$BIN_DIR/whisper-cli" ]]; then
+        log_info "whisper-cli 已存在，跳过: $BIN_DIR/whisper-cli"
+        return 0
+    fi
+
+    log_step "安装 whisper-cli (离线 STT)..."
+
+    local bundle_url="${WHISPER_BUNDLE_URL:-$WHISPER_BUNDLE_URL_MACOS}"
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    local tar_path="$tmp_dir/whisper-cli.tar.gz"
+    local extract_dir="$tmp_dir/extract"
+    mkdir -p "$extract_dir"
+
+    log_info "下载: $bundle_url"
+    if curl -fL --progress-bar "$bundle_url" -o "$tar_path" 2>/dev/null; then
+        log_info "解压 whisper-cli..."
+        tar -xzf "$tar_path" -C "$extract_dir"
+
+        local candidate=""
+        if [[ -x "$extract_dir/whisper-cli" ]]; then
+            candidate="$extract_dir/whisper-cli"
+        elif [[ -x "$extract_dir/bin/whisper-cli" ]]; then
+            candidate="$extract_dir/bin/whisper-cli"
+        fi
+
+        if [[ -n "$candidate" ]]; then
+            cp "$candidate" "$BIN_DIR/whisper-cli"
+            chmod +x "$BIN_DIR/whisper-cli"
+            rm -rf "$tmp_dir"
+            log_success "whisper-cli 安装完成: $BIN_DIR/whisper-cli"
+            return 0
+        fi
+        log_warn "whisper-cli bundle 格式不符合预期，尝试系统 whisper-cli 作为兜底"
+    else
+        log_warn "whisper-cli bundle 下载失败，尝试系统 whisper-cli 作为兜底"
+    fi
+
+    # Fallback: copy system whisper-cli if present (Homebrew, etc.)
+    local sys_bin
+    sys_bin="$(command -v whisper-cli || true)"
+    if [[ -n "$sys_bin" && -x "$sys_bin" ]]; then
+        cp "$sys_bin" "$BIN_DIR/whisper-cli"
+        chmod +x "$BIN_DIR/whisper-cli"
+        rm -rf "$tmp_dir"
+        log_success "已使用系统 whisper-cli: $sys_bin"
+        return 0
+    fi
+
+    rm -rf "$tmp_dir"
+    log_warn "未能安装 whisper-cli：语音消息将无法离线转写 (可稍后重新运行 installer)"
+    return 1
+}
+
 # 写入 OpenClaw 离线默认配置 (不覆盖用户已有配置)
 write_openclaw_config() {
     local state_dir="$OPENCLAW_STATE_ROOT"
@@ -498,7 +565,7 @@ write_openclaw_config() {
             id: "gemini-3-pro-preview",
             name: "LingKong (Gemma 3n) via local Gemini API",
             reasoning: false,
-            input: ["text", "audio"],
+            input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 32768,
             maxTokens: 8192,
@@ -525,7 +592,7 @@ write_openclaw_config() {
     media: {
       image: { enabled: false },
       video: { enabled: false },
-      audio: { enabled: true, models: [{ provider: "google" }] },
+      audio: { enabled: true },
     },
     links: { enabled: false },
     agentToAgent: { enabled: true },
@@ -651,6 +718,14 @@ download_models() {
         "$AUDIO_URL_HF" \
         "音频模型 (1.3GB)" \
         1395864576
+
+    # 离线语音转写 (STT) 模型 - Whisper small ~465MB
+    download_file \
+        "$MODELS_DIR/whisper/ggml-small.bin" \
+        "$WHISPER_URL" \
+        "$WHISPER_URL_HF" \
+        "语音转写模型 (Whisper small ~465MB)" \
+        487601967
 }
 
 # 创建原生启动脚本
@@ -1273,6 +1348,7 @@ export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
 export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+export WHISPER_CPP_MODEL="${WHISPER_CPP_MODEL:-$LINGKONG_HOME/models/whisper/ggml-small.bin}"
 export PATH="$LINGKONG_HOME/bin:${PATH:-}"
 
 if [[ ! -f "$OPENCLAW_APP_DIR/openclaw.mjs" ]]; then
@@ -1610,6 +1686,7 @@ main() {
         install_native_binaries
         download_webui
         download_openclaw
+        download_whisper_cli || true
         install_node_runtime || true
         write_openclaw_config
         detect_python || install_python

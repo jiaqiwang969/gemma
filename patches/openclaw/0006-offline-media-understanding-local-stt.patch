@@ -1,0 +1,133 @@
+diff --git a/src/media-understanding/runner.ts b/src/media-understanding/runner.ts
+index 6bbcf304b..c874bd6d8 100644
+--- a/src/media-understanding/runner.ts
++++ b/src/media-understanding/runner.ts
+@@ -24,6 +24,7 @@ import {
+ } from "../agents/model-catalog.js";
+ import { applyTemplate } from "../auto-reply/templating.js";
+ import { logVerbose, shouldLogVerbose } from "../globals.js";
++import { isOfflineMode } from "../infra/offline.js";
+ import { runExec } from "../process/exec.js";
+ import { MediaAttachmentCache, normalizeAttachments, selectAttachments } from "./attachments.js";
+ import {
+@@ -486,6 +487,19 @@ async function resolveAutoEntries(params: {
+   capability: MediaUnderstandingCapability;
+   activeModel?: ActiveMediaModel;
+ }): Promise<MediaUnderstandingModelConfig[]> {
++  const offline = isOfflineMode();
++  if (offline) {
++    // Offline mode is a hard safety switch: don't auto-pick any remote providers/CLIs.
++    // For audio, still allow truly-local STT (sherpa/whisper-cpp) if installed.
++    if (params.capability === "audio") {
++      const localAudio = await resolveLocalAudioEntry();
++      if (localAudio) {
++        return [localAudio];
++      }
++    }
++    return [];
++  }
++
+   const activeEntry = await resolveActiveModelEntry(params);
+   if (activeEntry) {
+     return [activeEntry];
+diff --git a/test/media-understanding.auto.e2e.test.ts b/test/media-understanding.auto.e2e.test.ts
+index 98e2c88c5..cde2deb63 100644
+--- a/test/media-understanding.auto.e2e.test.ts
++++ b/test/media-understanding.auto.e2e.test.ts
+@@ -27,12 +27,14 @@ const loadApply = async () => {
+ 
+ const envSnapshot = () => ({
+   PATH: process.env.PATH,
++  OPENCLAW_OFFLINE: process.env.OPENCLAW_OFFLINE,
+   SHERPA_ONNX_MODEL_DIR: process.env.SHERPA_ONNX_MODEL_DIR,
+   WHISPER_CPP_MODEL: process.env.WHISPER_CPP_MODEL,
+ });
+ 
+ const restoreEnv = (snapshot: ReturnType<typeof envSnapshot>) => {
+   process.env.PATH = snapshot.PATH;
++  process.env.OPENCLAW_OFFLINE = snapshot.OPENCLAW_OFFLINE;
+   process.env.SHERPA_ONNX_MODEL_DIR = snapshot.SHERPA_ONNX_MODEL_DIR;
+   process.env.WHISPER_CPP_MODEL = snapshot.WHISPER_CPP_MODEL;
+ };
+@@ -132,6 +134,81 @@ describe("media understanding auto-detect (e2e)", () => {
+     }
+   });
+ 
++  it("prefers whisper-cli over the active reply model for audio when offline", async () => {
++    const snapshot = envSnapshot();
++    try {
++      const binDir = await makeTempDir("openclaw-bin-whispercpp-active-");
++      const modelDir = await makeTempDir("openclaw-whispercpp-model-active-");
++      tempPaths.push(binDir, modelDir);
++
++      const modelPath = path.join(modelDir, "tiny.bin");
++      await fs.writeFile(modelPath, "model");
++
++      await writeExecutable(
++        binDir,
++        "whisper-cli",
++        "#!/usr/bin/env bash\n" +
++          'out=""\n' +
++          'prev=""\n' +
++          'for arg in "$@"; do\n' +
++          '  if [ "$prev" = "-of" ]; then out="$arg"; break; fi\n' +
++          '  prev="$arg"\n' +
++          "done\n" +
++          'if [ -n "$out" ]; then echo \'whisper cpp ok\' > "${out}.txt"; fi\n',
++      );
++
++      process.env.PATH = `${binDir}:/usr/bin:/bin`;
++      process.env.WHISPER_CPP_MODEL = modelPath;
++      process.env.OPENCLAW_OFFLINE = "1";
++
++      const { filePath } = await makeTempMedia(".wav");
++      tempPaths.push(path.dirname(filePath));
++
++      const { applyMediaUnderstanding } = await loadApply();
++      const ctx: MsgContext = {
++        Body: "<media:audio>",
++        MediaPath: filePath,
++        MediaType: "audio/wav",
++      };
++
++      // Simulate the real auto-reply flow: applyMediaUnderstanding is called with the active reply model.
++      // In offline mode we should prefer local STT and avoid remote/provider fallbacks.
++      const cfg: OpenClawConfig = {
++        tools: { media: { audio: { enabled: true } } },
++        models: {
++          providers: {
++            google: {
++              apiKey: "test-key",
++              baseUrl: "http://127.0.0.1:1/v1beta",
++              api: "google-generative-ai",
++              models: [
++                {
++                  id: "gemini-3-pro-preview",
++                  name: "test",
++                  reasoning: false,
++                  input: ["text", "audio"],
++                  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
++                  contextWindow: 1,
++                  maxTokens: 1,
++                },
++              ],
++            },
++          },
++        },
++      };
++
++      await applyMediaUnderstanding({
++        ctx,
++        cfg,
++        activeModel: { provider: "google", model: "gemini-3-pro-preview" },
++      });
++
++      expect(ctx.Transcript).toBe("whisper cpp ok");
++    } finally {
++      restoreEnv(snapshot);
++    }
++  });
++
+   it("uses gemini CLI for images when available", async () => {
+     const snapshot = envSnapshot();
+     try {

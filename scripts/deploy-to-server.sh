@@ -18,6 +18,7 @@ MODELS_DIR="$HOME/.lingkong/models"
 
 DEPLOY_MODELS="${1:-}"
 DEPLOY_OPENCLAW="${DEPLOY_OPENCLAW:-1}"  # set to 0 to skip OpenClaw bundle upload
+DEPLOY_WHISPER="${DEPLOY_WHISPER:-1}"   # set to 0 to skip whisper-cli bundle upload
 
 echo "🐉 灵空 AI - 部署更新到服务器"
 echo ""
@@ -34,6 +35,7 @@ ensure_known_host() {
 
 # Build OpenClaw bundle locally (macOS arm64) so the website installer can fetch it.
 OPENCLAW_STABLE_TARBALL="/tmp/openclaw-macos-arm64.tar.gz"
+WHISPER_STABLE_TARBALL="/tmp/whisper-cli-macos-arm64.tar.gz"
 NODE_VERSION_DEFAULT="${NODE_VERSION_DEFAULT:-22.20.0}"
 NODE_STABLE_TARBALL="/tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz"
 
@@ -61,6 +63,32 @@ maybe_build_openclaw_bundle() {
     fi
     cp "$latest" "$OPENCLAW_STABLE_TARBALL"
     echo "✓ OpenClaw bundle 已构建: $OPENCLAW_STABLE_TARBALL ($(du -h "$OPENCLAW_STABLE_TARBALL" | cut -f1))"
+}
+
+maybe_build_whisper_bundle() {
+    if [[ "$DEPLOY_WHISPER" != "1" ]]; then
+        echo "▶ 跳过 whisper-cli bundle (DEPLOY_WHISPER=0)"
+        return 0
+    fi
+
+    local platform
+    platform="$(uname -s)-$(uname -m)"
+    if [[ "$platform" != "Darwin-arm64" ]]; then
+        echo "⚠ whisper-cli bundle 目前仅能在 macOS arm64 构建 (当前: $platform)，跳过"
+        return 0
+    fi
+
+    echo "▶ 构建 whisper-cli bundle..."
+    cd "$PROJECT_DIR"
+    ./scripts/build-whisper-cli-bundle.sh
+    local latest
+    latest="$(ls -t artifacts/bundles/whisper-cli-macos-arm64-*.tar.gz 2>/dev/null | head -1)"
+    if [[ -z "$latest" ]]; then
+        echo "⚠ 未找到 whisper-cli bundle 产物 (artifacts/bundles/whisper-cli-macos-arm64-*.tar.gz)，跳过"
+        return 0
+    fi
+    cp "$latest" "$WHISPER_STABLE_TARBALL"
+    echo "✓ whisper-cli bundle 已构建: $WHISPER_STABLE_TARBALL ($(du -h "$WHISPER_STABLE_TARBALL" | cut -f1))"
 }
 
 maybe_download_node_runtime() {
@@ -121,12 +149,19 @@ scp /tmp/gemini_api.tar.gz $SERVER:/tmp/gemini_api.tar.gz
 echo "✓ gemini_api.tar.gz 已上传"
 
 maybe_build_openclaw_bundle
+maybe_build_whisper_bundle
 maybe_download_node_runtime
 
 if [[ "$DEPLOY_OPENCLAW" == "1" && -f "$OPENCLAW_STABLE_TARBALL" ]]; then
   echo "▶ 上传 OpenClaw bundle..."
   scp "$OPENCLAW_STABLE_TARBALL" $SERVER:/tmp/openclaw-macos-arm64.tar.gz
   echo "✓ openclaw-macos-arm64.tar.gz 已上传"
+fi
+
+if [[ "$DEPLOY_WHISPER" == "1" && -f "$WHISPER_STABLE_TARBALL" ]]; then
+  echo "▶ 上传 whisper-cli bundle..."
+  scp "$WHISPER_STABLE_TARBALL" $SERVER:/tmp/whisper-cli-macos-arm64.tar.gz
+  echo "✓ whisper-cli-macos-arm64.tar.gz 已上传"
 fi
 
 if [[ "$DEPLOY_OPENCLAW" == "1" && -f "$NODE_STABLE_TARBALL" ]]; then
@@ -203,6 +238,7 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/bin $REMOTE_DIR/static/pitch $REMOTE_DIR/
     sudo mv /tmp/webui.tar.gz $REMOTE_DIR/webui.tar.gz && \
     sudo mv /tmp/gemini_api.tar.gz $REMOTE_DIR/gemini_api.tar.gz && \
     (test -f /tmp/openclaw-macos-arm64.tar.gz && sudo mv /tmp/openclaw-macos-arm64.tar.gz $REMOTE_DIR/bin/openclaw-macos-arm64.tar.gz || true) && \
+    (test -f /tmp/whisper-cli-macos-arm64.tar.gz && sudo mv /tmp/whisper-cli-macos-arm64.tar.gz $REMOTE_DIR/bin/whisper-cli-macos-arm64.tar.gz || true) && \
     (test -f /tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz && sudo mv /tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz $REMOTE_DIR/bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz || true) && \
     sudo mv /tmp/home.html $REMOTE_DIR/static/home.html && \
     sudo mv /tmp/index.html $REMOTE_DIR/static/index.html 2>/dev/null || true && \
@@ -267,7 +303,7 @@ rm -f /tmp/webui.tar.gz /tmp/gemini_api.tar.gz
 
 # 生成校验和文件 (用于客户端检测更新)
 echo "▶ 生成校验和文件..."
-ssh $SERVER "cd $REMOTE_DIR && sha256sum install.sh webui.tar.gz gemini_api.tar.gz bin/llama-lingkong-macos-arm64.tar.gz bin/openclaw-macos-arm64.tar.gz bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz 2>/dev/null | sudo tee checksums.sha256 > /dev/null && sudo chmod 644 checksums.sha256"
+ssh $SERVER "cd $REMOTE_DIR && sha256sum install.sh webui.tar.gz gemini_api.tar.gz bin/llama-lingkong-macos-arm64.tar.gz bin/openclaw-macos-arm64.tar.gz bin/whisper-cli-macos-arm64.tar.gz bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz 2>/dev/null | sudo tee checksums.sha256 > /dev/null && sudo chmod 644 checksums.sha256"
 echo "✓ checksums.sha256 已生成"
 
 # 上传模型文件 (可选)
@@ -277,7 +313,7 @@ if [[ "$DEPLOY_MODELS" == "models" ]]; then
     echo "  上传模型文件到服务器 (4.5GB，需要较长时间)"
     echo "════════════════════════════════════════════════════════════"
 
-    ssh $SERVER "sudo mkdir -p $REMOTE_DIR/models && sudo chown ubuntu:ubuntu $REMOTE_DIR/models"
+    ssh $SERVER "sudo mkdir -p $REMOTE_DIR/models $REMOTE_DIR/models/whisper && sudo chown -R ubuntu:ubuntu $REMOTE_DIR/models"
 
     for model in gemma-3n-E2B-it-Q4_K_M.gguf gemma-3n-vision-mmproj-f16.gguf gemma-3n-audio-mmproj-f16.gguf; do
         if [[ -f "$MODELS_DIR/$model" ]]; then
@@ -290,6 +326,17 @@ if [[ "$DEPLOY_MODELS" == "models" ]]; then
             echo "⚠ $MODELS_DIR/$model 不存在，跳过"
         fi
     done
+
+    # Whisper STT model (optional, ~465MB)
+    if [[ -f "$MODELS_DIR/whisper/ggml-small.bin" ]]; then
+        size=$(du -h "$MODELS_DIR/whisper/ggml-small.bin" | cut -f1)
+        echo "▶ 上传 whisper/ggml-small.bin ($size)..."
+        scp "$MODELS_DIR/whisper/ggml-small.bin" "$SERVER:/tmp/ggml-small.bin"
+        ssh $SERVER "sudo mv /tmp/ggml-small.bin $REMOTE_DIR/models/whisper/ggml-small.bin && sudo chmod 644 $REMOTE_DIR/models/whisper/ggml-small.bin"
+        echo "✓ whisper/ggml-small.bin 已上传"
+    else
+        echo "⚠ $MODELS_DIR/whisper/ggml-small.bin 不存在，跳过"
+    fi
 
     echo ""
     echo "✓ 模型文件上传完成"
