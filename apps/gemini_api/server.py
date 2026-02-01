@@ -122,6 +122,25 @@ _rate_limit_cache: Dict[str, List[float]] = {}
 _rate_limit_lock = threading.Lock()
 
 
+def _is_truthy_env(value: Optional[str]) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def is_offline_mode() -> bool:
+    """
+    Runtime safety switch: for local-only deployments we should avoid any non-local
+    outbound network access. (WhatsApp transport is handled by OpenClaw, not here.)
+    """
+    return (
+        _is_truthy_env(os.environ.get("LINGKONG_OFFLINE"))
+        or _is_truthy_env(os.environ.get("OPENCLAW_OFFLINE"))
+        or _is_truthy_env(os.environ.get("CLAWDBOT_OFFLINE"))
+        or _is_truthy_env(os.environ.get("MOLTBOT_OFFLINE"))
+    )
+
+
 def check_rate_limit(client_ip: str) -> bool:
     """
     检查请求是否超过速率限制
@@ -1766,10 +1785,14 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
             elif isinstance(part, dict):
                 if "text" in part:
                     text_parts.append(part["text"])
-                elif "inlineData" in part:
+                elif "inlineData" in part or "inline_data" in part:
                     # 内联媒体数据 (Gemini API 格式)
-                    inline = part["inlineData"]
-                    mime_type = inline.get("mimeType", "image/jpeg")
+                    #
+                    # 兼容两种字段风格:
+                    # - 官方: inlineData { mimeType, data }
+                    # - 部分客户端: inline_data { mime_type, data }
+                    inline = part.get("inlineData") or part.get("inline_data") or {}
+                    mime_type = inline.get("mimeType") or inline.get("mime_type") or "image/jpeg"
                     data = inline.get("data", "")
 
                     if mime_type in SUPPORTED_MEDIA_TYPES and data:
@@ -1792,6 +1815,9 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
                         logger.warning(f"不支持的媒体类型: {mime_type}")
                 elif "fileData" in part:
                     # 文件引用 (需要下载)
+                    if is_offline_mode():
+                        logger.warning("离线模式: 禁止通过 fileData 下载外部媒体")
+                        continue
                     file_data = part["fileData"]
                     file_uri = file_data.get("fileUri", "")
                     mime_type = file_data.get("mimeType", "image/jpeg")
