@@ -30,8 +30,23 @@ if [[ -d "$PATCH_DIR" ]]; then
       echo "- $(basename "$p")"
     done
     echo
-    echo "Running: git apply --check (in patch order)"
-    git -C "$OPENCLAW_DIR" apply --check "${patches[@]}"
+    echo "Running: patch apply check (sequential, in a clean worktree)"
+
+    tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-patch-check.XXXXXX")"
+    worktree_dir="$tmp_root/openclaw-src"
+
+    cleanup() {
+      set +e
+      git -C "$OPENCLAW_DIR" worktree remove --force "$worktree_dir" >/dev/null 2>&1 || true
+      rm -rf "$tmp_root" >/dev/null 2>&1 || true
+    }
+    trap cleanup EXIT
+
+    git -C "$OPENCLAW_DIR" worktree add --detach "$worktree_dir" HEAD >/dev/null
+    for p in "${patches[@]}"; do
+      git -C "$worktree_dir" apply --whitespace=nowarn --check "$p"
+      git -C "$worktree_dir" apply --whitespace=nowarn "$p"
+    done
     echo "OK: all patches apply cleanly (as a series)."
   fi
   echo
