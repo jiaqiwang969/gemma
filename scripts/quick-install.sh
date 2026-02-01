@@ -1164,6 +1164,57 @@ show_status() {
         echo -e "  OpenClaw:   ${RED}○ 已停止${NC}"
     fi
 
+    # WhatsApp link status (best-effort; requires OpenClaw gateway to be reachable).
+    if [[ -x "$LINGKONG_HOME/bin/openclaw" ]]; then
+        local wa_json
+        wa_json="$("$LINGKONG_HOME/bin/openclaw" channels status --probe --timeout 5000 --json 2>/dev/null || true)"
+        if [[ -n "$wa_json" ]] && command -v python3 >/dev/null 2>&1; then
+            local wa_line
+            wa_line="$(WA_JSON="$wa_json" python3 - <<'PY'
+import json
+import os
+import sys
+
+raw = os.environ.get("WA_JSON", "")
+try:
+    data = json.loads(raw)
+except Exception:
+    sys.exit(1)
+
+wa = (data.get("channels") or {}).get("whatsapp") or {}
+linked = bool(wa.get("linked"))
+connected = bool(wa.get("connected"))
+running = bool(wa.get("running"))
+self_id = wa.get("self") or {}
+who = self_id.get("e164") or self_id.get("jid") or ""
+last = wa.get("lastError") or ""
+
+status = "not linked"
+if linked and connected:
+    status = "connected"
+elif linked and running:
+    status = "linked"
+elif linked:
+    status = "linked (not running)"
+
+suffix = f" ({who})" if who else ""
+if not linked:
+    print(f"○ 未绑定（运行: lingkong agent login）")
+elif status == "connected":
+    print(f"● 已连接{suffix}")
+else:
+    extra = f" ({last})" if last else ""
+    print(f"○ 已绑定但未连接{suffix}{extra}")
+PY
+            )" || true
+            if [[ -n "$wa_line" ]]; then
+                echo -e "  WhatsApp:   $wa_line"
+            fi
+        elif [[ -n "$wa_json" ]]; then
+            echo -e "  WhatsApp:   (运行: lingkong agent login)"
+        fi
+    fi
+
     echo ""
     echo -e "  ${CYAN}WebUI:${NC}      http://localhost:$WEBUI_PORT"
     echo -e "  ${CYAN}Playground:${NC} http://localhost:$WEBUI_PORT/static/playground.html"
