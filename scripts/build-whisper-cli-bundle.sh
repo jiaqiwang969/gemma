@@ -67,10 +67,11 @@ trap cleanup EXIT
 echo "Preparing clean whisper.cpp worktree..."
 git -C "$WHISPER_DIR" worktree add --detach "$worktree_dir" HEAD >/dev/null
 
-echo "Configuring (Release + Metal)..."
+echo "Configuring (Release + Metal, static binary)..."
 cmake -S "$worktree_dir" -B "$worktree_dir/build" \
   -DCMAKE_BUILD_TYPE=Release \
   -DWHISPER_BUILD_EXAMPLES=ON \
+  -DBUILD_SHARED_LIBS=OFF \
   -DGGML_METAL=ON \
   -DCMAKE_INSTALL_PREFIX="$install_dir"
 echo
