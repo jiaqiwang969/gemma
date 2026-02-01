@@ -3892,7 +3892,8 @@ if __name__ == "__main__":
         logger.info("  GET  /test/vision, POST /test/vision-base64")
     if AUDIO_ENABLED:
         logger.info("  POST /test/audio, GET /test/audio-status")
-    logger.info("启动服务器: http://localhost:5001")
+    api_port = int(os.environ.get("GEMINI_API_PORT", "5001"))
+    logger.info(f"启动服务器: http://localhost:{api_port}")
     logger.info("=" * 60)
 
-    app.run(host="0.0.0.0", port=5001, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=api_port, debug=False, threaded=True)
