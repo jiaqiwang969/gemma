@@ -1,0 +1,62 @@
+diff --git a/src/web/auto-reply/deliver-reply.ts b/src/web/auto-reply/deliver-reply.ts
+index 13bf1158d..0d44b6604 100644
+--- a/src/web/auto-reply/deliver-reply.ts
++++ b/src/web/auto-reply/deliver-reply.ts
+@@ -48,7 +48,7 @@ export async function deliverWebReply(params: {
+         lastErr = err;
+         const errText = formatError(err);
+         const isLast = attempt === maxAttempts;
+-        const shouldRetry = /closed|reset|timed\\s*out|disconnect/i.test(errText);
++        const shouldRetry = /closed|reset|timed\\s*out|timeout|disconnect/i.test(errText);
+         if (!shouldRetry || isLast) {
+           throw err;
+         }
+@@ -97,8 +97,11 @@ export async function deliverWebReply(params: {
+   // Media (with optional caption on first item)
+   for (const [index, mediaUrl] of mediaList.entries()) {
+     const caption = index === 0 ? remainingText.shift() || undefined : undefined;
++    // Used to avoid sending user-facing error noise for audio TTS failures (fallback to text-only).
++    let mediaKind: string | null = null;
+     try {
+       const media = await loadWebMedia(mediaUrl, maxMediaBytes);
++      mediaKind = media.kind;
+       if (shouldLogVerbose()) {
+         logVerbose(
+           `Web auto-reply media size: ${(media.buffer.length / (1024 * 1024)).toFixed(2)}MB`,
+@@ -131,6 +134,7 @@ export async function deliverWebReply(params: {
+               caption,
+             }),
+           "media:audio",
++          5,
+         );
+       } else if (media.kind === "video") {
+         await sendWithRetry(
+@@ -177,13 +181,21 @@ export async function deliverWebReply(params: {
+       whatsappOutboundLog.error(`Failed sending web media to ${msg.from}: ${formatError(err)}`);
+       replyLogger.warn({ err, mediaUrl }, "failed to send web media reply");
+       if (index === 0) {
+-        const warning =
+-          err instanceof Error ? `⚠️ Media failed: ${err.message}` : "⚠️ Media failed.";
+-        const fallbackTextParts = [remainingText.shift() ?? caption ?? "", warning].filter(Boolean);
+-        const fallbackText = fallbackTextParts.join("\n");
+-        if (fallbackText) {
+-          whatsappOutboundLog.warn(`Media skipped; sent text-only to ${msg.from}`);
+-          await msg.reply(fallbackText);
++        // For WhatsApp voice UX we want silent text fallback when TTS audio cannot be delivered
++        // (avoid leaking technical errors like "audio send timeout (25000ms)" to users).
++        if (mediaKind === "audio") {
++          if (caption) {
++            remainingText.unshift(caption);
++          }
++        } else {
++          const warning =
++            err instanceof Error ? `⚠️ Media failed: ${err.message}` : "⚠️ Media failed.";
++          const fallbackTextParts = [caption ?? remainingText.shift() ?? "", warning].filter(Boolean);
++          const fallbackText = fallbackTextParts.join("\n");
++          if (fallbackText) {
++            whatsappOutboundLog.warn(`Media skipped; sent text-only to ${msg.from}`);
++            await msg.reply(fallbackText);
++          }
+         }
+       }
+     }
