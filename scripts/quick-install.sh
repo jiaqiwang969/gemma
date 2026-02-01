@@ -998,6 +998,165 @@ show_status() {
     echo ""
 }
 
+# ================== macOS launchd (长期运行) ==================
+
+LAUNCHD_LABEL_GEMINI="ai.lingkong.gemini-api"
+LAUNCHD_LABEL_OPENCLAW="ai.lingkong.openclaw"
+
+service_install() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        echo "launchd 仅支持 macOS"
+        return 1
+    fi
+
+    local plist_dir="$HOME/Library/LaunchAgents"
+    mkdir -p "$plist_dir" "$LOG_DIR"
+
+    local python_bin="$LINGKONG_HOME/venv/bin/python"
+    if [[ ! -x "$python_bin" ]]; then
+        python_bin="$(command -v python3 || true)"
+    fi
+    if [[ -z "$python_bin" ]]; then
+        echo "未找到 python3（Gemini API 需要 Python 运行）"
+        return 1
+    fi
+
+    # Helper: wait for Gemini API before starting OpenClaw.
+    local openclaw_launchd="$LINGKONG_HOME/bin/openclaw-launchd"
+    cat >"$openclaw_launchd" <<'OPENCLAW_LAUNCHD_SCRIPT'
+#!/bin/bash
+set -e
+
+LINGKONG_HOME="${LINGKONG_HOME:-$HOME/.lingkong}"
+export PATH="$LINGKONG_HOME/bin:${PATH:-}"
+export OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-$LINGKONG_HOME/openclaw}"
+export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_STATE_DIR/openclaw.json}"
+export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
+export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+
+for i in {1..120}; do
+  if curl -s --connect-timeout 1 http://127.0.0.1:5001/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+exec "$LINGKONG_HOME/bin/openclaw" gateway run --force --allow-unconfigured
+OPENCLAW_LAUNCHD_SCRIPT
+    chmod +x "$openclaw_launchd"
+
+    local gemini_plist="$plist_dir/$LAUNCHD_LABEL_GEMINI.plist"
+    cat >"$gemini_plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>$LAUNCHD_LABEL_GEMINI</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>$python_bin</string>
+      <string>server.py</string>
+    </array>
+    <key>WorkingDirectory</key><string>$LINGKONG_HOME/apps/gemini_api</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>LINGKONG_OFFLINE</key><string>1</string>
+      <key>OPENCLAW_OFFLINE</key><string>1</string>
+      <key>GEMINI_API_PORT</key><string>5001</string>
+      <key>GEMINI_API_LLAMA_PORT</key><string>8090</string>
+      <key>LLAMA_SERVER_BIN</key><string>$LINGKONG_HOME/bin/llama-server</string>
+      <key>LLAMA_MTMD_BIN</key><string>$LINGKONG_HOME/bin/llama-mtmd-cli</string>
+      <key>LLAMA_MODEL</key><string>$MODEL</string>
+      <key>LLAMA_MODEL_AUDIO</key><string>$MODEL</string>
+      <key>LLAMA_MMPROJ_VISION</key><string>$VISION</string>
+      <key>LLAMA_MMPROJ_AUDIO</key><string>$AUDIO</string>
+      <key>DYLD_LIBRARY_PATH</key><string>$LINGKONG_HOME/lib</string>
+      <key>FFMPEG_BIN</key><string>$LINGKONG_HOME/bin/ffmpeg</string>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>5</integer>
+    <key>StandardOutPath</key><string>$LOG_DIR/gemini.launchd.log</string>
+    <key>StandardErrorPath</key><string>$LOG_DIR/gemini.launchd.err.log</string>
+  </dict>
+</plist>
+EOF
+
+    local openclaw_plist="$plist_dir/$LAUNCHD_LABEL_OPENCLAW.plist"
+    cat >"$openclaw_plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>$LAUNCHD_LABEL_OPENCLAW</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>$openclaw_launchd</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>5</integer>
+    <key>StandardOutPath</key><string>$LOG_DIR/openclaw.launchd.log</string>
+    <key>StandardErrorPath</key><string>$LOG_DIR/openclaw.launchd.err.log</string>
+  </dict>
+</plist>
+EOF
+
+    local domain="gui/$UID"
+    launchctl bootout "$domain" "$gemini_plist" 2>/dev/null || true
+    launchctl bootout "$domain" "$openclaw_plist" 2>/dev/null || true
+    launchctl bootstrap "$domain" "$gemini_plist"
+    launchctl bootstrap "$domain" "$openclaw_plist"
+    launchctl enable "$domain/$LAUNCHD_LABEL_GEMINI" 2>/dev/null || true
+    launchctl enable "$domain/$LAUNCHD_LABEL_OPENCLAW" 2>/dev/null || true
+    launchctl kickstart -k "$domain/$LAUNCHD_LABEL_GEMINI" 2>/dev/null || true
+    launchctl kickstart -k "$domain/$LAUNCHD_LABEL_OPENCLAW" 2>/dev/null || true
+
+    echo -e "${GREEN}[成功]${NC} launchd 已安装并启动:"
+    echo "  - $LAUNCHD_LABEL_GEMINI"
+    echo "  - $LAUNCHD_LABEL_OPENCLAW"
+}
+
+service_uninstall() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        echo "launchd 仅支持 macOS"
+        return 1
+    fi
+
+    local plist_dir="$HOME/Library/LaunchAgents"
+    local gemini_plist="$plist_dir/$LAUNCHD_LABEL_GEMINI.plist"
+    local openclaw_plist="$plist_dir/$LAUNCHD_LABEL_OPENCLAW.plist"
+    local domain="gui/$UID"
+
+    launchctl bootout "$domain" "$gemini_plist" 2>/dev/null || true
+    launchctl bootout "$domain" "$openclaw_plist" 2>/dev/null || true
+
+    rm -f "$gemini_plist" "$openclaw_plist" "$LINGKONG_HOME/bin/openclaw-launchd" 2>/dev/null || true
+
+    echo -e "${GREEN}[成功]${NC} launchd 已卸载"
+}
+
+service_status() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        echo "launchd 仅支持 macOS"
+        return 1
+    fi
+
+    local domain="gui/$UID"
+    for label in "$LAUNCHD_LABEL_GEMINI" "$LAUNCHD_LABEL_OPENCLAW"; do
+        if launchctl print "$domain/$label" >/dev/null 2>&1; then
+            echo -e "  ${GREEN}●${NC} $label"
+        else
+            echo -e "  ${RED}○${NC} $label"
+        fi
+    done
+
+    echo ""
+    echo "日志:"
+    echo "  $LOG_DIR/gemini.launchd.log"
+    echo "  $LOG_DIR/openclaw.launchd.log"
+}
+
 # 主函数
 case "${1:-start}" in
     start|up)
@@ -1066,12 +1225,29 @@ case "${1:-start}" in
                 ;;
         esac
         ;;
+    service)
+        shift || true
+        case "${1:-status}" in
+            install)
+                service_install
+                ;;
+            uninstall)
+                service_uninstall
+                ;;
+            status)
+                service_status
+                ;;
+            *)
+                echo "使用方法: lingkong service [install|uninstall|status]"
+                ;;
+        esac
+        ;;
     update|upgrade)
         echo -e "${CYAN}🔄 检查更新...${NC}"
         check_update
         ;;
     *)
-        echo "使用方法: lingkong [start|stop|restart|status|logs|update|agent]"
+        echo "使用方法: lingkong [start|stop|restart|status|logs|update|agent|service]"
         ;;
 esac
 SCRIPT
@@ -1091,6 +1267,7 @@ export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
 export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+export PATH="$LINGKONG_HOME/bin:${PATH:-}"
 
 if [[ ! -f "$OPENCLAW_APP_DIR/openclaw.mjs" ]]; then
   echo "[openclaw] missing runtime at: $OPENCLAW_APP_DIR/openclaw.mjs" >&2
