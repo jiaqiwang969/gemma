@@ -1,0 +1,49 @@
+diff --git a/src/media-understanding/runner.ts b/src/media-understanding/runner.ts
+index c874bd6d8..021fda3d9 100644
+--- a/src/media-understanding/runner.ts
++++ b/src/media-understanding/runner.ts
+@@ -292,15 +292,28 @@ async function resolveLocalWhisperCppEntry(): Promise<MediaUnderstandingModelCon
+     return null;
+   }
+   const envModel = process.env.WHISPER_CPP_MODEL?.trim();
++  const envLang = process.env.WHISPER_CPP_LANG?.trim();
++  const envThreads = process.env.WHISPER_CPP_THREADS?.trim();
+   const defaultModel = "/opt/homebrew/share/whisper-cpp/for-tests-ggml-tiny.bin";
+   const modelPath = envModel && (await fileExists(envModel)) ? envModel : defaultModel;
+   if (!(await fileExists(modelPath))) {
+     return null;
+   }
++  const lang = envLang && envLang.length > 0 ? envLang : "auto";
++  const threads =
++    envThreads && /^[0-9]+$/.test(envThreads) ? Math.max(1, parseInt(envThreads, 10)) : null;
++  const args = ["-m", modelPath, "-otxt", "-of", "{{OutputBase}}", "-np", "-nt"];
++  if (threads) {
++    args.push("-t", String(threads));
++  }
++  if (lang) {
++    args.push("-l", lang);
++  }
++  args.push("{{MediaPath}}");
+   return {
+     type: "cli",
+     command: "whisper-cli",
+-    args: ["-m", modelPath, "-otxt", "-of", "{{OutputBase}}", "-np", "-nt", "{{MediaPath}}"],
++    args,
+   };
+ }
+ 
+diff --git a/src/tts/tts.ts b/src/tts/tts.ts
+index 82c8b2698..87e06760a 100644
+--- a/src/tts/tts.ts
++++ b/src/tts/tts.ts
+@@ -1629,7 +1629,9 @@ export async function maybeApplyTtsToPayload(params: {
+   if (text.includes("MEDIA:")) {
+     return nextPayload;
+   }
+-  if (ttsText.trim().length < 10) {
++  // For inbound voice UX (and explicit [[tts]] directives), we still want short
++  // replies spoken (e.g. "OK", "Yes", "星期六").
++  if (ttsText.trim().length < 10 && !(autoMode === "inbound" || directives.hasDirective)) {
+     return nextPayload;
+   }
+ 
