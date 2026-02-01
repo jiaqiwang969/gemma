@@ -1021,6 +1021,12 @@ service_install() {
         return 1
     fi
 
+    local ffmpeg_bin
+    ffmpeg_bin="$(command -v ffmpeg 2>/dev/null || true)"
+    if [[ -z "$ffmpeg_bin" ]]; then
+        ffmpeg_bin="$LINGKONG_HOME/bin/ffmpeg"
+    fi
+
     # Helper: wait for Gemini API before starting OpenClaw.
     local openclaw_launchd="$LINGKONG_HOME/bin/openclaw-launchd"
     cat >"$openclaw_launchd" <<'OPENCLAW_LAUNCHD_SCRIPT'
@@ -1071,7 +1077,7 @@ OPENCLAW_LAUNCHD_SCRIPT
       <key>LLAMA_MMPROJ_VISION</key><string>$VISION</string>
       <key>LLAMA_MMPROJ_AUDIO</key><string>$AUDIO</string>
       <key>DYLD_LIBRARY_PATH</key><string>$LINGKONG_HOME/lib</string>
-      <key>FFMPEG_BIN</key><string>$LINGKONG_HOME/bin/ffmpeg</string>
+      <key>FFMPEG_BIN</key><string>$ffmpeg_bin</string>
     </dict>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
