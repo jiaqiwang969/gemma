@@ -132,6 +132,11 @@ if [[ -d "$worktree_dir/extensions" ]]; then
   # extensions folder. Without this, default configs may fail validation.
   copy_dir "$worktree_dir/extensions" "$stage_dir/openclaw/"
 fi
+if [[ -d "$worktree_dir/docs" ]]; then
+  # The gateway uses templates (AGENTS.md, HEARTBEAT.md, etc) when bootstrapping
+  # the agent workspace. Package docs/reference/templates to avoid runtime errors.
+  copy_dir "$worktree_dir/docs" "$stage_dir/openclaw/"
+fi
 if [[ -d "$worktree_dir/skills" ]]; then
   copy_dir "$worktree_dir/skills" "$stage_dir/openclaw/"
 fi
