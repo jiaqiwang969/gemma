@@ -33,8 +33,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.20.0'
-          cache: 'pnpm'
-          cache-dependency-path: infra/openclaw/pnpm-lock.yaml
 
       - name: Enable pnpm (corepack)
         run: |
