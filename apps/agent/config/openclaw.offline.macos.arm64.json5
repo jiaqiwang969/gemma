@@ -51,21 +51,43 @@
     profile: "full",
     deny: [
       "group:web",
-      "tts", // until we ship an offline TTS provider (macos-say)
       "browser",
     ],
     web: {
       search: { enabled: false },
       fetch: { enabled: false },
     },
+    // Media/link understanding runs automatically on inbound messages.
+    // In offline mode we must avoid auto-selecting remote providers:
+    // - enable audio transcription via local Gemini provider
+    // - disable image/video and link understanding by default
+    media: {
+      image: { enabled: false },
+      video: { enabled: false },
+      audio: {
+        enabled: true,
+        models: [{ provider: "google" }],
+      },
+    },
+    links: { enabled: false },
     agentToAgent: { enabled: true },
   },
 
   messages: {
     // Keep replies clean (no "[openclaw]" prefix).
     responsePrefix: "",
-    // Don't auto-tts until offline TTS is implemented.
-    tts: { auto: "off" },
+    // Voice UX: if the user sends a voice message, reply with voice by default.
+    // (Text messages still reply with text.)
+    tts: {
+      auto: "inbound",
+      provider: "macos-say",
+      macosSay: {
+        enabled: true,
+        // Optional: set a voice name (see: `say -v '?'`).
+        // voice: "Ting-Ting",
+        preferOpus: true,
+      },
+    },
   },
 
   // Minimal WhatsApp allowlist (edit during setup).
@@ -76,4 +98,3 @@
     },
   },
 }
-

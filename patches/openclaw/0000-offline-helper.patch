@@ -1,0 +1,137 @@
+diff --git a/src/infra/offline.ts b/src/infra/offline.ts
+new file mode 100644
+--- /dev/null
++++ b/src/infra/offline.ts
+@@ -0,0 +1,67 @@
++import { isTruthyEnvValue, logAcceptedEnvOption } from "./env.js";
++
++export type OfflineModeSource = "env";
++
++export type OfflineModeStatus = {
++  enabled: boolean;
++  source?: OfflineModeSource;
++};
++
++/**
++ * Offline mode is a hard safety switch intended for "local-only" deployments.
++ *
++ * When enabled, OpenClaw should avoid any non-WhatsApp outbound networking by:
++ * - disabling network-capable tools (web_search/web_fetch)
++ * - requiring local model endpoints (localhost/127.0.0.1/::1)
++ *
++ * NOTE: We intentionally keep this env-only (no config schema changes) so
++ * downstream distributors can turn it on without patching config validation.
++ */
++export function resolveOfflineMode(env: NodeJS.ProcessEnv = process.env): OfflineModeStatus {
++  const enabled =
++    isTruthyEnvValue(env.OPENCLAW_OFFLINE) ||
++    isTruthyEnvValue(env.CLAWDBOT_OFFLINE) ||
++    isTruthyEnvValue(env.MOLTBOT_OFFLINE) ||
++    isTruthyEnvValue(env.LINGKONG_OFFLINE);
++
++  if (enabled) {
++    logAcceptedEnvOption({
++      key: "OPENCLAW_OFFLINE",
++      description: "Force offline mode (disable web tools; require localhost model baseUrl).",
++      value: env.OPENCLAW_OFFLINE,
++    });
++  }
++
++  return enabled ? { enabled: true, source: "env" } : { enabled: false };
++}
++
++export function isOfflineMode(env: NodeJS.ProcessEnv = process.env): boolean {
++  return resolveOfflineMode(env).enabled;
++}
++
++export function isLoopbackHostname(hostname: string): boolean {
++  const h = hostname.trim().toLowerCase().replace(/\\.$/, "");
++  if (!h) {
++    return false;
++  }
++  if (h === "localhost") {
++    return true;
++  }
++  if (h === "127.0.0.1") {
++    return true;
++  }
++  if (h === "::1") {
++    return true;
++  }
++  // Do NOT treat 0.0.0.0 as loopback; it's a bind-all address and is not a safe client target.
++  return false;
++}
++
++export function isLocalhostUrl(raw: string): boolean {
++  const trimmed = raw.trim();
++  if (!trimmed) {
++    return false;
++  }
++  let url: URL;
++  try {
++    url = new URL(trimmed);
++  } catch {
++    return false;
++  }
++  if (url.protocol !== "http:" && url.protocol !== "https:") {
++    return false;
++  }
++  return isLoopbackHostname(url.hostname);
++}
++
+diff --git a/src/agents/pi-embedded-runner/run.offline-mode.test.ts b/src/agents/pi-embedded-runner/run.offline-mode.test.ts
+new file mode 100644
+--- /dev/null
++++ b/src/agents/pi-embedded-runner/run.offline-mode.test.ts
+@@ -0,0 +1,41 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++
++vi.mock("../models-config.js", () => ({
++  ensureOpenClawModelsJson: vi.fn(async () => ({ agentDir: "/tmp/openclaw-agent", wrote: false })),
++}));
++
++vi.mock("./model.js", () => ({
++  resolveModel: vi.fn(() => ({
++    model: {
++      id: "claude-opus-4-5",
++      name: "claude-opus-4-5",
++      provider: "anthropic",
++      api: "anthropic-messages",
++      // Missing baseUrl simulates the default remote endpoint (blocked in offline mode).
++      baseUrl: undefined,
++      reasoning: false,
++      input: ["text"],
++      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
++      contextWindow: 1,
++      maxTokens: 1,
++    },
++    authStorage: {},
++    modelRegistry: {},
++  })),
++}));
++
++import { runEmbeddedPiAgent } from "./run.js";
++
++describe("runEmbeddedPiAgent offline mode", () => {
++  afterEach(() => {
++    vi.unstubAllEnvs();
++  });
++
++  it("refuses non-local model endpoints when offline", async () => {
++    vi.stubEnv("OPENCLAW_OFFLINE", "1");
++
++    await expect(
++      runEmbeddedPiAgent({
++        sessionId: "probe-offline",
++        sessionFile: "/tmp/openclaw-session.jsonl",
++        workspaceDir: "/tmp",
++        prompt: "hello",
++        timeoutMs: 1000,
++        runId: "test",
++        // Bypass the command queue for unit tests.
++        enqueue: (task) => task(),
++      }),
++    ).rejects.toThrow(/Offline mode is enabled/);
++  });
++});
++

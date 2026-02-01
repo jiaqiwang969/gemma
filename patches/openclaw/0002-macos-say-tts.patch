@@ -1,0 +1,333 @@
+diff --git a/src/auto-reply/reply/commands-tts.ts b/src/auto-reply/reply/commands-tts.ts
+index b31c5d1d7..3681bb50c 100644
+--- a/src/auto-reply/reply/commands-tts.ts
++++ b/src/auto-reply/reply/commands-tts.ts
+@@ -54,6 +54,7 @@ function ttsUsage(): ReplyPayload {
+       `• /tts summary [on|off] — View/change auto-summary\n` +
+       `• /tts audio <text> — Generate audio from text\n\n` +
+       `**Providers:**\n` +
++      `• macos-say — Offline (macOS built-in)\n` +
+       `• edge — Free, fast (default)\n` +
+       `• openai — High quality (requires API key)\n` +
+       `• elevenlabs — Premium voices (requires API key)\n\n` +
+@@ -162,6 +163,7 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
+       const hasOpenAI = Boolean(resolveTtsApiKey(config, "openai"));
+       const hasElevenLabs = Boolean(resolveTtsApiKey(config, "elevenlabs"));
+       const hasEdge = isTtsProviderConfigured(config, "edge");
++      const hasMacosSay = isTtsProviderConfigured(config, "macos-say");
+       return {
+         shouldContinue: false,
+         reply: {
+@@ -171,13 +173,19 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
+             `OpenAI key: ${hasOpenAI ? "✅" : "❌"}\n` +
+             `ElevenLabs key: ${hasElevenLabs ? "✅" : "❌"}\n` +
+             `Edge enabled: ${hasEdge ? "✅" : "❌"}\n` +
+-            `Usage: /tts provider openai | elevenlabs | edge`,
++            `macos-say enabled: ${hasMacosSay ? "✅" : "❌"}\n` +
++            `Usage: /tts provider macos-say | openai | elevenlabs | edge`,
+         },
+       };
+     }
+ 
+     const requested = args.trim().toLowerCase();
+-    if (requested !== "openai" && requested !== "elevenlabs" && requested !== "edge") {
++    if (
++      requested !== "macos-say" &&
++      requested !== "openai" &&
++      requested !== "elevenlabs" &&
++      requested !== "edge"
++    ) {
+       return { shouldContinue: false, reply: ttsUsage() };
+     }
+ 
+diff --git a/src/config/types.tts.ts b/src/config/types.tts.ts
+index 4eb4989b9..578c1cf7d 100644
+--- a/src/config/types.tts.ts
++++ b/src/config/types.tts.ts
+@@ -1,4 +1,4 @@
+-export type TtsProvider = "elevenlabs" | "openai" | "edge";
++export type TtsProvider = "elevenlabs" | "openai" | "edge" | "macos-say";
+ 
+ export type TtsMode = "final" | "all";
+ 
+@@ -73,6 +73,17 @@ export type TtsConfig = {
+     proxy?: string;
+     timeoutMs?: number;
+   };
++  /** macOS offline TTS via the built-in `say` command. */
++  macosSay?: {
++    /** Enable macOS say provider (macOS only). */
++    enabled?: boolean;
++    /** Optional macOS voice name (see: `say -v '?'`). */
++    voice?: string;
++    /** Optional speech rate in words per minute (see: `say -r`). */
++    rate?: number;
++    /** Prefer Opus/OGG output when ffmpeg is available (default: true). */
++    preferOpus?: boolean;
++  };
+   /** Optional path for local TTS user preferences JSON. */
+   prefsPath?: string;
+   /** Hard cap for text sent to TTS (chars). */
+diff --git a/src/config/zod-schema.core.ts b/src/config/zod-schema.core.ts
+index 627a89873..e01cbbbc9 100644
+--- a/src/config/zod-schema.core.ts
++++ b/src/config/zod-schema.core.ts
+@@ -155,7 +155,7 @@ export const MarkdownConfigSchema = z
+   .strict()
+   .optional();
+ 
+-export const TtsProviderSchema = z.enum(["elevenlabs", "openai", "edge"]);
++export const TtsProviderSchema = z.enum(["elevenlabs", "openai", "edge", "macos-say"]);
+ export const TtsModeSchema = z.enum(["final", "all"]);
+ export const TtsAutoSchema = z.enum(["off", "always", "inbound", "tagged"]);
+ export const TtsConfigSchema = z
+@@ -223,6 +223,15 @@ export const TtsConfigSchema = z
+       })
+       .strict()
+       .optional(),
++    macosSay: z
++      .object({
++        enabled: z.boolean().optional(),
++        voice: z.string().optional(),
++        rate: z.number().int().min(1).max(1000).optional(),
++        preferOpus: z.boolean().optional(),
++      })
++      .strict()
++      .optional(),
+     prefsPath: z.string().optional(),
+     maxTextLength: z.number().int().min(1).optional(),
+     timeoutMs: z.number().int().min(1000).max(120000).optional(),
+diff --git a/src/tts/tts.ts b/src/tts/tts.ts
+index 0f47c02a9..82c8b2698 100644
+--- a/src/tts/tts.ts
++++ b/src/tts/tts.ts
+@@ -31,8 +31,10 @@ import {
+ } from "../agents/model-selection.js";
+ import { resolveModel } from "../agents/pi-embedded-runner/model.js";
+ import { normalizeChannelId } from "../channels/plugins/index.js";
++import { isOfflineMode } from "../infra/offline.js";
+ import { logVerbose } from "../globals.js";
+ import { isVoiceCompatibleAudio } from "../media/audio.js";
++import { runCommandWithTimeout } from "../process/exec.js";
+ import { CONFIG_DIR, resolveUserPath } from "../utils.js";
+ 
+ const DEFAULT_TIMEOUT_MS = 30_000;
+@@ -122,6 +124,12 @@ export type ResolvedTtsConfig = {
+     proxy?: string;
+     timeoutMs?: number;
+   };
++  macosSay: {
++    enabled: boolean;
++    voice?: string;
++    rate?: number;
++    preferOpus: boolean;
++  };
+   prefsPath?: string;
+   maxTextLength: number;
+   timeoutMs: number;
+@@ -250,6 +258,7 @@ export function resolveTtsConfig(cfg: OpenClawConfig): ResolvedTtsConfig {
+   const providerSource = raw.provider ? "config" : "default";
+   const edgeOutputFormat = raw.edge?.outputFormat?.trim();
+   const auto = normalizeTtsAutoMode(raw.auto) ?? (raw.enabled ? "always" : "off");
++  const isMacOS = process.platform === "darwin";
+   return {
+     auto,
+     mode: raw.mode ?? "final",
+@@ -296,6 +305,15 @@ export function resolveTtsConfig(cfg: OpenClawConfig): ResolvedTtsConfig {
+       proxy: raw.edge?.proxy?.trim() || undefined,
+       timeoutMs: raw.edge?.timeoutMs,
+     },
++    macosSay: {
++      enabled: raw.macosSay?.enabled ?? isMacOS,
++      voice: raw.macosSay?.voice?.trim() || undefined,
++      rate:
++        typeof raw.macosSay?.rate === "number" && Number.isFinite(raw.macosSay.rate)
++          ? raw.macosSay.rate
++          : undefined,
++      preferOpus: raw.macosSay?.preferOpus ?? true,
++    },
+     prefsPath: raw.prefsPath,
+     maxTextLength: raw.maxTextLength ?? DEFAULT_MAX_TEXT_LENGTH,
+     timeoutMs: raw.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+@@ -501,7 +519,7 @@ export function resolveTtsApiKey(
+   return undefined;
+ }
+ 
+-export const TTS_PROVIDERS = ["openai", "elevenlabs", "edge"] as const;
++export const TTS_PROVIDERS = ["openai", "elevenlabs", "edge", "macos-say"] as const;
+ 
+ export function resolveTtsProviderOrder(primary: TtsProvider): TtsProvider[] {
+   return [primary, ...TTS_PROVIDERS.filter((provider) => provider !== primary)];
+@@ -511,6 +529,9 @@ export function isTtsProviderConfigured(config: ResolvedTtsConfig, provider: Tts
+   if (provider === "edge") {
+     return config.edge.enabled;
+   }
++  if (provider === "macos-say") {
++    return process.platform === "darwin" && config.macosSay.enabled;
++  }
+   return Boolean(resolveTtsApiKey(config, provider));
+ }
+ 
+@@ -1158,6 +1179,98 @@ async function edgeTTS(params: {
+   await tts.ttsPromise(text, outputPath);
+ }
+ 
++function hasBinaryOnPath(bin: string): boolean {
++  const pathEnv = process.env.PATH ?? "";
++  const parts = pathEnv.split(path.delimiter).filter(Boolean);
++  for (const part of parts) {
++    try {
++      if (existsSync(path.join(part, bin))) {
++        return true;
++      }
++    } catch {
++      // ignore
++    }
++  }
++  return false;
++}
++
++async function macosSayTTS(params: {
++  text: string;
++  tempDir: string;
++  config: ResolvedTtsConfig["macosSay"];
++  timeoutMs: number;
++}): Promise<{ audioPath: string; outputFormat: string }> {
++  if (process.platform !== "darwin") {
++    throw new Error("macos-say is only supported on macOS");
++  }
++  if (!params.config.enabled) {
++    throw new Error("macos-say is disabled");
++  }
++  if (!existsSync("/usr/bin/say")) {
++    throw new Error("macos-say unavailable: missing /usr/bin/say");
++  }
++
++  const aiffPath = path.join(params.tempDir, `say-${Date.now()}.aiff`);
++  const sayArgs: string[] = [];
++  if (params.config.voice?.trim()) {
++    sayArgs.push("-v", params.config.voice.trim());
++  }
++  if (typeof params.config.rate === "number" && Number.isFinite(params.config.rate)) {
++    sayArgs.push("-r", String(Math.max(1, Math.floor(params.config.rate))));
++  }
++  sayArgs.push("-o", aiffPath, params.text);
++
++  const sayRes = await runCommandWithTimeout(["say", ...sayArgs], {
++    timeoutMs: params.timeoutMs,
++  });
++  if (sayRes.code !== 0) {
++    const detail = sayRes.stderr.trim() || sayRes.stdout.trim() || "unknown error";
++    throw new Error(`macos-say failed: ${detail}`);
++  }
++
++  if (params.config.preferOpus && hasBinaryOnPath("ffmpeg")) {
++    const oggPath = path.join(params.tempDir, `voice-${Date.now()}.ogg`);
++    const ffRes = await runCommandWithTimeout(
++      [
++        "ffmpeg",
++        "-hide_banner",
++        "-loglevel",
++        "error",
++        "-y",
++        "-i",
++        aiffPath,
++        "-ac",
++        "1",
++        "-c:a",
++        "libopus",
++        "-b:a",
++        "24k",
++        oggPath,
++      ],
++      { timeoutMs: params.timeoutMs },
++    );
++    if (ffRes.code === 0 && existsSync(oggPath)) {
++      return { audioPath: oggPath, outputFormat: "ogg-opus" };
++    }
++  }
++
++  if (!existsSync("/usr/bin/afconvert")) {
++    throw new Error("macos-say conversion failed and /usr/bin/afconvert is missing");
++  }
++
++  const m4aPath = path.join(params.tempDir, `voice-${Date.now()}.m4a`);
++  const afRes = await runCommandWithTimeout(
++    ["afconvert", "-f", "m4af", "-d", "aac", aiffPath, m4aPath],
++    { timeoutMs: params.timeoutMs },
++  );
++  if (afRes.code === 0 && existsSync(m4aPath)) {
++    return { audioPath: m4aPath, outputFormat: "m4a-aac" };
++  }
++
++  const detail = afRes.stderr.trim() || afRes.stdout.trim() || "unknown error";
++  throw new Error(`macos-say conversion failed: ${detail}`);
++}
++
+ export async function textToSpeech(params: {
+   text: string;
+   cfg: OpenClawConfig;
+@@ -1169,6 +1282,7 @@ export async function textToSpeech(params: {
+   const prefsPath = params.prefsPath ?? resolveTtsPrefsPath(config);
+   const channelId = resolveChannelId(params.channel);
+   const output = resolveOutputFormat(channelId);
++  const offline = isOfflineMode();
+ 
+   if (params.text.length > config.maxTextLength) {
+     return {
+@@ -1185,8 +1299,41 @@ export async function textToSpeech(params: {
+   let lastError: string | undefined;
+ 
+   for (const provider of providers) {
++    if (offline && provider !== "macos-say") {
++      lastError = `${provider}: blocked by offline mode`;
++      continue;
++    }
+     const providerStart = Date.now();
+     try {
++      if (provider === "macos-say") {
++        const tempDir = mkdtempSync(path.join(tmpdir(), "tts-"));
++        try {
++          const result = await macosSayTTS({
++            text: params.text,
++            tempDir,
++            config: config.macosSay,
++            timeoutMs: config.timeoutMs,
++          });
++          scheduleCleanup(tempDir);
++          const voiceCompatible = isVoiceCompatibleAudio({ fileName: result.audioPath });
++          return {
++            success: true,
++            audioPath: result.audioPath,
++            latencyMs: Date.now() - providerStart,
++            provider,
++            outputFormat: result.outputFormat,
++            voiceCompatible,
++          };
++        } catch (err) {
++          try {
++            rmSync(tempDir, { recursive: true, force: true });
++          } catch {
++            // ignore cleanup errors
++          }
++          throw err;
++        }
++      }
++
+       if (provider === "edge") {
+         if (!config.edge.enabled) {
+           lastError = "edge: disabled";
+@@ -1487,11 +1634,12 @@ export async function maybeApplyTtsToPayload(params: {
+   }
+ 
+   const maxLength = getTtsMaxLength(prefsPath);
++  const offline = isOfflineMode();
+   let textForAudio = ttsText.trim();
+   let wasSummarized = false;
+ 
+   if (textForAudio.length > maxLength) {
+-    if (!isSummarizationEnabled(prefsPath)) {
++    if (offline || !isSummarizationEnabled(prefsPath)) {
+       // Truncate text when summarization is disabled
+       logVerbose(
+         `TTS: truncating long text (${textForAudio.length} > ${maxLength}), summarization disabled.`,

@@ -27,10 +27,12 @@ if [[ -d "$PATCH_DIR" ]]; then
     echo "No patches found."
   else
     for p in "${patches[@]}"; do
-      echo "- git apply --check $(basename "$p")"
-      git -C "$OPENCLAW_DIR" apply --check "$p"
+      echo "- $(basename "$p")"
     done
-    echo "OK: all patches apply cleanly."
+    echo
+    echo "Running: git apply --check (in patch order)"
+    git -C "$OPENCLAW_DIR" apply --check "${patches[@]}"
+    echo "OK: all patches apply cleanly (as a series)."
   fi
   echo
 fi
