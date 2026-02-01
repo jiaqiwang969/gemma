@@ -1405,7 +1405,11 @@ case "${1:-start}" in
                 tail -f "$LOG_DIR/openclaw.log"
                 ;;
             login)
-                "$LINGKONG_HOME/bin/openclaw" channels login --channel whatsapp --verbose
+                if [[ -x "$LINGKONG_HOME/bin/lingkong-whatsapp-login" ]]; then
+                    "$LINGKONG_HOME/bin/lingkong-whatsapp-login"
+                else
+                    "$LINGKONG_HOME/bin/openclaw" channels login --channel whatsapp --verbose
+                fi
                 ;;
             *)
                 echo "使用方法: lingkong agent [start|stop|status|logs|login]"
@@ -1516,6 +1520,106 @@ exec "$NODE_BIN" "$OPENCLAW_APP_DIR/openclaw.mjs" "$@"
 SCRIPT
 
     chmod +x "$BIN_DIR/openclaw"
+
+    # WhatsApp login helper: generate a QR PNG via the local Gateway method (web.login.start),
+    # then wait for the scan (web.login.wait). Falls back to ASCII QR via `openclaw channels login`.
+    cat > "$BIN_DIR/lingkong-whatsapp-login" << 'SCRIPT'
+#!/bin/bash
+set -e
+
+LINGKONG_HOME="${LINGKONG_HOME:-$HOME/.lingkong}"
+export PATH="$LINGKONG_HOME/bin:${PATH:-}"
+
+# Ensure OpenClaw gateway is running (required for gateway call).
+if ! "$LINGKONG_HOME/bin/openclaw" gateway health --json >/dev/null 2>&1; then
+  if [[ -x "$LINGKONG_HOME/bin/lingkong" ]]; then
+    "$LINGKONG_HOME/bin/lingkong" agent start >/dev/null 2>&1 || true
+  fi
+fi
+
+python_bin=""
+if [[ -x "$LINGKONG_HOME/venv/bin/python" ]]; then
+  python_bin="$LINGKONG_HOME/venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  python_bin="python3"
+elif command -v python >/dev/null 2>&1; then
+  python_bin="python"
+fi
+
+tmp_dir="$LINGKONG_HOME/tmp"
+mkdir -p "$tmp_dir"
+qr_json="$tmp_dir/whatsapp-qr.json"
+qr_png="$tmp_dir/whatsapp-qr.png"
+wait_json="$tmp_dir/whatsapp-wait.json"
+
+if [[ -z "$python_bin" ]]; then
+  echo "[lingkong] python3 not found; falling back to terminal QR login." >&2
+  exec "$LINGKONG_HOME/bin/openclaw" channels login --channel whatsapp --verbose
+fi
+
+if ! "$LINGKONG_HOME/bin/openclaw" gateway call web.login.start --timeout 70000 --params "{\"timeoutMs\":60000,\"force\":true}" --json > "$qr_json" 2>/dev/null; then
+  echo "[lingkong] gateway QR login failed; falling back to terminal QR login." >&2
+  exec "$LINGKONG_HOME/bin/openclaw" channels login --channel whatsapp --verbose
+fi
+
+if ! QR_JSON="$qr_json" QR_PNG="$qr_png" "$python_bin" - <<'PY'
+import base64
+import json
+import os
+import pathlib
+import sys
+
+qr_json = os.environ["QR_JSON"]
+qr_png = os.environ["QR_PNG"]
+
+with open(qr_json, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+url = data.get("qrDataUrl")
+if not url and isinstance(data.get("result"), dict):
+    url = data["result"].get("qrDataUrl")
+
+prefix = "data:image/png;base64,"
+if not isinstance(url, str) or not url.startswith(prefix):
+    print("missing qrDataUrl in gateway response", file=sys.stderr)
+    sys.exit(2)
+
+payload = base64.b64decode(url[len(prefix) :])
+pathlib.Path(qr_png).write_bytes(payload)
+print(qr_png)
+PY
+then
+  echo "[lingkong] failed to write QR PNG; falling back to terminal QR login." >&2
+  exec "$LINGKONG_HOME/bin/openclaw" channels login --channel whatsapp --verbose
+fi
+
+echo ""
+echo "[lingkong] WhatsApp QR saved to: $qr_png"
+echo "[lingkong] Scan it in WhatsApp → Settings → Linked Devices."
+echo ""
+
+if [[ "$(uname)" == "Darwin" ]]; then
+  open "$qr_png" 2>/dev/null || true
+fi
+
+if "$LINGKONG_HOME/bin/openclaw" gateway call web.login.wait --timeout 130000 --params "{\"timeoutMs\":120000}" --json > "$wait_json" 2>/dev/null; then
+  WAIT_JSON="$wait_json" "$python_bin" - <<'PY'
+import json
+import os
+
+with open(os.environ["WAIT_JSON"], "r", encoding="utf-8") as f:
+    data = json.load(f)
+print(data.get("message", ""))
+PY
+else
+  echo "[lingkong] timed out waiting for scan. Re-run: lingkong agent login" >&2
+fi
+
+# Print a quick status hint (non-fatal).
+"$LINGKONG_HOME/bin/openclaw" channels status --probe >/dev/null 2>&1 || true
+SCRIPT
+
+    chmod +x "$BIN_DIR/lingkong-whatsapp-login"
 
     # Voice benchmark helper: local STT (whisper-cli) -> local Gemini -> local TTS (say)
     cat > "$BIN_DIR/lingkong-voice-bench" << 'SCRIPT'

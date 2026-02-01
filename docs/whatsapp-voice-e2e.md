@@ -28,10 +28,16 @@ curl -fsS http://127.0.0.1:5001/health >/dev/null && echo OK
 If WhatsApp is not linked, do:
 
 ```bash
-~/.lingkong/bin/openclaw channels login --verbose
+~/.lingkong/bin/lingkong agent login
 ```
 
-Scan the QR in WhatsApp: Settings -> Linked Devices -> Link a device.
+This will generate `~/.lingkong/tmp/whatsapp-qr.png` (and open it on macOS), then wait for the scan.
+
+Fallback (ASCII QR in terminal):
+
+```bash
+~/.lingkong/bin/openclaw channels login --verbose
+```
 
 3) Send a WhatsApp voice note to the bot.
 
@@ -65,4 +71,3 @@ tail -n 200 ~/.lingkong/logs/gemini.log
 tail -n 200 ~/.lingkong/logs/openclaw.log
 tail -n 200 /tmp/openclaw/openclaw-*.log
 ```
-
