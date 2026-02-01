@@ -19,10 +19,10 @@ voice note -> local STT -> local LLM -> local TTS -> WhatsApp voice reply.
 curl -fsS http://127.0.0.1:5001/health >/dev/null && echo OK
 ```
 
-2) Check OpenClaw gateway:
+2) Check WhatsApp channel status:
 
 ```bash
-~/.lingkong/bin/openclaw gateway health --json
+~/.lingkong/bin/openclaw channels status --probe --json
 ```
 
 If WhatsApp is not linked, do:
