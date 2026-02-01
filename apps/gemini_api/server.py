@@ -50,6 +50,7 @@ import uuid
 import base64
 import binascii
 import hashlib
+import shutil
 import subprocess
 import re
 import signal
@@ -1360,6 +1361,70 @@ def normalize_mime_type(mime_type: Optional[str]) -> str:
     return mime_type.split(";", 1)[0].strip().lower()
 
 
+def resolve_ffmpeg_bin() -> Optional[str]:
+    """Return an ffmpeg path if available (env override -> PATH -> ~/.lingkong/bin/ffmpeg)."""
+    env_bin = os.environ.get("FFMPEG_BIN")
+    if env_bin and Path(env_bin).exists():
+        return env_bin
+
+    on_path = shutil.which("ffmpeg")
+    if on_path and Path(on_path).exists():
+        return on_path
+
+    lingkong_ffmpeg = Path.home() / ".lingkong" / "bin" / "ffmpeg"
+    if lingkong_ffmpeg.exists():
+        return str(lingkong_ffmpeg)
+
+    return None
+
+
+def convert_audio_to_wav_16k_mono(*, input_path: str, output_path: str) -> tuple[bool, str]:
+    """
+    Convert an audio file to 16kHz mono WAV using ffmpeg.
+    Returns: (ok, error_message)
+    """
+    ffmpeg = resolve_ffmpeg_bin()
+    if not ffmpeg:
+        return False, "ffmpeg not found (set FFMPEG_BIN or install ffmpeg)"
+
+    try:
+        # Standardize to the format expected by llama-mtmd-cli audio ingestion.
+        # - mono
+        # - 16kHz
+        # - signed 16-bit PCM
+        res = subprocess.run(
+            [
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                input_path,
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-c:a",
+                "pcm_s16le",
+                output_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if res.returncode != 0:
+            msg = (res.stderr or res.stdout or "").strip() or f"ffmpeg exit {res.returncode}"
+            return False, msg
+        if not Path(output_path).exists():
+            return False, "ffmpeg reported success but output file is missing"
+        return True, ""
+    except subprocess.TimeoutExpired:
+        return False, "ffmpeg timed out"
+    except OSError as exc:
+        return False, str(exc)
+
+
 def extract_audio_from_media(media_data_list: List[str]) -> tuple:
     """
     从媒体数据列表中分离音频和图像
@@ -1411,14 +1476,12 @@ def save_audio_to_temp_file(audio_data_uri: str) -> Optional[str]:
     Returns:
         临时文件路径，失败返回 None
     """
-    import tempfile
-
     try:
         # 解析 data URI
         # 格式: data:audio/flac;base64,DATA
         header, b64_data = audio_data_uri.split(",", 1)
         mime_part = header.split(";")[0]  # "data:audio/flac"
-        mime_type = mime_part.replace("data:", "")  # "audio/flac"
+        mime_type = normalize_mime_type(mime_part.replace("data:", ""))  # "audio/flac"
 
         # 确定文件扩展名
         ext_map = {
@@ -1445,8 +1508,30 @@ def save_audio_to_temp_file(audio_data_uri: str) -> Optional[str]:
         with os.fdopen(fd, 'wb') as f:
             f.write(audio_bytes)
 
-        logger.debug(f"保存音频到: {temp_path} ({len(audio_bytes)} bytes)")
-        return temp_path
+        logger.debug(f"保存音频到: {temp_path} ({len(audio_bytes)} bytes, mime={mime_type})")
+
+        # llama-mtmd-cli audio decoding is limited; WhatsApp voice notes are commonly Opus/OGG.
+        # Convert everything non-WAV to a standardized 16k mono WAV.
+        if mime_type in {"audio/wav", "audio/wave", "audio/x-wav"}:
+            return temp_path
+
+        wav_path = str(Path(temp_path).with_suffix(".wav"))
+        ok, err = convert_audio_to_wav_16k_mono(input_path=temp_path, output_path=wav_path)
+        try:
+            Path(temp_path).unlink()
+        except OSError:
+            pass
+
+        if not ok:
+            logger.warning(f"音频转 WAV 失败 ({mime_type}): {err}")
+            try:
+                Path(wav_path).unlink()
+            except OSError:
+                pass
+            return None
+
+        logger.debug(f"音频已转为 WAV: {wav_path}")
+        return wav_path
 
     except (ValueError, binascii.Error) as e:
         logger.warning(f"保存音频 base64 解码失败: {e}")
