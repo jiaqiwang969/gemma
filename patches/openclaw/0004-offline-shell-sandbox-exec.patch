@@ -1,0 +1,73 @@
+diff --git a/src/agents/bash-tools.exec.ts b/src/agents/bash-tools.exec.ts
+index 2f8b026ac..0591ebb6d 100644
+--- a/src/agents/bash-tools.exec.ts
++++ b/src/agents/bash-tools.exec.ts
+@@ -2,6 +2,7 @@ import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
+ import type { ChildProcessWithoutNullStreams } from "node:child_process";
+ import { Type } from "@sinclair/typebox";
+ import crypto from "node:crypto";
++import fs from "node:fs";
+ import path from "node:path";
+ import type { BashSandboxConfig } from "./bash-tools.shared.js";
+ import {
+@@ -25,6 +26,7 @@ import {
+   getShellPathFromLoginShell,
+   resolveShellEnvFallbackTimeoutMs,
+ } from "../infra/shell-env.js";
++import { isOfflineMode } from "../infra/offline.js";
+ import { enqueueSystemEvent } from "../infra/system-events.js";
+ import { logInfo, logWarn } from "../logger.js";
+ import { formatSpawnError, spawnWithFallback } from "../process/spawn-utils.js";
+@@ -391,6 +393,15 @@ async function runExecProcess(opts: {
+   let pty: PtyHandle | null = null;
+   let stdin: SessionStdin | undefined;
+ 
++  // Offline policy: allow local execution but hard-block any outbound networking
++  // from shell commands. This complements disabling web tools + remote model
++  // providers. WhatsApp transport runs in the gateway process, not in shell.
++  const offline = isOfflineMode();
++  const sandboxExecPath = "/usr/bin/sandbox-exec";
++  const sandboxExecProfile = "(version 1)(allow default)(deny network*)";
++  const useSandboxExec =
++    offline && process.platform === "darwin" && !opts.sandbox && fs.existsSync(sandboxExecPath);
++
+   if (opts.sandbox) {
+     const { child: spawned } = await spawnWithFallback({
+       argv: [
+@@ -436,7 +447,13 @@ async function runExecProcess(opts: {
+       if (!spawnPty) {
+         throw new Error("PTY support is unavailable (node-pty spawn not found).");
+       }
+-      pty = spawnPty(shell, [...shellArgs, opts.command], {
++      let ptyFile = shell;
++      let ptyArgs = [...shellArgs, opts.command];
++      if (useSandboxExec) {
++        ptyFile = sandboxExecPath;
++        ptyArgs = ["-p", sandboxExecProfile, shell, ...shellArgs, opts.command];
++      }
++      pty = spawnPty(ptyFile, ptyArgs, {
+         cwd: opts.workdir,
+         env: opts.env,
+         name: process.env.TERM ?? "xterm-256color",
+@@ -468,7 +485,9 @@ async function runExecProcess(opts: {
+       logWarn(`exec: PTY spawn failed (${errText}); retrying without PTY for "${opts.command}".`);
+       opts.warnings.push(warning);
+       const { child: spawned } = await spawnWithFallback({
+-        argv: [shell, ...shellArgs, opts.command],
++        argv: useSandboxExec
++          ? [sandboxExecPath, "-p", sandboxExecProfile, shell, ...shellArgs, opts.command]
++          : [shell, ...shellArgs, opts.command],
+         options: {
+           cwd: opts.workdir,
+           env: opts.env,
+@@ -495,7 +514,9 @@ async function runExecProcess(opts: {
+   } else {
+     const { shell, args: shellArgs } = getShellConfig();
+     const { child: spawned } = await spawnWithFallback({
+-      argv: [shell, ...shellArgs, opts.command],
++      argv: useSandboxExec
++        ? [sandboxExecPath, "-p", sandboxExecProfile, shell, ...shellArgs, opts.command]
++        : [shell, ...shellArgs, opts.command],
+       options: {
+         cwd: opts.workdir,
+         env: opts.env,
