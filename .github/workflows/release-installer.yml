@@ -1,0 +1,55 @@
+name: Release Installer (lingkong.xyz)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.gitmodules'
+      - 'apps/gemini_api/**'
+      - 'apps/webui/**'
+      - 'infra/openclaw'
+      - 'infra/openclaw/**'
+      - 'patches/openclaw/**'
+      - 'scripts/build-openclaw-bundle.sh'
+      - 'scripts/deploy-to-server.sh'
+      - 'scripts/quick-install.sh'
+      - 'scripts/sync-openclaw.sh'
+  workflow_dispatch: {}
+
+jobs:
+  release:
+    name: Build + Upload Website Artifacts
+    runs-on: macos-14
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+          cache: 'pnpm'
+          cache-dependency-path: infra/openclaw/pnpm-lock.yaml
+
+      - name: Enable pnpm (corepack)
+        run: |
+          corepack enable
+          pnpm -v
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy (install.sh + tarballs + static pages)
+        env:
+          DEPLOY_SERVER: ${{ secrets.USERNAME }}@${{ secrets.HOST }}
+        run: |
+          ./scripts/deploy-to-server.sh
