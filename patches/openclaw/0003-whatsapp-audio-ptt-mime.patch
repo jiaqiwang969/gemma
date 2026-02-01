@@ -1,0 +1,33 @@
+diff --git a/src/web/auto-reply/deliver-reply.ts b/src/web/auto-reply/deliver-reply.ts
+index 21ddc2d2a..13bf1158d 100644
+--- a/src/web/auto-reply/deliver-reply.ts
++++ b/src/web/auto-reply/deliver-reply.ts
+@@ -4,6 +4,7 @@ import type { WebInboundMsg } from "./types.js";
+ import { chunkMarkdownTextWithMode, type ChunkMode } from "../../auto-reply/chunk.js";
+ import { logVerbose, shouldLogVerbose } from "../../globals.js";
+ import { convertMarkdownTables } from "../../markdown/tables.js";
++import { isVoiceCompatibleAudio } from "../../media/audio.js";
+ import { loadWebMedia } from "../media.js";
+ import { newConnectionId } from "../reconnect.js";
+ import { formatError } from "../session.js";
+@@ -115,12 +116,18 @@ export async function deliverWebReply(params: {
+           "media:image",
+         );
+       } else if (media.kind === "audio") {
++        const mimetypeRaw = media.contentType ?? "application/octet-stream";
++        const mimetype = mimetypeRaw === "audio/ogg" ? "audio/ogg; codecs=opus" : mimetypeRaw;
++        const ptt = isVoiceCompatibleAudio({
++          contentType: mimetype,
++          fileName: media.fileName ?? mediaUrl,
++        });
+         await sendWithRetry(
+           () =>
+             msg.sendMedia({
+               audio: media.buffer,
+-              ptt: true,
+-              mimetype: media.contentType,
++              ptt,
++              mimetype,
+               caption,
+             }),
+           "media:audio",
