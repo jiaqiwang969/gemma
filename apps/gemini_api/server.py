@@ -1348,6 +1348,18 @@ SUPPORTED_AUDIO_TYPES = {
 SUPPORTED_MEDIA_TYPES = SUPPORTED_IMAGE_TYPES | SUPPORTED_AUDIO_TYPES
 
 
+def normalize_mime_type(mime_type: Optional[str]) -> str:
+    """
+    Normalize MIME types like "audio/ogg; codecs=opus" -> "audio/ogg".
+
+    Some clients include parameters in inlineData.mimeType; our supported-type
+    checks expect a bare MIME type.
+    """
+    if not mime_type:
+        return "application/octet-stream"
+    return mime_type.split(";", 1)[0].strip().lower()
+
+
 def extract_audio_from_media(media_data_list: List[str]) -> tuple:
     """
     从媒体数据列表中分离音频和图像
@@ -1792,7 +1804,8 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
                     # - 官方: inlineData { mimeType, data }
                     # - 部分客户端: inline_data { mime_type, data }
                     inline = part.get("inlineData") or part.get("inline_data") or {}
-                    mime_type = inline.get("mimeType") or inline.get("mime_type") or "image/jpeg"
+                    mime_type_raw = inline.get("mimeType") or inline.get("mime_type") or "image/jpeg"
+                    mime_type = normalize_mime_type(mime_type_raw)
                     data = inline.get("data", "")
 
                     if mime_type in SUPPORTED_MEDIA_TYPES and data:
@@ -1812,7 +1825,7 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
                         elif mime_type in SUPPORTED_AUDIO_TYPES:
                             logger.debug(f"检测到音频: {mime_type}")
                     else:
-                        logger.warning(f"不支持的媒体类型: {mime_type}")
+                        logger.warning(f"不支持的媒体类型: {mime_type_raw}")
                 elif "fileData" in part:
                     # 文件引用 (需要下载)
                     if is_offline_mode():
@@ -1820,7 +1833,7 @@ def parse_gemini_contents(contents: List[Dict]) -> tuple:
                         continue
                     file_data = part["fileData"]
                     file_uri = file_data.get("fileUri", "")
-                    mime_type = file_data.get("mimeType", "image/jpeg")
+                    mime_type = normalize_mime_type(file_data.get("mimeType", "image/jpeg"))
 
                     if file_uri and mime_type in SUPPORTED_MEDIA_TYPES:
                         # 尝试下载文件
