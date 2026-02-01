@@ -510,42 +510,18 @@ download_whisper_cli() {
 }
 
 # 写入 OpenClaw 离线默认配置 (不覆盖用户已有配置)
-write_openclaw_config() {
-    local state_dir="$OPENCLAW_STATE_ROOT"
-    local config_path="$state_dir/openclaw.json"
+write_openclaw_config_to() {
+    local dest_path="$1"
+    local dm_policy="$2"
+    local allow_from_block="$3"
 
-    mkdir -p "$state_dir"
-
-    if [[ -f "$config_path" ]]; then
-        log_info "OpenClaw 配置已存在，跳过: $config_path"
-        return 0
-    fi
-
-    log_step "写入 OpenClaw 离线配置..."
-
-    local allow_from="${OPENCLAW_WHATSAPP_ALLOW_FROM:-}"
-    if [[ -z "$allow_from" ]]; then
-        echo ""
-        echo -e "${CYAN}WhatsApp 访问控制:${NC}"
-        echo -e "  - 推荐填写你自己的手机号 (E.164 格式，例如 +8613800138000)"
-        echo -e "  - 留空则使用 pairing 模式 (更安全，稍后在 WhatsApp 内配对)"
-        read -r -p "请输入 allowFrom (可留空): " allow_from
-    fi
-
-    local dm_policy="pairing"
-    local allow_from_block=""
-    if [[ -n "$allow_from" ]]; then
-        dm_policy="allowlist"
-        allow_from_block="allowFrom: [\"$allow_from\"],"
-    fi
-
-    cat >"$config_path" <<EOF
+    cat >"$dest_path" <<EOF
 // OpenClaw offline-first profile for LingKong (macOS arm64).
 //
 // Goal: run fully offline *except* WhatsApp transport.
 // Runtime env (recommended):
-//   OPENCLAW_STATE_DIR=$state_dir
-//   OPENCLAW_CONFIG_PATH=$config_path
+//   OPENCLAW_STATE_DIR=$OPENCLAW_STATE_ROOT
+//   OPENCLAW_CONFIG_PATH=$dest_path
 //   OPENCLAW_OFFLINE=1
 {
   gateway: {
@@ -622,6 +598,41 @@ write_openclaw_config() {
   },
 }
 EOF
+}
+
+write_openclaw_config() {
+    local state_dir="$OPENCLAW_STATE_ROOT"
+    local config_path="$state_dir/openclaw.json"
+
+    mkdir -p "$state_dir"
+
+    if [[ -f "$config_path" ]]; then
+        log_info "OpenClaw 配置已存在，保留: $config_path"
+        local template_path="$state_dir/openclaw.offline.template.json5"
+        write_openclaw_config_to "$template_path" "pairing" ""
+        log_info "已写入最新离线模板: $template_path (如需升级配置，可自行对比/替换)"
+        return 0
+    fi
+
+    log_step "写入 OpenClaw 离线配置..."
+
+    local allow_from="${OPENCLAW_WHATSAPP_ALLOW_FROM:-}"
+    if [[ -z "$allow_from" ]]; then
+        echo ""
+        echo -e "${CYAN}WhatsApp 访问控制:${NC}"
+        echo -e "  - 推荐填写你自己的手机号 (E.164 格式，例如 +8613800138000)"
+        echo -e "  - 留空则使用 pairing 模式 (更安全，稍后在 WhatsApp 内配对)"
+        read -r -p "请输入 allowFrom (可留空): " allow_from
+    fi
+
+    local dm_policy="pairing"
+    local allow_from_block=""
+    if [[ -n "$allow_from" ]]; then
+        dm_policy="allowlist"
+        allow_from_block="allowFrom: [\"$allow_from\"],"
+    fi
+
+    write_openclaw_config_to "$config_path" "$dm_policy" "$allow_from_block"
 
     log_success "OpenClaw 配置已写入: $config_path"
 }
