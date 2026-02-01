@@ -705,7 +705,7 @@ migrate_openclaw_whatsapp_creds() {
             return 1
         fi
         if command -v python3 >/dev/null 2>&1; then
-            python3 - <<PY >/dev/null 2>&1
+            python3 - <<PY >/dev/null 2>&1 || return 1
 import json, pathlib
 json.loads(pathlib.Path("$creds_path").read_text(encoding="utf-8"))
 PY
