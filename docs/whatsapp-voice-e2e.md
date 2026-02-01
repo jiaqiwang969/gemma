@@ -33,6 +33,10 @@ If WhatsApp is not linked, do:
 
 This will generate `~/.lingkong/tmp/whatsapp-qr.png` (and open it on macOS), then wait for the scan.
 
+If you previously used Moltbot/OpenClaw on this machine, the installer will try to migrate existing
+WhatsApp creds from `~/.moltbot/credentials/whatsapp/` to `~/.lingkong/openclaw/credentials/whatsapp/`
+so you may not need to re-scan the QR.
+
 Fallback (ASCII QR in terminal):
 
 ```bash

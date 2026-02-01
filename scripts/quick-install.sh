@@ -683,6 +683,61 @@ repair_openclaw_config_if_invalid() {
     fi
 }
 
+# 迁移旧版 Moltbot/OpenClaw 的 WhatsApp 登录凭证到 LingKong 的 OpenClaw state，
+# 避免升级后需要重新扫码绑定（best-effort，不会覆盖已有 creds）。
+migrate_openclaw_whatsapp_creds() {
+    local state_dir="$OPENCLAW_STATE_ROOT"
+    local dst_root="$state_dir/credentials/whatsapp"
+    local dst_creds="$dst_root/default/creds.json"
+
+    if [[ -f "$dst_creds" ]]; then
+        return 0
+    fi
+
+    is_valid_creds() {
+        local creds_path="$1"
+        if [[ ! -f "$creds_path" ]]; then
+            return 1
+        fi
+        local size
+        size="$(stat -f%z "$creds_path" 2>/dev/null || stat -c%s "$creds_path" 2>/dev/null || echo 0)"
+        if [[ "$size" -lt 200 ]]; then
+            return 1
+        fi
+        if command -v python3 >/dev/null 2>&1; then
+            python3 - <<PY >/dev/null 2>&1
+import json, pathlib
+json.loads(pathlib.Path("$creds_path").read_text(encoding="utf-8"))
+PY
+        fi
+        return 0
+    }
+
+    local candidates=(
+        "$HOME/.moltbot/credentials/whatsapp"
+        "$HOME/.clawdbot/credentials/whatsapp"
+        "$HOME/.openclaw/credentials/whatsapp"
+        "$HOME/.moldbot/credentials/whatsapp"
+    )
+
+    for src_root in "${candidates[@]}"; do
+        local src_creds="$src_root/default/creds.json"
+        if ! is_valid_creds "$src_creds"; then
+            continue
+        fi
+        log_step "迁移 WhatsApp 登录凭证（避免重新扫码）..."
+        mkdir -p "$dst_root"
+        # Copy contents of credentials/whatsapp (supports multi-account).
+        cp -R "$src_root"/. "$dst_root"/
+        chmod 700 "$state_dir" "$state_dir/credentials" "$dst_root" 2>/dev/null || true
+        chmod 700 "$dst_root/default" 2>/dev/null || true
+        chmod 600 "$dst_creds" 2>/dev/null || true
+        log_success "已迁移 WhatsApp creds: $src_root -> $dst_root"
+        return 0
+    done
+    return 0
+}
+
 # 下载模型
 # 下载单个文件 (带断点续传和备用地址)
 download_file() {
@@ -2170,6 +2225,7 @@ main() {
         download_whisper_cli || true
         install_node_runtime || true
         write_openclaw_config
+        migrate_openclaw_whatsapp_creds || true
         detect_python || install_python
         install_python_deps
         create_native_scripts
