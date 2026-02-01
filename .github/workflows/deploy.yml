@@ -24,6 +24,9 @@ jobs:
     name: Deploy to Server
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    env:
+      DEPLOY_HOST: ${{ secrets.HOST || secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.USERNAME || secrets.DEPLOY_USERNAME }}
 
     steps:
       - uses: actions/checkout@v4
@@ -31,35 +34,35 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY }}
 
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy WebUI
         if: github.event.inputs.target == 'webui' || github.event.inputs.target == 'all' || github.event_name == 'push'
         run: |
           echo "Deploying WebUI..."
-          scp apps/webui/server_lite.py ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/opt/lingkong-webui/server.py
-          scp -r apps/webui/static/* ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/opt/lingkong-webui/static/
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'sudo systemctl restart lingkong-webui'
+          scp apps/webui/server_lite.py "$DEPLOY_USER@$DEPLOY_HOST:/opt/lingkong-webui/server.py"
+          scp -r apps/webui/static/* "$DEPLOY_USER@$DEPLOY_HOST:/opt/lingkong-webui/static/"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'sudo systemctl restart lingkong-webui'
 
       - name: Deploy Gateway
         if: github.event.inputs.target == 'gateway' || github.event.inputs.target == 'all'
         run: |
           echo "Deploying Gateway..."
-          scp apps/gemini_api/gateway.py ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/opt/lingkong-gateway/
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'sudo systemctl restart lingkong-gateway'
+          scp apps/gemini_api/gateway.py "$DEPLOY_USER@$DEPLOY_HOST:/opt/lingkong-gateway/"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'sudo systemctl restart lingkong-gateway'
 
       - name: Verify deployment
         run: |
           echo "Verifying deployment..."
           sleep 5
-          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} 'curl -s http://127.0.0.1:5000/api/status | head -5'
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" 'curl -s http://127.0.0.1:5000/api/status | head -5'
 
       - name: Notify success
         run: |
           echo "✅ Deployment successful!"
-          echo "WebUI: http://${{ secrets.HOST }}"
+          echo "WebUI: http://$DEPLOY_HOST"
