@@ -1416,6 +1416,173 @@ exec "$NODE_BIN" "$OPENCLAW_APP_DIR/openclaw.mjs" "$@"
 SCRIPT
 
     chmod +x "$BIN_DIR/openclaw"
+
+    # Voice benchmark helper: local STT (whisper-cli) -> local Gemini -> local TTS (say)
+    cat > "$BIN_DIR/lingkong-voice-bench" << 'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+
+LINGKONG_HOME="${LINGKONG_HOME:-$HOME/.lingkong}"
+GEMINI_BASE_URL="${GEMINI_BASE_URL:-http://127.0.0.1:5001}"
+MODEL_ID="${MODEL_ID:-gemini-3-pro-preview}"
+
+WHISPER_CPP_MODEL="${WHISPER_CPP_MODEL:-$LINGKONG_HOME/models/whisper/ggml-small.bin}"
+WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-auto}"
+WHISPER_CPP_THREADS="${WHISPER_CPP_THREADS:-}"
+
+TEXT="${1:-What day is it today?}"
+
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [[ -z "$PYTHON_BIN" ]]; then
+  if [[ -x "$LINGKONG_HOME/venv/bin/python" ]]; then
+    PYTHON_BIN="$LINGKONG_HOME/venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+  fi
+fi
+if [[ -z "$PYTHON_BIN" ]]; then
+  echo "[voice-bench] python3 is required for JSON parsing (Gemini API response)" >&2
+  exit 1
+fi
+
+now_ms() {
+  "$PYTHON_BIN" - <<'PY'
+import time
+print(int(time.time() * 1000))
+PY
+}
+
+WHISPER_BIN="${WHISPER_CLI_BIN:-}"
+if [[ -z "$WHISPER_BIN" ]]; then
+  if [[ -x "$LINGKONG_HOME/bin/whisper-cli" ]]; then
+    WHISPER_BIN="$LINGKONG_HOME/bin/whisper-cli"
+  else
+    WHISPER_BIN="$(command -v whisper-cli || true)"
+  fi
+fi
+if [[ -z "$WHISPER_BIN" || ! -x "$WHISPER_BIN" ]]; then
+  echo "[voice-bench] whisper-cli not found. Re-run installer to install it." >&2
+  exit 1
+fi
+if [[ ! -f "$WHISPER_CPP_MODEL" ]]; then
+  echo "[voice-bench] missing WHISPER_CPP_MODEL: $WHISPER_CPP_MODEL" >&2
+  echo "[voice-bench] Re-run installer to download whisper model, or set WHISPER_CPP_MODEL." >&2
+  exit 1
+fi
+
+if [[ ! -x /usr/bin/say || ! -x /usr/bin/afconvert ]]; then
+  echo "[voice-bench] macOS TTS prerequisites missing: /usr/bin/say or /usr/bin/afconvert" >&2
+  exit 1
+fi
+
+if ! curl -fsS "$GEMINI_BASE_URL/health" >/dev/null 2>&1; then
+  echo "[voice-bench] Gemini API not running at: $GEMINI_BASE_URL" >&2
+  echo "[voice-bench] Try: $LINGKONG_HOME/bin/lingkong start" >&2
+  exit 1
+fi
+
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/lingkong-voice-bench.XXXXXX")"
+cleanup() { rm -rf "$tmp_dir" >/dev/null 2>&1 || true; }
+trap cleanup EXIT
+
+in_aiff="$tmp_dir/in.aiff"
+in_wav="$tmp_dir/in.wav"
+stt_out="$tmp_dir/stt"
+req_json="$tmp_dir/req.json"
+resp_json="$tmp_dir/resp.json"
+out_aiff="$tmp_dir/out.aiff"
+out_ogg="$tmp_dir/out.ogg"
+out_m4a="$tmp_dir/out.m4a"
+
+echo "[voice-bench] input: $TEXT"
+
+t0="$(now_ms)"
+say -o "$in_aiff" "$TEXT"
+t1="$(now_ms)"
+afconvert -f WAVE -d LEI16 -c 1 -r 16000 "$in_aiff" "$in_wav"
+t2="$(now_ms)"
+
+stt_args=()
+if [[ "${WHISPER_CPP_THREADS:-}" =~ ^[0-9]+$ ]]; then
+  stt_args+=("-t" "$WHISPER_CPP_THREADS")
+fi
+stt_args+=("-m" "$WHISPER_CPP_MODEL" "-l" "$WHISPER_CPP_LANG" "-otxt" "-of" "$stt_out" "-np" "-nt" "$in_wav")
+
+"$WHISPER_BIN" "${stt_args[@]}" >/dev/null
+t3="$(now_ms)"
+
+transcript=""
+if [[ -f "${stt_out}.txt" ]]; then
+  transcript="$(cat "${stt_out}.txt" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+fi
+if [[ -z "$transcript" ]]; then
+  echo "[voice-bench] STT produced empty transcript" >&2
+  exit 1
+fi
+
+echo "[voice-bench] transcript: $transcript"
+
+cat >"$req_json" <<EOF
+{
+  "contents": [
+    {
+      "role": "user",
+      "parts": [
+        { "text": "You are a voice assistant. Reply in one short sentence. User said: ${transcript}" }
+      ]
+    }
+  ],
+  "generationConfig": {
+    "maxOutputTokens": 96,
+    "temperature": 0.2
+  }
+}
+EOF
+
+curl -fsS "$GEMINI_BASE_URL/v1beta/models/$MODEL_ID:generateContent" \
+  -H 'Content-Type: application/json' \
+  -d "@$req_json" >"$resp_json"
+t4="$(now_ms)"
+
+reply="$("$PYTHON_BIN" - <<'PY' <"$resp_json"
+import json, sys
+j = json.load(sys.stdin)
+cands = j.get("candidates") or []
+content = (cands[0].get("content") if cands else {}) or {}
+parts = content.get("parts") or []
+out = []
+for p in parts:
+    if isinstance(p, dict) and isinstance(p.get("text"), str):
+        out.append(p["text"])
+print("".join(out).strip())
+PY
+)"
+if [[ -z "$reply" ]]; then
+  echo "[voice-bench] empty model reply" >&2
+  exit 1
+fi
+
+echo "[voice-bench] reply: $reply"
+
+say -o "$out_aiff" "$reply"
+t5="$(now_ms)"
+
+out_audio="$out_m4a"
+if command -v ffmpeg >/dev/null 2>&1; then
+  if ffmpeg -hide_banner -loglevel error -y -i "$out_aiff" -ac 1 -c:a libopus -b:a 24k "$out_ogg" >/dev/null 2>&1; then
+    out_audio="$out_ogg"
+  fi
+fi
+if [[ "$out_audio" == "$out_m4a" ]]; then
+  afconvert -f m4af -d aac "$out_aiff" "$out_m4a" >/dev/null 2>&1 || true
+fi
+t6="$(now_ms)"
+
+echo "[voice-bench] output audio: $out_audio"
+echo "[voice-bench] timing(ms): say_in=$((t1-t0)) convert_in=$((t2-t1)) stt=$((t3-t2)) llm=$((t4-t3)) say_out=$((t5-t4)) encode_out=$((t6-t5)) total=$((t6-t0))"
+SCRIPT
+
+    chmod +x "$BIN_DIR/lingkong-voice-bench"
     log_success "启动脚本创建完成"
 }
 
