@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 OPENCLAW_DIR="$ROOT_DIR/infra/openclaw"
 PATCH_DIR="$ROOT_DIR/patches/openclaw"
 
-if [[ ! -d "$OPENCLAW_DIR/.git" ]]; then
+if [[ ! -e "$OPENCLAW_DIR/.git" ]]; then
   echo "ERROR: OpenClaw submodule not initialized at: $OPENCLAW_DIR" >&2
   echo "Run: git submodule update --init --recursive infra/openclaw" >&2
   exit 1
@@ -43,4 +43,3 @@ Next steps (manual for now):
     git add infra/openclaw
 - Then re-run this script to ensure patches still apply.
 EOF
-

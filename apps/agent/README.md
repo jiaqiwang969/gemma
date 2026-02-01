@@ -9,5 +9,9 @@ Planned responsibilities:
 - wiring for offline TTS (text -> macOS say -> audio -> WhatsApp voice note)
 - service supervision (launchd) and health checks
 
-Implementation will land in phases; see the plan `lingkong-openclaw-offline-macos`.
+Current artifacts:
 
+- Offline config template (to be copied to `~/.lingkong/openclaw/openclaw.json`):
+  - `apps/agent/config/openclaw.offline.macos.arm64.json5`
+
+Implementation will land in phases; see the plan `lingkong-openclaw-offline-macos`.

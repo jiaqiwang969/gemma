@@ -1,0 +1,151 @@
+diff --git a/src/agents/pi-embedded-runner/run.ts b/src/agents/pi-embedded-runner/run.ts
+index e7c9ad44a..7db168420 100644
+--- a/src/agents/pi-embedded-runner/run.ts
++++ b/src/agents/pi-embedded-runner/run.ts
+@@ -6,6 +6,7 @@ import { enqueueCommandInLane } from "../../process/command-queue.js";
+ import { resolveUserPath } from "../../utils.js";
+ import { isMarkdownCapableMessageChannel } from "../../utils/message-channel.js";
+ import { resolveOpenClawAgentDir } from "../agent-paths.js";
++import { isOfflineMode, isLocalhostUrl } from "../../infra/offline.js";
+ import {
+   isProfileInCooldown,
+   markAuthProfileFailure,
+@@ -110,6 +111,22 @@ export async function runEmbeddedPiAgent(
+         throw new Error(error ?? `Unknown model: ${provider}/${modelId}`);
+       }
+ 
++      if (isOfflineMode()) {
++        const baseUrl = (model as { baseUrl?: string }).baseUrl;
++        if (!baseUrl || !isLocalhostUrl(baseUrl)) {
++          const shown = baseUrl ? `"${baseUrl}"` : "<unset>";
++          throw new Error(
++            [
++              "Offline mode is enabled (OPENCLAW_OFFLINE=1).",
++              `Refusing to run a non-local model endpoint for ${model.provider}/${model.id}.`,
++              `Model baseUrl must be http(s)://localhost|127.0.0.1|[::1]/..., got: ${shown}.`,
++              "Fix: set models.providers.<provider>.baseUrl to your local LingKong/Gemini API (127.0.0.1),",
++              "then select that provider/model as agents.defaults.model.primary.",
++            ].join(" "),
++          );
++        }
++      }
++
+       const ctxInfo = resolveContextWindowInfo({
+         cfg: params.config,
+         provider,
+diff --git a/src/agents/tools/web-fetch.ts b/src/agents/tools/web-fetch.ts
+index 94b677687..29be862c4 100644
+--- a/src/agents/tools/web-fetch.ts
++++ b/src/agents/tools/web-fetch.ts
+@@ -2,6 +2,7 @@ import type { Dispatcher } from "undici";
+ import { Type } from "@sinclair/typebox";
+ import type { OpenClawConfig } from "../../config/config.js";
+ import type { AnyAgentTool } from "./common.js";
++import { isOfflineMode } from "../../infra/offline.js";
+ import {
+   closeDispatcher,
+   createPinnedDispatcher,
+@@ -600,6 +601,9 @@ export function createWebFetchTool(options?: {
+   config?: OpenClawConfig;
+   sandboxed?: boolean;
+ }): AnyAgentTool | null {
++  if (isOfflineMode()) {
++    return null;
++  }
+   const fetch = resolveFetchConfig(options?.config);
+   if (!resolveFetchEnabled({ fetch, sandboxed: options?.sandboxed })) {
+     return null;
+diff --git a/src/agents/tools/web-search.ts b/src/agents/tools/web-search.ts
+index 1d891fbd5..e44bc98b9 100644
+--- a/src/agents/tools/web-search.ts
++++ b/src/agents/tools/web-search.ts
+@@ -2,6 +2,7 @@ import { Type } from "@sinclair/typebox";
+ import type { OpenClawConfig } from "../../config/config.js";
+ import type { AnyAgentTool } from "./common.js";
+ import { formatCliCommand } from "../../cli/command-format.js";
++import { isOfflineMode } from "../../infra/offline.js";
+ import { jsonResult, readNumberParam, readStringParam } from "./common.js";
+ import {
+   CacheEntry,
+@@ -455,6 +456,9 @@ export function createWebSearchTool(options?: {
+   config?: OpenClawConfig;
+   sandboxed?: boolean;
+ }): AnyAgentTool | null {
++  if (isOfflineMode()) {
++    return null;
++  }
+   const search = resolveSearchConfig(options?.config);
+   if (!resolveSearchEnabled({ search, sandboxed: options?.sandboxed })) {
+     return null;
+diff --git a/src/agents/tools/web-tools.enabled-defaults.test.ts b/src/agents/tools/web-tools.enabled-defaults.test.ts
+index f9cdc2539..636c67e5a 100644
+--- a/src/agents/tools/web-tools.enabled-defaults.test.ts
++++ b/src/agents/tools/web-tools.enabled-defaults.test.ts
+@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+ import { createWebFetchTool, createWebSearchTool } from "./web-tools.js";
+ 
+ describe("web tools defaults", () => {
++  afterEach(() => {
++    vi.unstubAllEnvs();
++  });
++
+   it("enables web_fetch by default (non-sandbox)", () => {
+     const tool = createWebFetchTool({ config: {}, sandboxed: false });
+     expect(tool?.name).toBe("web_fetch");
+@@ -19,6 +23,12 @@ describe("web tools defaults", () => {
+     const tool = createWebSearchTool({ config: {}, sandboxed: false });
+     expect(tool?.name).toBe("web_search");
+   });
++
++  it("disables web tools in offline mode", () => {
++    vi.stubEnv("OPENCLAW_OFFLINE", "1");
++    expect(createWebFetchTool({ config: {}, sandboxed: false })).toBeNull();
++    expect(createWebSearchTool({ config: {}, sandboxed: false })).toBeNull();
++  });
+ });
+ 
+ describe("web_search country and language parameters", () => {
+diff --git a/src/infra/update-check.ts b/src/infra/update-check.ts
+index c4be8d5da..a59d7d6f4 100644
+--- a/src/infra/update-check.ts
++++ b/src/infra/update-check.ts
+@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
+ import path from "node:path";
+ import { runCommandWithTimeout } from "../process/exec.js";
+ import { parseSemver } from "./runtime-guard.js";
++import { isOfflineMode } from "./offline.js";
+ import { channelToNpmTag, type UpdateChannel } from "./update-channels.js";
+ 
+ export type PackageManager = "pnpm" | "bun" | "npm" | "unknown";
+@@ -314,6 +315,9 @@ export async function fetchNpmTagVersion(params: {
+ }): Promise<NpmTagStatus> {
+   const timeoutMs = params?.timeoutMs ?? 3500;
+   const tag = params.tag;
++  if (isOfflineMode()) {
++    return { tag, version: null, error: "offline mode: npm registry check disabled" };
++  }
+   try {
+     const res = await fetchWithTimeout(
+       `https://registry.npmjs.org/openclaw/${encodeURIComponent(tag)}`,
+diff --git a/src/infra/update-startup.ts b/src/infra/update-startup.ts
+index 4f9e7e42d..48cd52782 100644
+--- a/src/infra/update-startup.ts
++++ b/src/infra/update-startup.ts
+@@ -3,6 +3,7 @@ import path from "node:path";
+ import type { loadConfig } from "../config/config.js";
+ import { formatCliCommand } from "../cli/command-format.js";
+ import { resolveStateDir } from "../config/paths.js";
++import { isOfflineMode } from "./offline.js";
+ import { VERSION } from "../version.js";
+ import { resolveOpenClawPackageRoot } from "./openclaw-root.js";
+ import { normalizeUpdateChannel, DEFAULT_PACKAGE_CHANNEL } from "./update-channels.js";
+@@ -48,6 +49,9 @@ export async function runGatewayUpdateCheck(params: {
+   isNixMode: boolean;
+   allowInTests?: boolean;
+ }): Promise<void> {
++  if (isOfflineMode()) {
++    return;
++  }
+   if (shouldSkipCheck(Boolean(params.allowInTests))) {
+     return;
+   }

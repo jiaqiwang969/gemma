@@ -1,0 +1,79 @@
+// OpenClaw offline-first profile for LingKong (macOS arm64).
+//
+// Goal: run fully offline *except* WhatsApp transport.
+// - Disable web_search/web_fetch + update checks
+// - Force the default LLM to a localhost Gemini-compatible endpoint (LingKong)
+// - Keep the rest of the agent/tooling available for local tasks
+//
+// Runtime: set OPENCLAW_STATE_DIR=~/.lingkong/openclaw and OPENCLAW_OFFLINE=1.
+{
+  update: {
+    // Prevent any background internet checks.
+    checkOnStart: false,
+  },
+
+  // Default model: route all LLM calls to the local Gemini-compatible server.
+  // LingKong's Gemini API server defaults to port 5001 and exposes /v1beta/*.
+  models: {
+    mode: "replace",
+    providers: {
+      google: {
+        baseUrl: "http://127.0.0.1:5001/v1beta",
+        // OpenClaw requires an API key per provider. For local deployments this can be any non-empty string.
+        apiKey: "local-noauth",
+        api: "google-generative-ai",
+        models: [
+          {
+            id: "gemini-3-pro-preview",
+            name: "LingKong (Gemma 3n) via local Gemini API",
+            reasoning: false,
+            input: ["text"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 32768,
+            maxTokens: 8192,
+          },
+        ],
+      },
+    },
+  },
+
+  agents: {
+    defaults: {
+      model: { primary: "google/gemini-3-pro-preview" },
+
+      // Offline-first: disable remote embedding providers by default.
+      memorySearch: { enabled: false },
+    },
+  },
+
+  tools: {
+    // Keep full local tooling, but prohibit anything that can cause internet traffic.
+    profile: "full",
+    deny: [
+      "group:web",
+      "tts", // until we ship an offline TTS provider (macos-say)
+      "browser",
+    ],
+    web: {
+      search: { enabled: false },
+      fetch: { enabled: false },
+    },
+    agentToAgent: { enabled: true },
+  },
+
+  messages: {
+    // Keep replies clean (no "[openclaw]" prefix).
+    responsePrefix: "",
+    // Don't auto-tts until offline TTS is implemented.
+    tts: { auto: "off" },
+  },
+
+  // Minimal WhatsApp allowlist (edit during setup).
+  channels: {
+    whatsapp: {
+      dmPolicy: "allowlist",
+      allowFrom: ["+15551234567"],
+    },
+  },
+}
+
