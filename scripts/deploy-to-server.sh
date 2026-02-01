@@ -17,9 +17,57 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 MODELS_DIR="$HOME/.lingkong/models"
 
 DEPLOY_MODELS="${1:-}"
+DEPLOY_OPENCLAW="${DEPLOY_OPENCLAW:-1}"  # set to 0 to skip OpenClaw bundle upload
 
 echo "🐉 灵空 AI - 部署更新到服务器"
 echo ""
+
+# Build OpenClaw bundle locally (macOS arm64) so the website installer can fetch it.
+OPENCLAW_STABLE_TARBALL="/tmp/openclaw-macos-arm64.tar.gz"
+NODE_VERSION_DEFAULT="${NODE_VERSION_DEFAULT:-22.20.0}"
+NODE_STABLE_TARBALL="/tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz"
+
+maybe_build_openclaw_bundle() {
+    if [[ "$DEPLOY_OPENCLAW" != "1" ]]; then
+        echo "▶ 跳过 OpenClaw bundle (DEPLOY_OPENCLAW=0)"
+        return 0
+    fi
+
+    local platform
+    platform="$(uname -s)-$(uname -m)"
+    if [[ "$platform" != "Darwin-arm64" ]]; then
+        echo "⚠ OpenClaw bundle 目前仅能在 macOS arm64 构建 (当前: $platform)，跳过"
+        return 0
+    fi
+
+    echo "▶ 构建 OpenClaw bundle..."
+    cd "$PROJECT_DIR"
+    ./scripts/build-openclaw-bundle.sh
+    local latest
+    latest="$(ls -t artifacts/bundles/openclaw-macos-arm64-*.tar.gz 2>/dev/null | head -1)"
+    if [[ -z "$latest" ]]; then
+        echo "⚠ 未找到 OpenClaw bundle 产物 (artifacts/bundles/openclaw-macos-arm64-*.tar.gz)，跳过"
+        return 0
+    fi
+    cp "$latest" "$OPENCLAW_STABLE_TARBALL"
+    echo "✓ OpenClaw bundle 已构建: $OPENCLAW_STABLE_TARBALL ($(du -h "$OPENCLAW_STABLE_TARBALL" | cut -f1))"
+}
+
+maybe_download_node_runtime() {
+    # Only needed when the installer runs on a machine without system node.
+    if [[ "$DEPLOY_OPENCLAW" != "1" ]]; then
+        return 0
+    fi
+
+    if [[ -f "$NODE_STABLE_TARBALL" ]]; then
+        return 0
+    fi
+
+    echo "▶ 下载 Node.js runtime (macOS arm64)..."
+    local url="https://nodejs.org/dist/v${NODE_VERSION_DEFAULT}/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz"
+    curl -fL --progress-bar "$url" -o "$NODE_STABLE_TARBALL"
+    echo "✓ Node runtime 已下载: $NODE_STABLE_TARBALL ($(du -h "$NODE_STABLE_TARBALL" | cut -f1))"
+}
 
 # 测试连接
 echo "▶ 测试服务器连接..."
@@ -60,6 +108,21 @@ echo "✓ webui.tar.gz 已上传"
 echo "▶ 上传 Gemini API 包..."
 scp /tmp/gemini_api.tar.gz $SERVER:/tmp/gemini_api.tar.gz
 echo "✓ gemini_api.tar.gz 已上传"
+
+maybe_build_openclaw_bundle
+maybe_download_node_runtime
+
+if [[ "$DEPLOY_OPENCLAW" == "1" && -f "$OPENCLAW_STABLE_TARBALL" ]]; then
+  echo "▶ 上传 OpenClaw bundle..."
+  scp "$OPENCLAW_STABLE_TARBALL" $SERVER:/tmp/openclaw-macos-arm64.tar.gz
+  echo "✓ openclaw-macos-arm64.tar.gz 已上传"
+fi
+
+if [[ "$DEPLOY_OPENCLAW" == "1" && -f "$NODE_STABLE_TARBALL" ]]; then
+  echo "▶ 上传 Node runtime..."
+  scp "$NODE_STABLE_TARBALL" $SERVER:/tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz
+  echo "✓ node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz 已上传"
+fi
 
 echo "▶ 上传首页..."
 scp apps/webui/static/home.html $SERVER:/tmp/home.html
@@ -124,10 +187,12 @@ echo "✓ lingkong.html 已上传"
 
 # 移动文件并设置权限
 echo "▶ 部署文件..."
-ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/static/evolution $REMOTE_DIR/static/encryption $REMOTE_DIR/models && \
+ssh $SERVER "sudo mkdir -p $REMOTE_DIR/bin $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REMOTE_DIR/static/js $REMOTE_DIR/static/tinybox $REMOTE_DIR/static/playground $REMOTE_DIR/static/evolution $REMOTE_DIR/static/encryption $REMOTE_DIR/models && \
     sudo mv /tmp/install.sh $REMOTE_DIR/install.sh && \
     sudo mv /tmp/webui.tar.gz $REMOTE_DIR/webui.tar.gz && \
     sudo mv /tmp/gemini_api.tar.gz $REMOTE_DIR/gemini_api.tar.gz && \
+    (test -f /tmp/openclaw-macos-arm64.tar.gz && sudo mv /tmp/openclaw-macos-arm64.tar.gz $REMOTE_DIR/bin/openclaw-macos-arm64.tar.gz || true) && \
+    (test -f /tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz && sudo mv /tmp/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz $REMOTE_DIR/bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz || true) && \
     sudo mv /tmp/home.html $REMOTE_DIR/static/home.html && \
     sudo mv /tmp/index.html $REMOTE_DIR/static/index.html 2>/dev/null || true && \
     sudo mv /tmp/chat.html $REMOTE_DIR/static/chat.html 2>/dev/null || true && \
@@ -159,7 +224,8 @@ ssh $SERVER "sudo mkdir -p $REMOTE_DIR/static/pitch $REMOTE_DIR/static/i18n $REM
     sudo chmod 755 $REMOTE_DIR/static/encryption 2>/dev/null || true && \
     sudo chmod 644 $REMOTE_DIR/static/i18n/*.json 2>/dev/null || true && \
     sudo chmod 644 $REMOTE_DIR/static/js/*.js 2>/dev/null || true && \
-    sudo chown -R ubuntu:ubuntu $REMOTE_DIR/static $REMOTE_DIR/install.sh $REMOTE_DIR/webui.tar.gz $REMOTE_DIR/gemini_api.tar.gz"
+    sudo chmod 644 $REMOTE_DIR/bin/*.tar.gz 2>/dev/null || true && \
+    sudo chown -R ubuntu:ubuntu $REMOTE_DIR/static $REMOTE_DIR/bin $REMOTE_DIR/install.sh $REMOTE_DIR/webui.tar.gz $REMOTE_DIR/gemini_api.tar.gz"
 echo "✓ 文件已部署"
 
 # 同步静态文件到 WebUI 目录 (nginx 从这里读取)
@@ -190,7 +256,7 @@ rm -f /tmp/webui.tar.gz /tmp/gemini_api.tar.gz
 
 # 生成校验和文件 (用于客户端检测更新)
 echo "▶ 生成校验和文件..."
-ssh $SERVER "cd $REMOTE_DIR && sha256sum install.sh webui.tar.gz gemini_api.tar.gz bin/llama-lingkong-macos-arm64.tar.gz 2>/dev/null | sudo tee checksums.sha256 > /dev/null && sudo chmod 644 checksums.sha256"
+ssh $SERVER "cd $REMOTE_DIR && sha256sum install.sh webui.tar.gz gemini_api.tar.gz bin/llama-lingkong-macos-arm64.tar.gz bin/openclaw-macos-arm64.tar.gz bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz 2>/dev/null | sudo tee checksums.sha256 > /dev/null && sudo chmod 644 checksums.sha256"
 echo "✓ checksums.sha256 已生成"
 
 # 上传模型文件 (可选)
