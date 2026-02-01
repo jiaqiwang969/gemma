@@ -2149,7 +2149,19 @@ Your final, well-considered response...
 }
 
 # 默认思考等级 (gemini-3-pro-preview 默认会思考)
-DEFAULT_THINKING_LEVEL = "medium"
+DEFAULT_THINKING_LEVEL = (
+    os.environ.get("GEMINI_API_DEFAULT_THINKING_LEVEL")
+    or ("none" if is_offline_mode() else "medium")
+)
+
+# Default includeThoughts behavior when the client omits thinkingConfig.includeThoughts.
+# Offline-first deployments should not leak chain-of-thought to WhatsApp users.
+_include_thoughts_env = os.environ.get("GEMINI_API_INCLUDE_THOUGHTS_DEFAULT")
+DEFAULT_INCLUDE_THOUGHTS = (
+    _is_truthy_env(_include_thoughts_env)
+    if _include_thoughts_env is not None
+    else (False if is_offline_mode() else True)
+)
 
 
 def parse_thinking_response(response_text: str) -> tuple:
@@ -2838,7 +2850,7 @@ def generate_content(model_name: str):
         # 默认使用 medium 思考等级 (与真实 gemini-3-pro-preview 行为一致)
         thinking_level = thinking_config.get("thinkingLevel", DEFAULT_THINKING_LEVEL)
         # includeThoughts: 控制是否在响应中显示思考过程 (独立于 thinkingLevel)
-        include_thoughts = thinking_config.get("includeThoughts", True)  # 默认显示
+        include_thoughts = thinking_config.get("includeThoughts", DEFAULT_INCLUDE_THOUGHTS)
 
         max_tokens = generation_config.get("maxOutputTokens", DEFAULT_MAX_TOKENS)
         temperature = generation_config.get("temperature", DEFAULT_TEMPERATURE)

@@ -55,6 +55,10 @@
 
       // Offline-first: disable remote embedding providers by default.
       memorySearch: { enabled: false },
+
+      // Default to low-noise responses (users can still opt in per-session via /think or /verbose).
+      thinkingDefault: "off",
+      verboseDefault: "off",
     },
   },
 
