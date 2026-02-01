@@ -42,18 +42,36 @@ jobs:
           corepack enable
           pnpm -v
 
+      - name: Detect deploy secrets
+        env:
+          DEPLOY_KEY: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_KEY || secrets.SSH_KEY }}
+        run: |
+          if [[ -n "${DEPLOY_KEY}" ]]; then
+            echo "HAS_DEPLOY_KEY=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_DEPLOY_KEY=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
+        if: env.HAS_DEPLOY_KEY == 'true'
         with:
           # Support multiple secret naming conventions.
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_KEY || secrets.SSH_KEY }}
 
       - name: Add server to known hosts
+        if: env.HAS_DEPLOY_KEY == 'true'
         run: |
           mkdir -p ~/.ssh
           host="${DEPLOY_SERVER#*@}"
           ssh-keyscan -H "${host}" >> ~/.ssh/known_hosts
 
       - name: Deploy (install.sh + tarballs + static pages)
+        if: env.HAS_DEPLOY_KEY == 'true'
         run: |
           ./scripts/deploy-to-server.sh
+
+      - name: Skip deploy (missing SSH key)
+        if: env.HAS_DEPLOY_KEY != 'true'
+        run: |
+          echo "::warning::Skipping lingkong.xyz deploy: missing SSH key secret. Configure one of: SSH_PRIVATE_KEY / SSH_KEY / DEPLOY_SSH_PRIVATE_KEY / DEPLOY_SSH_KEY"
