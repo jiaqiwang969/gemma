@@ -61,6 +61,11 @@ VISION_URL_HF="$HF_BASE/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO_URL_HF="$HF_BASE/gemma-3n-audio-mmproj-f16.gguf"
 WHISPER_URL_HF="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin"
 
+# 默认不下载 Gemma audio mmproj（1.3GB）；WhatsApp 语音默认由 whisper.cpp 负责转写。
+# 如需开启“音频理解/音频摘要”等能力：
+#   LINGKONG_DOWNLOAD_AUDIO_MMPROJ=1 curl -fsSL https://lingkong.xyz/install.sh | bash
+DOWNLOAD_AUDIO_MMPROJ="${LINGKONG_DOWNLOAD_AUDIO_MMPROJ:-0}"
+
 # Python 依赖
 PYTHON_DEPS="flask flask-cors pillow psutil librosa soundfile requests"
 
@@ -713,13 +718,17 @@ download_models() {
         "视觉模型 (570MB)" \
         598999040
 
-    # 音频模型 - 1.3GB = 1395864576 bytes
-    download_file \
-        "$MODELS_DIR/gemma-3n-audio-mmproj-f16.gguf" \
-        "$AUDIO_URL" \
-        "$AUDIO_URL_HF" \
-        "音频模型 (1.3GB)" \
-        1395864576
+    # 音频模型 (可选) - 1.3GB = 1395864576 bytes
+    if [[ "$DOWNLOAD_AUDIO_MMPROJ" == "1" ]]; then
+        download_file \
+            "$MODELS_DIR/gemma-3n-audio-mmproj-f16.gguf" \
+            "$AUDIO_URL" \
+            "$AUDIO_URL_HF" \
+            "音频模型 (1.3GB)" \
+            1395864576
+    else
+        log_info "跳过音频模型 (Gemma audio mmproj)。如需开启音频理解：LINGKONG_DOWNLOAD_AUDIO_MMPROJ=1 重新运行安装脚本"
+    fi
 
     # 离线语音转写 (STT) 模型 - Whisper small ~465MB
     download_file \
@@ -822,7 +831,11 @@ start_gemini_api() {
     # 多模态支持: llama-server 只支持单个 mmproj，优先视觉
     # 音频通过 llama-mtmd-cli 单独处理
     export LLAMA_MMPROJ_VISION="$VISION"
-    export LLAMA_MMPROJ_AUDIO="$AUDIO"
+    if [[ -f "$AUDIO" ]]; then
+        export LLAMA_MMPROJ_AUDIO="$AUDIO"
+    else
+        unset LLAMA_MMPROJ_AUDIO
+    fi
     export GEMINI_API_LLAMA_PORT="8090"
     # GPU 配置 (可通过环境变量覆盖)
     # LLAMA_GPU_DEVICES: 指定 GPU (例如 "0" 或 "0,1")，空=自动选择最大显存的 GPU
@@ -872,7 +885,11 @@ start_webui() {
     export LLAMA_MMPROJ_SERVER_PORT="8090"
     export LLAMA_MM_MODEL="$MODEL"
     export LLAMA_MM_PROJ_IMAGE="$VISION"
-    export LLAMA_MM_PROJ_AUDIO="$AUDIO"
+    if [[ -f "$AUDIO" ]]; then
+        export LLAMA_MM_PROJ_AUDIO="$AUDIO"
+    else
+        unset LLAMA_MM_PROJ_AUDIO
+    fi
     export LLAMA_MTMD_BIN="$LINGKONG_HOME/bin/llama-mtmd-cli"
     export WEBUI_PORT="$WEBUI_PORT"
 
@@ -1351,6 +1368,22 @@ export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
 export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
 export WHISPER_CPP_MODEL="${WHISPER_CPP_MODEL:-$LINGKONG_HOME/models/whisper/ggml-small.bin}"
+export WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-auto}"
+
+# Whisper performance tuning (safe default): cap threads to avoid CPU saturation.
+if [[ -z "${WHISPER_CPP_THREADS:-}" ]]; then
+  ncpu=""
+  if command -v sysctl >/dev/null 2>&1; then
+    ncpu="$(sysctl -n hw.ncpu 2>/dev/null || true)"
+  elif command -v nproc >/dev/null 2>&1; then
+    ncpu="$(nproc 2>/dev/null || true)"
+  fi
+  if [[ "$ncpu" =~ ^[0-9]+$ ]]; then
+    if [[ "$ncpu" -gt 8 ]]; then ncpu=8; fi
+    if [[ "$ncpu" -lt 1 ]]; then ncpu=1; fi
+    export WHISPER_CPP_THREADS="$ncpu"
+  fi
+fi
 export PATH="$LINGKONG_HOME/bin:${PATH:-}"
 
 if [[ ! -f "$OPENCLAW_APP_DIR/openclaw.mjs" ]]; then
