@@ -579,6 +579,8 @@ write_openclaw_config() {
     defaults: {
       model: { primary: "google/gemini-3-pro-preview" },
       memorySearch: { enabled: false },
+      thinkingDefault: "off",
+      verboseDefault: "off",
     },
   },
 
