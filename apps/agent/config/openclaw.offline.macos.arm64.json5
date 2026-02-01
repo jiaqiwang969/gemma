@@ -56,11 +56,18 @@
       // Offline-first: disable remote embedding providers by default.
       memorySearch: { enabled: false },
 
+      // Keep the OpenClaw workspace co-located with LingKong state under ~/.lingkong.
+      // This avoids scattering files under ~/.openclaw by default.
+      workspace: "~/.lingkong/openclaw/workspace",
+
       // Default to low-noise responses (users can still opt in per-session via /think or /verbose).
       thinkingDefault: "off",
       verboseDefault: "off",
     },
   },
+
+  // WhatsApp is the primary interface; keep auxiliary HTTP surfaces off.
+  canvasHost: { enabled: false },
 
   tools: {
     // Keep full local tooling, but prohibit anything that can cause internet traffic.

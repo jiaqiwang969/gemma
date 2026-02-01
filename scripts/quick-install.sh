@@ -532,6 +532,9 @@ write_openclaw_config_to() {
     controlUi: { enabled: false },
   },
 
+  // WhatsApp is the primary interface; keep auxiliary HTTP surfaces off.
+  canvasHost: { enabled: false },
+
   update: {
     checkOnStart: false,
   },
@@ -562,6 +565,8 @@ write_openclaw_config_to() {
     defaults: {
       model: { primary: "google/gemini-3-pro-preview" },
       memorySearch: { enabled: false },
+      // Keep OpenClaw workspace co-located with LingKong state under ~/.lingkong.
+      workspace: "$OPENCLAW_STATE_ROOT/workspace",
       thinkingDefault: "off",
       verboseDefault: "off",
     },
