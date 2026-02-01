@@ -26,7 +26,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     env:
       DEPLOY_HOST: ${{ secrets.HOST || secrets.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ secrets.USERNAME || secrets.DEPLOY_USERNAME }}
+      DEPLOY_USER: ${{ secrets.USERNAME || secrets.DEPLOY_USERNAME || secrets.DEPLOY_USER }}
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_KEY }}
 
       - name: Add server to known hosts
         run: |

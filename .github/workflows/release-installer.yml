@@ -25,7 +25,7 @@ jobs:
     name: Build + Upload Website Artifacts
     runs-on: macos-14
     env:
-      DEPLOY_SERVER: ${{ secrets.DEPLOY_SERVER || format('{0}@{1}', secrets.USERNAME || secrets.DEPLOY_USERNAME, secrets.HOST || secrets.DEPLOY_HOST) }}
+      DEPLOY_SERVER: ${{ secrets.DEPLOY_SERVER || format('{0}@{1}', secrets.USERNAME || secrets.DEPLOY_USERNAME || secrets.DEPLOY_USER, secrets.HOST || secrets.DEPLOY_HOST) }}
     steps:
       - name: Checkout (with submodules)
         uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           # Support multiple secret naming conventions.
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_PRIVATE_KEY || secrets.DEPLOY_SSH_KEY }}
 
       - name: Add server to known hosts
         run: |
