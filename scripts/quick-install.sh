@@ -1535,6 +1535,13 @@ if ! "$LINGKONG_HOME/bin/openclaw" gateway health --json >/dev/null 2>&1; then
   if [[ -x "$LINGKONG_HOME/bin/lingkong" ]]; then
     "$LINGKONG_HOME/bin/lingkong" agent start >/dev/null 2>&1 || true
   fi
+  # Give the gateway a moment to bind before we try web.login.* calls.
+  for _ in {1..20}; do
+    if "$LINGKONG_HOME/bin/openclaw" gateway health --json >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.5
+  done
 fi
 
 python_bin=""
