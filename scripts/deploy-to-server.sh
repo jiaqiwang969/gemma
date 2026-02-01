@@ -10,8 +10,8 @@
 
 set -e
 
-SERVER="ubuntu@115.159.223.227"
-REMOTE_DIR="/var/www/html"
+SERVER="${DEPLOY_SERVER:-ubuntu@115.159.223.227}"
+REMOTE_DIR="${DEPLOY_REMOTE_DIR:-/var/www/html}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 MODELS_DIR="$HOME/.lingkong/models"
