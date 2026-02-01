@@ -1,0 +1,3 @@
+[submodule "infra/openclaw"]
+	path = infra/openclaw
+	url = https://github.com/clawdbot/clawdbot.git
