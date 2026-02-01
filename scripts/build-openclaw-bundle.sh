@@ -85,8 +85,11 @@ if [[ ${#patches[@]} -gt 0 ]]; then
   for p in "${patches[@]}"; do
     echo "- $(basename "$p")"
   done
-  git -C "$worktree_dir" apply --whitespace=nowarn --check "${patches[@]}"
-  git -C "$worktree_dir" apply --whitespace=nowarn "${patches[@]}"
+  # Apply sequentially so later patches can build on earlier ones.
+  for p in "${patches[@]}"; do
+    git -C "$worktree_dir" apply --whitespace=nowarn --check "$p"
+    git -C "$worktree_dir" apply --whitespace=nowarn "$p"
+  done
 else
   echo "No patches found in $PATCH_DIR (unexpected for LingKong builds)."
 fi

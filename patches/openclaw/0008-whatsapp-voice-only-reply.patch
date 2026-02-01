@@ -1,0 +1,59 @@
+diff --git a/src/web/auto-reply/deliver-reply.ts b/src/web/auto-reply/deliver-reply.ts
+index 0d44b6604..f71edc664 100644
+--- a/src/web/auto-reply/deliver-reply.ts
++++ b/src/web/auto-reply/deliver-reply.ts
+@@ -93,10 +93,14 @@ export async function deliverWebReply(params: {
+   }
+ 
+   const remainingText = [...textChunks];
++  const inboundHasAudio = Boolean(msg.mediaType && msg.mediaType.startsWith("audio/"));
++  // When the user sends a WhatsApp voice note, prefer replying with *only* voice (no caption text),
++  // but keep a text fallback if the audio send fails.
++  let voiceOnlyFallbackText: string[] | null = null;
+ 
+   // Media (with optional caption on first item)
+   for (const [index, mediaUrl] of mediaList.entries()) {
+-    const caption = index === 0 ? remainingText.shift() || undefined : undefined;
++    let caption = index === 0 ? remainingText.shift() || undefined : undefined;
+     // Used to avoid sending user-facing error noise for audio TTS failures (fallback to text-only).
+     let mediaKind: string | null = null;
+     try {
+@@ -125,6 +129,15 @@ export async function deliverWebReply(params: {
+           contentType: mimetype,
+           fileName: media.fileName ?? mediaUrl,
+         });
++        if (inboundHasAudio) {
++          if (voiceOnlyFallbackText === null) {
++            voiceOnlyFallbackText = [caption, ...remainingText].filter(
++              (chunk): chunk is string => typeof chunk === "string" && chunk.length > 0,
++            );
++          }
++          caption = undefined;
++          remainingText.length = 0;
++        }
+         await sendWithRetry(
+           () =>
+             msg.sendMedia({
+@@ -134,7 +147,7 @@ export async function deliverWebReply(params: {
+               caption,
+             }),
+           "media:audio",
+-          5,
++          inboundHasAudio ? 2 : 5,
+         );
+       } else if (media.kind === "video") {
+         await sendWithRetry(
+@@ -184,6 +197,13 @@ export async function deliverWebReply(params: {
+         // For WhatsApp voice UX we want silent text fallback when TTS audio cannot be delivered
+         // (avoid leaking technical errors like "audio send timeout (25000ms)" to users).
+         if (mediaKind === "audio") {
++          if (voiceOnlyFallbackText && voiceOnlyFallbackText.length) {
++            for (const chunk of voiceOnlyFallbackText) {
++              await sendWithRetry(() => msg.reply(chunk), "text");
++            }
++            voiceOnlyFallbackText = [];
++            continue;
++          }
+           if (caption) {
+             remainingText.unshift(caption);
+           }

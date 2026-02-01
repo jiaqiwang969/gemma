@@ -809,6 +809,9 @@ LINGKONG_HOME="${LINGKONG_HOME:-$HOME/.lingkong}"
 MODEL="$LINGKONG_HOME/models/gemma-3n-E2B-it-Q4_K_M.gguf"
 VISION="$LINGKONG_HOME/models/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO="$LINGKONG_HOME/models/gemma-3n-audio-mmproj-f16.gguf"
+# 可选多模态开关（提高启动/推理速度时可关闭；0=关闭，1=开启）
+ENABLE_VISION_MMPROJ="${LINGKONG_ENABLE_VISION_MMPROJ:-1}"
+ENABLE_AUDIO_MMPROJ="${LINGKONG_ENABLE_AUDIO_MMPROJ:-0}"
 LLAMA_PORT="${LLAMA_PORT:-8081}"
 WEBUI_PORT="${WEBUI_PORT:-8080}"
 OPENCLAW_PORT="${OPENCLAW_PORT:-18789}"
@@ -888,8 +891,12 @@ start_gemini_api() {
     export LLAMA_MODEL_AUDIO="$MODEL"
     # 多模态支持: llama-server 只支持单个 mmproj，优先视觉
     # 音频通过 llama-mtmd-cli 单独处理
-    export LLAMA_MMPROJ_VISION="$VISION"
-    if [[ -f "$AUDIO" ]]; then
+    if [[ "${ENABLE_VISION_MMPROJ:-1}" == "1" && -f "$VISION" ]]; then
+        export LLAMA_MMPROJ_VISION="$VISION"
+    else
+        unset LLAMA_MMPROJ_VISION
+    fi
+    if [[ "${ENABLE_AUDIO_MMPROJ:-0}" == "1" && -f "$AUDIO" ]]; then
         export LLAMA_MMPROJ_AUDIO="$AUDIO"
     else
         unset LLAMA_MMPROJ_AUDIO
@@ -942,8 +949,12 @@ start_webui() {
     export LLAMA_SERVER_PORT="8090"
     export LLAMA_MMPROJ_SERVER_PORT="8090"
     export LLAMA_MM_MODEL="$MODEL"
-    export LLAMA_MM_PROJ_IMAGE="$VISION"
-    if [[ -f "$AUDIO" ]]; then
+    if [[ "${ENABLE_VISION_MMPROJ:-1}" == "1" && -f "$VISION" ]]; then
+        export LLAMA_MM_PROJ_IMAGE="$VISION"
+    else
+        unset LLAMA_MM_PROJ_IMAGE
+    fi
+    if [[ "${ENABLE_AUDIO_MMPROJ:-0}" == "1" && -f "$AUDIO" ]]; then
         export LLAMA_MM_PROJ_AUDIO="$AUDIO"
     else
         unset LLAMA_MM_PROJ_AUDIO
@@ -1212,6 +1223,15 @@ exec "$LINGKONG_HOME/bin/openclaw" gateway run --force --allow-unconfigured
 OPENCLAW_LAUNCHD_SCRIPT
     chmod +x "$openclaw_launchd"
 
+    local vision_mmproj="disabled"
+    if [[ "${ENABLE_VISION_MMPROJ:-1}" == "1" && -f "$VISION" ]]; then
+        vision_mmproj="$VISION"
+    fi
+    local audio_mmproj="disabled"
+    if [[ "${ENABLE_AUDIO_MMPROJ:-0}" == "1" && -f "$AUDIO" ]]; then
+        audio_mmproj="$AUDIO"
+    fi
+
     local gemini_plist="$plist_dir/$LAUNCHD_LABEL_GEMINI.plist"
     cat >"$gemini_plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1235,8 +1255,8 @@ OPENCLAW_LAUNCHD_SCRIPT
       <key>LLAMA_MTMD_BIN</key><string>$LINGKONG_HOME/bin/llama-mtmd-cli</string>
       <key>LLAMA_MODEL</key><string>$MODEL</string>
       <key>LLAMA_MODEL_AUDIO</key><string>$MODEL</string>
-      <key>LLAMA_MMPROJ_VISION</key><string>$VISION</string>
-      <key>LLAMA_MMPROJ_AUDIO</key><string>$AUDIO</string>
+      <key>LLAMA_MMPROJ_VISION</key><string>$vision_mmproj</string>
+      <key>LLAMA_MMPROJ_AUDIO</key><string>$audio_mmproj</string>
       <key>DYLD_LIBRARY_PATH</key><string>$LINGKONG_HOME/lib</string>
       <key>FFMPEG_BIN</key><string>$ffmpeg_bin</string>
     </dict>
@@ -1511,6 +1531,7 @@ WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-auto}"
 WHISPER_CPP_THREADS="${WHISPER_CPP_THREADS:-}"
 
 TEXT="${1:-What day is it today?}"
+NOW="$(date '+%F %A %T')"
 
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [[ -z "$PYTHON_BIN" ]]; then
@@ -1608,7 +1629,7 @@ cat >"$req_json" <<EOF
     {
       "role": "user",
       "parts": [
-        { "text": "你是语音助手。只输出最终答案：言简意赅，不要解释，不要带前缀，不要换行。用户说：${transcript}" }
+        { "text": "你是语音助手。只输出最终答案：言简意赅，不要解释，不要带前缀，不要换行。当前系统时间：${NOW}。用户说：${transcript}" }
       ]
     }
   ],
