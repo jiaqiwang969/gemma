@@ -22,6 +22,16 @@ DEPLOY_OPENCLAW="${DEPLOY_OPENCLAW:-1}"  # set to 0 to skip OpenClaw bundle uplo
 echo "🐉 灵空 AI - 部署更新到服务器"
 echo ""
 
+# Ensure we can connect non-interactively (avoid host key prompts).
+ensure_known_host() {
+    local host="${SERVER#*@}"
+    mkdir -p "$HOME/.ssh"
+    if ! ssh-keygen -F "$host" >/dev/null 2>&1; then
+        echo "▶ 添加 $host 到 known_hosts..."
+        ssh-keyscan -H "$host" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+    fi
+}
+
 # Build OpenClaw bundle locally (macOS arm64) so the website installer can fetch it.
 OPENCLAW_STABLE_TARBALL="/tmp/openclaw-macos-arm64.tar.gz"
 NODE_VERSION_DEFAULT="${NODE_VERSION_DEFAULT:-22.20.0}"
@@ -71,6 +81,7 @@ maybe_download_node_runtime() {
 
 # 测试连接
 echo "▶ 测试服务器连接..."
+ensure_known_host
 if ! ssh -o ConnectTimeout=10 $SERVER "echo 'connected'" 2>/dev/null; then
     echo "❌ 无法连接服务器，请检查 SSH 配置"
     exit 1
