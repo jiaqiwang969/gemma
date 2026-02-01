@@ -24,6 +24,8 @@ BIN_DIR="$LINGKONG_HOME/bin"
 LIB_DIR="$LINGKONG_HOME/lib"
 MODELS_DIR="$LINGKONG_HOME/models"
 SANDBOX_DIR="$LINGKONG_HOME/sandbox"
+OPENCLAW_APP_DIR="$LINGKONG_HOME/apps/openclaw"
+OPENCLAW_STATE_ROOT="$LINGKONG_HOME/openclaw"
 
 # 下载地址 (支持环境变量覆盖)
 LINGKONG_SERVER="${LINGKONG_SERVER:-https://lingkong.xyz}"
@@ -33,6 +35,14 @@ BINARY_URL_LINUX_CUDA="$BASE_URL/bin/llama-lingkong-linux-x86_64-cuda.tar.gz"
 BINARY_URL_LINUX_CPU="$BASE_URL/bin/llama-lingkong-linux-x86_64.tar.gz"
 WEBUI_URL="$BASE_URL/webui.tar.gz"
 SANDBOX_URL="$BASE_URL/sandbox.tar.gz"
+# OpenClaw (WhatsApp agent gateway) bundle.
+# Note: today we ship macOS arm64 only; keep URLs overridable for local testing.
+OPENCLAW_BUNDLE_URL_MACOS="${OPENCLAW_BUNDLE_URL_MACOS:-$BASE_URL/bin/openclaw-macos-arm64.tar.gz}"
+
+# Optional Node runtime (used when system Node is missing).
+NODE_VERSION_DEFAULT="${NODE_VERSION_DEFAULT:-22.20.0}"
+NODE_TARBALL_URL_MACOS="${NODE_TARBALL_URL_MACOS:-$BASE_URL/bin/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz}"
+NODE_TARBALL_URL_MACOS_FALLBACK="https://nodejs.org/dist/v${NODE_VERSION_DEFAULT}/node-v${NODE_VERSION_DEFAULT}-darwin-arm64.tar.gz"
 
 # 模型下载地址 (优先国内镜像，备用 HuggingFace)
 MODELS_BASE="$BASE_URL/models"
@@ -143,7 +153,7 @@ detect_docker() {
 # 创建目录
 create_directories() {
     log_step "创建安装目录..."
-    mkdir -p "$BIN_DIR" "$LIB_DIR" "$MODELS_DIR" "$SANDBOX_DIR" "$LINGKONG_HOME/apps" "$LINGKONG_HOME/logs" "$LINGKONG_HOME/run"
+    mkdir -p "$BIN_DIR" "$LIB_DIR" "$MODELS_DIR" "$SANDBOX_DIR" "$LINGKONG_HOME/apps" "$LINGKONG_HOME/logs" "$LINGKONG_HOME/run" "$OPENCLAW_APP_DIR" "$OPENCLAW_STATE_ROOT"
     log_success "目录创建完成: $LINGKONG_HOME"
 }
 
@@ -332,6 +342,216 @@ download_webui() {
     fi
 }
 
+# 安装 Node.js (仅在缺少系统 node 时，用于运行 OpenClaw)
+install_node_runtime() {
+    if command -v node &> /dev/null; then
+        return 0
+    fi
+
+    if [[ "$PLATFORM" != "macos-arm64" ]]; then
+        log_warn "未检测到 node；OpenClaw 需要 Node.js。请手动安装 Node 后再试。"
+        return 1
+    fi
+
+    log_step "安装 Node.js (用于 OpenClaw)..."
+
+    local node_dir="$LINGKONG_HOME/node"
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    local tar_path="$tmp_dir/node.tar.gz"
+    local url="$NODE_TARBALL_URL_MACOS"
+
+    log_info "下载 Node: $url"
+    if ! curl -fL --progress-bar "$url" -o "$tar_path" 2>/dev/null; then
+        log_warn "镜像下载失败，尝试官方源..."
+        url="$NODE_TARBALL_URL_MACOS_FALLBACK"
+        log_info "下载 Node: $url"
+        curl -fL --progress-bar "$url" -o "$tar_path"
+    fi
+
+    rm -rf "$node_dir"
+    mkdir -p "$node_dir"
+
+    tar -xzf "$tar_path" -C "$tmp_dir"
+    local extracted
+    extracted=$(ls -d "$tmp_dir"/node-v*-darwin-arm64 2>/dev/null | head -1)
+    if [[ ! -d "$extracted" ]]; then
+        log_error "Node 解压失败"
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    # Flatten into ~/.lingkong/node/{bin,lib,...}
+    cp -R "$extracted"/* "$node_dir"/
+    rm -rf "$tmp_dir"
+
+    if [[ -x "$node_dir/bin/node" ]]; then
+        log_success "Node 已安装: $node_dir/bin/node"
+    else
+        log_error "Node 安装失败: node 不可执行"
+        return 1
+    fi
+}
+
+# 下载 OpenClaw bundle (WhatsApp agent gateway)
+download_openclaw() {
+    if [[ "$PLATFORM" != "macos-arm64" ]]; then
+        log_info "OpenClaw 暂仅提供 macOS arm64 bundle，跳过 ($PLATFORM)"
+        return 0
+    fi
+
+    log_step "下载 OpenClaw (WhatsApp agent)..."
+
+    local bundle_url="${OPENCLAW_BUNDLE_URL:-$OPENCLAW_BUNDLE_URL_MACOS}"
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    local tar_path="$tmp_dir/openclaw.tar.gz"
+    local extract_dir="$tmp_dir/extract"
+    mkdir -p "$extract_dir"
+
+    log_info "下载: $bundle_url"
+    if ! curl -fL --progress-bar "$bundle_url" -o "$tar_path" 2>/dev/null; then
+        log_warn "OpenClaw bundle 下载失败，跳过"
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    log_info "解压 OpenClaw..."
+    tar -xzf "$tar_path" -C "$extract_dir"
+
+    if [[ ! -d "$extract_dir/openclaw" ]]; then
+        log_error "OpenClaw bundle 格式错误: 缺少 openclaw/ 目录"
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+
+    rm -rf "$OPENCLAW_APP_DIR"
+    mkdir -p "$(dirname "$OPENCLAW_APP_DIR")"
+    mv "$extract_dir/openclaw" "$OPENCLAW_APP_DIR"
+    if [[ -f "$extract_dir/BUILD_INFO.txt" ]]; then
+        mv "$extract_dir/BUILD_INFO.txt" "$OPENCLAW_APP_DIR/BUILD_INFO.txt" 2>/dev/null || true
+    fi
+
+    rm -rf "$tmp_dir"
+    log_success "OpenClaw 安装完成: $OPENCLAW_APP_DIR"
+}
+
+# 写入 OpenClaw 离线默认配置 (不覆盖用户已有配置)
+write_openclaw_config() {
+    local state_dir="$OPENCLAW_STATE_ROOT"
+    local config_path="$state_dir/openclaw.json"
+
+    mkdir -p "$state_dir"
+
+    if [[ -f "$config_path" ]]; then
+        log_info "OpenClaw 配置已存在，跳过: $config_path"
+        return 0
+    fi
+
+    log_step "写入 OpenClaw 离线配置..."
+
+    local allow_from="${OPENCLAW_WHATSAPP_ALLOW_FROM:-}"
+    if [[ -z "$allow_from" ]]; then
+        echo ""
+        echo -e "${CYAN}WhatsApp 访问控制:${NC}"
+        echo -e "  - 推荐填写你自己的手机号 (E.164 格式，例如 +8613800138000)"
+        echo -e "  - 留空则使用 pairing 模式 (更安全，稍后在 WhatsApp 内配对)"
+        read -r -p "请输入 allowFrom (可留空): " allow_from
+    fi
+
+    local dm_policy="pairing"
+    local allow_from_block=""
+    if [[ -n "$allow_from" ]]; then
+        dm_policy="allowlist"
+        allow_from_block="allowFrom: [\"$allow_from\"],"
+    fi
+
+    cat >"$config_path" <<EOF
+// OpenClaw offline-first profile for LingKong (macOS arm64).
+//
+// Goal: run fully offline *except* WhatsApp transport.
+// Runtime env (recommended):
+//   OPENCLAW_STATE_DIR=$state_dir
+//   OPENCLAW_CONFIG_PATH=$config_path
+//   OPENCLAW_OFFLINE=1
+{
+  gateway: {
+    mode: "local",
+    bind: "loopback",
+    controlUi: { enabled: false },
+  },
+
+  update: {
+    checkOnStart: false,
+  },
+
+  models: {
+    mode: "replace",
+    providers: {
+      google: {
+        baseUrl: "http://127.0.0.1:5001/v1beta",
+        apiKey: "local-noauth",
+        api: "google-generative-ai",
+        models: [
+          {
+            id: "gemini-3-pro-preview",
+            name: "LingKong (Gemma 3n) via local Gemini API",
+            reasoning: false,
+            input: ["text", "audio"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 32768,
+            maxTokens: 8192,
+          },
+        ],
+      },
+    },
+  },
+
+  agents: {
+    defaults: {
+      model: { primary: "google/gemini-3-pro-preview" },
+      memorySearch: { enabled: false },
+    },
+  },
+
+  tools: {
+    profile: "full",
+    deny: ["group:web", "browser"],
+    web: {
+      search: { enabled: false },
+      fetch: { enabled: false },
+    },
+    media: {
+      image: { enabled: false },
+      video: { enabled: false },
+      audio: { enabled: true, models: [{ provider: "google" }] },
+    },
+    links: { enabled: false },
+    agentToAgent: { enabled: true },
+  },
+
+  messages: {
+    responsePrefix: "",
+    tts: {
+      auto: "inbound",
+      provider: "macos-say",
+      macosSay: { enabled: true, preferOpus: true },
+    },
+  },
+
+  channels: {
+    whatsapp: {
+      dmPolicy: "$dm_policy",
+      $allow_from_block
+    },
+  },
+}
+EOF
+
+    log_success "OpenClaw 配置已写入: $config_path"
+}
+
 # 下载模型
 # 下载单个文件 (带断点续传和备用地址)
 download_file() {
@@ -450,6 +670,9 @@ LLAMA_PORT="${LLAMA_PORT:-8081}"
 WEBUI_PORT="${WEBUI_PORT:-8080}"
 PID_DIR="$LINGKONG_HOME/run"
 LOG_DIR="$LINGKONG_HOME/logs"
+OPENCLAW_APP_DIR="$LINGKONG_HOME/apps/openclaw"
+OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-$LINGKONG_HOME/openclaw}"
+OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_STATE_DIR/openclaw.json}"
 
 export DYLD_LIBRARY_PATH="$LINGKONG_HOME/lib:${DYLD_LIBRARY_PATH:-}"
 export LD_LIBRARY_PATH="$LINGKONG_HOME/lib:${LD_LIBRARY_PATH:-}"
@@ -514,6 +737,7 @@ start_gemini_api() {
     sign_binaries
 
     # 设置环境变量
+    export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
     export LLAMA_SERVER_BIN="$LINGKONG_HOME/bin/llama-server"
     export LLAMA_MTMD_BIN="$LINGKONG_HOME/bin/llama-mtmd-cli"
     export LLAMA_MODEL="$MODEL"
@@ -594,8 +818,49 @@ start_webui() {
     done
 }
 
+# 启动 OpenClaw (WhatsApp agent gateway)
+start_openclaw() {
+    if [[ ! -f "$OPENCLAW_APP_DIR/openclaw.mjs" ]]; then
+        echo -e "${YELLOW}[警告]${NC} OpenClaw 未安装，跳过"
+        return 1
+    fi
+
+    if [[ ! -f "$OPENCLAW_CONFIG_PATH" ]]; then
+        echo -e "${YELLOW}[警告]${NC} OpenClaw 配置不存在: $OPENCLAW_CONFIG_PATH"
+        echo -e "${YELLOW}[提示]${NC} 可重新运行安装脚本，或手动创建 openclaw.json"
+    fi
+
+    if [[ -f "$PID_DIR/openclaw.pid" ]] && kill -0 "$(cat "$PID_DIR/openclaw.pid")" 2>/dev/null; then
+        echo -e "${GREEN}[运行中]${NC} OpenClaw (PID: $(cat "$PID_DIR/openclaw.pid"))"
+        return 0
+    fi
+
+    # Offline-first guardrails: allow WhatsApp transport, block other outbound networking where possible.
+    export OPENCLAW_STATE_DIR="$OPENCLAW_STATE_DIR"
+    export OPENCLAW_CONFIG_PATH="$OPENCLAW_CONFIG_PATH"
+    export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
+    export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+
+    nohup "$LINGKONG_HOME/bin/openclaw" gateway run --force --allow-unconfigured > "$LOG_DIR/openclaw.log" 2>&1 &
+    echo $! > "$PID_DIR/openclaw.pid"
+    echo -e "${GREEN}[启动]${NC} OpenClaw (PID: $(cat "$PID_DIR/openclaw.pid"))"
+}
+
+stop_openclaw() {
+    if [[ -f "$PID_DIR/openclaw.pid" ]]; then
+        local pid
+        pid=$(cat "$PID_DIR/openclaw.pid")
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+            echo -e "${GREEN}[成功]${NC} 已停止 openclaw (PID: $pid)"
+        fi
+        rm -f "$PID_DIR/openclaw.pid"
+    fi
+}
+
 # 停止服务
 stop_all() {
+    stop_openclaw
     for name in webui gemini llama; do
         local pid_file="$PID_DIR/$name.pid"
         if [[ -f "$pid_file" ]]; then
@@ -721,6 +986,12 @@ show_status() {
         echo -e "  WebUI:      ${RED}○ 已停止${NC}"
     fi
 
+    if [[ -f "$PID_DIR/openclaw.pid" ]] && kill -0 "$(cat "$PID_DIR/openclaw.pid")" 2>/dev/null; then
+        echo -e "  OpenClaw:   ${GREEN}● 运行中${NC} (PID: $(cat "$PID_DIR/openclaw.pid"))"
+    else
+        echo -e "  OpenClaw:   ${RED}○ 已停止${NC}"
+    fi
+
     echo ""
     echo -e "  ${CYAN}WebUI:${NC}      http://localhost:$WEBUI_PORT"
     echo -e "  ${CYAN}Playground:${NC} http://localhost:$WEBUI_PORT/static/playground.html"
@@ -735,6 +1006,7 @@ case "${1:-start}" in
         echo ""
         start_gemini_api
         start_webui
+        start_openclaw || true
         echo ""
         echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
         echo -e "${GREEN}  ✅ 灵空 AI 已启动!${NC}"
@@ -764,19 +1036,81 @@ case "${1:-start}" in
         show_status
         ;;
     logs)
-        tail -f "$LOG_DIR/webui.log" "$LOG_DIR/gemini.log"
+        tail -f "$LOG_DIR/webui.log" "$LOG_DIR/gemini.log" "$LOG_DIR/openclaw.log" 2>/dev/null || \
+          tail -f "$LOG_DIR/webui.log" "$LOG_DIR/gemini.log"
+        ;;
+    agent)
+        shift || true
+        case "${1:-status}" in
+            start|up)
+                start_openclaw
+                ;;
+            stop|down)
+                stop_openclaw
+                ;;
+            status|ps)
+                if [[ -f "$PID_DIR/openclaw.pid" ]] && kill -0 "$(cat "$PID_DIR/openclaw.pid")" 2>/dev/null; then
+                    echo -e "${GREEN}[运行中]${NC} OpenClaw (PID: $(cat "$PID_DIR/openclaw.pid"))"
+                else
+                    echo -e "${RED}[已停止]${NC} OpenClaw"
+                fi
+                ;;
+            logs)
+                tail -f "$LOG_DIR/openclaw.log"
+                ;;
+            login)
+                "$LINGKONG_HOME/bin/openclaw" channels login --channel whatsapp --verbose
+                ;;
+            *)
+                echo "使用方法: lingkong agent [start|stop|status|logs|login]"
+                ;;
+        esac
         ;;
     update|upgrade)
         echo -e "${CYAN}🔄 检查更新...${NC}"
         check_update
         ;;
     *)
-        echo "使用方法: lingkong [start|stop|restart|status|logs|update]"
+        echo "使用方法: lingkong [start|stop|restart|status|logs|update|agent]"
         ;;
 esac
 SCRIPT
 
     chmod +x "$BIN_DIR/lingkong"
+
+    # OpenClaw wrapper (runs the bundled OpenClaw CLI with LingKong defaults)
+    cat > "$BIN_DIR/openclaw" << 'SCRIPT'
+#!/bin/bash
+set -e
+
+LINGKONG_HOME="${LINGKONG_HOME:-$HOME/.lingkong}"
+OPENCLAW_APP_DIR="${OPENCLAW_APP_DIR:-$LINGKONG_HOME/apps/openclaw}"
+STATE_DIR="${OPENCLAW_STATE_DIR:-$LINGKONG_HOME/openclaw}"
+
+export OPENCLAW_STATE_DIR="$STATE_DIR"
+export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$STATE_DIR/openclaw.json}"
+export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
+export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+
+if [[ ! -f "$OPENCLAW_APP_DIR/openclaw.mjs" ]]; then
+  echo "[openclaw] missing runtime at: $OPENCLAW_APP_DIR/openclaw.mjs" >&2
+  echo "[openclaw] re-run installer to fetch the OpenClaw bundle." >&2
+  exit 1
+fi
+
+NODE_BIN="$(command -v node || true)"
+if [[ -z "$NODE_BIN" && -x "$LINGKONG_HOME/node/bin/node" ]]; then
+  NODE_BIN="$LINGKONG_HOME/node/bin/node"
+fi
+if [[ -z "$NODE_BIN" ]]; then
+  echo "[openclaw] node not found. Install Node.js, or re-run installer to fetch a runtime." >&2
+  exit 1
+fi
+
+exec "$NODE_BIN" "$OPENCLAW_APP_DIR/openclaw.mjs" "$@"
+SCRIPT
+
+    chmod +x "$BIN_DIR/openclaw"
     log_success "启动脚本创建完成"
 }
 
@@ -1092,6 +1426,9 @@ main() {
     else
         install_native_binaries
         download_webui
+        download_openclaw
+        install_node_runtime || true
+        write_openclaw_config
         detect_python || install_python
         install_python_deps
         create_native_scripts

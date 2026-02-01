@@ -5,8 +5,19 @@
 // - Force the default LLM to a localhost Gemini-compatible endpoint (LingKong)
 // - Keep the rest of the agent/tooling available for local tasks
 //
-// Runtime: set OPENCLAW_STATE_DIR=~/.lingkong/openclaw and OPENCLAW_OFFLINE=1.
+// Runtime:
+// - set OPENCLAW_STATE_DIR=~/.lingkong/openclaw
+// - set OPENCLAW_CONFIG_PATH=~/.lingkong/openclaw/openclaw.json (avoid legacy ~/.clawdbot configs)
+// - set OPENCLAW_OFFLINE=1 (and optionally LINGKONG_OFFLINE=1 for other components)
 {
+  gateway: {
+    // Ensure the gateway stays local-only for offline-first deployments.
+    mode: "local",
+    bind: "loopback",
+    // Keep Control UI off by default (WhatsApp is the primary interface).
+    controlUi: { enabled: false },
+  },
+
   update: {
     // Prevent any background internet checks.
     checkOnStart: false,
@@ -27,7 +38,8 @@
             id: "gemini-3-pro-preview",
             name: "LingKong (Gemma 3n) via local Gemini API",
             reasoning: false,
-            input: ["text"],
+            // Enable audio so inbound WhatsApp voice notes can be transcribed offline via the local Gemini API.
+            input: ["text", "audio"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 32768,
             maxTokens: 8192,
