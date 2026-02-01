@@ -89,6 +89,9 @@ artifacts/lora/
 artifacts/merged_model/
 artifacts/gguf/*.gguf
 
+# Built distributable bundles (OpenClaw, etc.)
+artifacts/bundles/
+
 # Rust build artifacts
 ai_glasses_rust/target/
 **/target/
