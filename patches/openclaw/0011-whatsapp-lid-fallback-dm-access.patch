@@ -1,0 +1,230 @@
+diff --git a/src/utils.ts b/src/utils.ts
+index e8a6ac725..45df720a4 100644
+--- a/src/utils.ts
++++ b/src/utils.ts
+@@ -146,7 +146,7 @@ export function jidToE164(jid: string, opts?: JidToE164Options): string | null {
+     }
+     const shouldLog = opts?.logMissing ?? shouldLogVerbose();
+     if (shouldLog) {
+-      logVerbose(`LID mapping not found for ${lid}; skipping inbound message`);
++      logVerbose(`LID mapping not found for ${lid}`);
+     }
+   }
+ 
+diff --git a/src/web/inbound/access-control.pairing-history.test.ts b/src/web/inbound/access-control.pairing-history.test.ts
+index b5d5b721c..da31e9ece 100644
+--- a/src/web/inbound/access-control.pairing-history.test.ts
++++ b/src/web/inbound/access-control.pairing-history.test.ts
+@@ -59,6 +59,36 @@ describe("checkInboundAccessControl", () => {
+     expect(sendMessageMock).not.toHaveBeenCalled();
+   });
+ 
++  it("allows DMs when allowFrom contains a raw LID JID", async () => {
++    config = {
++      channels: {
++        whatsapp: {
++          dmPolicy: "pairing",
++          allowFrom: ["999@lid"],
++        },
++      },
++    };
++
++    const result = await checkInboundAccessControl({
++      accountId: "default",
++      from: "999@lid",
++      selfE164: "+15550009999",
++      senderE164: null,
++      group: false,
++      pushName: "Sam",
++      isFromMe: false,
++      messageTimestampMs: 1_000_000,
++      connectedAtMs: 1_000_000,
++      pairingGraceMs: 30_000,
++      sock: { sendMessage: sendMessageMock },
++      remoteJid: "999@lid",
++    });
++
++    expect(result.allowed).toBe(true);
++    expect(upsertPairingRequestMock).not.toHaveBeenCalled();
++    expect(sendMessageMock).not.toHaveBeenCalled();
++  });
++
+   it("sends pairing replies for live DMs", async () => {
+     const connectedAtMs = 1_000_000;
+     const messageTimestampMs = connectedAtMs - 10_000;
+diff --git a/src/web/inbound/access-control.ts b/src/web/inbound/access-control.ts
+index 891712015..8bdc91600 100644
+--- a/src/web/inbound/access-control.ts
++++ b/src/web/inbound/access-control.ts
+@@ -17,6 +17,36 @@ export type InboundAccessControlResult = {
+ 
+ const PAIRING_REPLY_HISTORY_GRACE_MS = 30_000;
+ 
++function normalizeWhatsAppPeerId(value: string): string {
++  const withoutPrefix = value.replace(/^whatsapp:/, "").trim();
++
++  // Common WhatsApp DM JID -> E.164 (e.g. 123:1@s.whatsapp.net -> +123).
++  const e164JidMatch = withoutPrefix.match(/^(\d+)(?::\d+)?@(s\.whatsapp\.net|hosted)$/i);
++  if (e164JidMatch) {
++    return `+${e164JidMatch[1]}`;
++  }
++
++  // LID JIDs (linked IDs) cannot be reliably mapped to phone numbers without state;
++  // normalize the JID shape so allowlists can include raw LIDs (e.g. 999@lid).
++  const lidJidMatch = withoutPrefix.match(/^(\d+)(?::\d+)?@(lid|hosted\.lid)$/i);
++  if (lidJidMatch) {
++    return `${lidJidMatch[1]}@lid`;
++  }
++
++  if (withoutPrefix.includes("@")) {
++    // Generic JID normalization (strip device suffix, lowercase domain).
++    const match = withoutPrefix.match(/^([^@]+)@(.+)$/);
++    if (!match) {
++      return withoutPrefix.toLowerCase();
++    }
++    const user = match[1].replace(/:\d+$/, "");
++    const domain = match[2].toLowerCase();
++    return `${user}@${domain}`;
++  }
++
++  return normalizeE164(withoutPrefix);
++}
++
+ export async function checkInboundAccessControl(params: {
+   accountId: string;
+   from: string;
+@@ -66,7 +96,9 @@ export async function checkInboundAccessControl(params: {
+   const dmHasWildcard = allowFrom?.includes("*") ?? false;
+   const normalizedAllowFrom =
+     allowFrom && allowFrom.length > 0
+-      ? allowFrom.filter((entry) => entry !== "*").map(normalizeE164)
++      ? allowFrom
++          .filter((entry) => entry !== "*")
++          .map((entry) => normalizeWhatsAppPeerId(String(entry)))
+       : [];
+   const groupHasWildcard = groupAllowFrom?.includes("*") ?? false;
+   const normalizedGroupAllowFrom =
+@@ -137,38 +169,41 @@ export async function checkInboundAccessControl(params: {
+     }
+     if (dmPolicy !== "open" && !isSamePhone) {
+       const candidate = params.from;
++      const candidateKey = normalizeWhatsAppPeerId(candidate);
+       const allowed =
+         dmHasWildcard ||
+-        (normalizedAllowFrom.length > 0 && normalizedAllowFrom.includes(candidate));
++        (normalizedAllowFrom.length > 0 && normalizedAllowFrom.includes(candidateKey));
+       if (!allowed) {
+         if (dmPolicy === "pairing") {
+           if (suppressPairingReply) {
+-            logVerbose(`Skipping pairing reply for historical DM from ${candidate}.`);
++            logVerbose(`Skipping pairing reply for historical DM from ${candidateKey}.`);
+           } else {
+             const { code, created } = await upsertChannelPairingRequest({
+               channel: "whatsapp",
+-              id: candidate,
++              id: candidateKey,
+               meta: { name: (params.pushName ?? "").trim() || undefined },
+             });
+             if (created) {
+               logVerbose(
+-                `whatsapp pairing request sender=${candidate} name=${params.pushName ?? "unknown"}`,
++                `whatsapp pairing request sender=${candidateKey} name=${params.pushName ?? "unknown"}`,
+               );
+               try {
+                 await params.sock.sendMessage(params.remoteJid, {
+                   text: buildPairingReply({
+                     channel: "whatsapp",
+-                    idLine: `Your WhatsApp phone number: ${candidate}`,
++                    idLine: candidateKey.startsWith("+")
++                      ? `Your WhatsApp phone number: ${candidateKey}`
++                      : `Your WhatsApp sender id: ${candidateKey}`,
+                     code,
+                   }),
+                 });
+               } catch (err) {
+-                logVerbose(`whatsapp pairing reply failed for ${candidate}: ${String(err)}`);
++                logVerbose(`whatsapp pairing reply failed for ${candidateKey}: ${String(err)}`);
+               }
+             }
+           }
+         } else {
+-          logVerbose(`Blocked unauthorized sender ${candidate} (dmPolicy=${dmPolicy})`);
++          logVerbose(`Blocked unauthorized sender ${candidateKey} (dmPolicy=${dmPolicy})`);
+         }
+         return {
+           allowed: false,
+diff --git a/src/web/inbound/monitor.ts b/src/web/inbound/monitor.ts
+index c7cfabeba..e6907c9bb 100644
+--- a/src/web/inbound/monitor.ts
++++ b/src/web/inbound/monitor.ts
+@@ -178,15 +178,15 @@ export async function monitorWebInbox(options: {
+         }
+       }
+       const participantJid = msg.key?.participant ?? undefined;
+-      const from = group ? remoteJid : await resolveInboundJid(remoteJid);
+-      if (!from) {
+-        continue;
+-      }
++      const resolvedFrom = group ? remoteJid : await resolveInboundJid(remoteJid);
++      // Some WhatsApp DMs arrive as LID JIDs (e.g. 999@lid). If we cannot resolve
++      // them back to E.164, still process the message using the raw JID.
++      const from = group ? remoteJid : resolvedFrom ?? remoteJid;
+       const senderE164 = group
+         ? participantJid
+           ? await resolveInboundJid(participantJid)
+           : null
+-        : from;
++        : resolvedFrom;
+ 
+       let groupSubject: string | undefined;
+       let groupParticipants: string[] | undefined;
+diff --git a/src/web/monitor-inbox.streams-inbound-messages.test.ts b/src/web/monitor-inbox.streams-inbound-messages.test.ts
+index 61e8dd383..783065619 100644
+--- a/src/web/monitor-inbox.streams-inbound-messages.test.ts
++++ b/src/web/monitor-inbox.streams-inbound-messages.test.ts
+@@ -214,6 +214,45 @@ describe("web monitor inbox", () => {
+     await listener.close();
+   });
+ 
++  it("streams inbound messages when LID mapping is missing (falls back to raw JID)", async () => {
++    const onMessage = vi.fn(async (msg) => {
++      await msg.sendComposing();
++      await msg.reply("pong");
++    });
++
++    const listener = await monitorWebInbox({
++      verbose: false,
++      onMessage,
++      accountId: ACCOUNT_ID,
++      authDir,
++    });
++    const sock = await createWaSocket();
++    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
++    const upsert = {
++      type: "notify",
++      messages: [
++        {
++          key: { id: "abc", fromMe: false, remoteJid: "999@lid" },
++          message: { conversation: "ping" },
++          messageTimestamp: 1_700_000_000,
++          pushName: "Tester",
++        },
++      ],
++    };
++
++    sock.ev.emit("messages.upsert", upsert);
++    await new Promise((resolve) => setImmediate(resolve));
++
++    expect(getPNForLID).toHaveBeenCalledWith("999@lid");
++    expect(onMessage).toHaveBeenCalledWith(
++      expect.objectContaining({ body: "ping", from: "999@lid", to: "+123" }),
++    );
++    expect(sock.sendPresenceUpdate).toHaveBeenCalledWith("composing", "999@lid");
++    expect(sock.sendMessage).toHaveBeenCalledWith("999@lid", { text: "pong" });
++
++    await listener.close();
++  });
++
+   it("resolves LID JIDs via authDir mapping files", async () => {
+     const onMessage = vi.fn(async () => {
+       return;
