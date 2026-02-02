@@ -95,7 +95,7 @@
         // Keep the injected description short and in Chinese to reduce tokens and keep the main
         // assistant replies in Chinese (even when the vision model would default to English).
         maxChars: 400,
-        prompt: "请用中文一句话描述图片的主要内容；不要推测；不要解释。",
+        prompt: "请用中文一句话概括图片内容，尽量包含主要物体和场景；不要推测；不要解释。",
       },
       video: { enabled: false },
       audio: {
