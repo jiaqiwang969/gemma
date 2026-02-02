@@ -1076,6 +1076,14 @@ start_openclaw() {
     export OPENCLAW_CONFIG_PATH="$OPENCLAW_CONFIG_PATH"
     export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
     export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+    # Ensure bundled binaries (whisper-cli, ffmpeg, etc) are discoverable by OpenClaw sub-processes.
+    export PATH="$LINGKONG_HOME/bin:${PATH:-}"
+    # Offline STT: point OpenClaw media-understanding (whisper-cli) at our bundled model.
+    # Default to zh for short Chinese voice notes; users can override via WHISPER_CPP_LANG.
+    if [[ -f "$LINGKONG_HOME/models/whisper/ggml-small.bin" ]]; then
+        export WHISPER_CPP_MODEL="$LINGKONG_HOME/models/whisper/ggml-small.bin"
+        export WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-zh}"
+    fi
     # Default to the smallest prompt for low-latency voice assistant UX.
     # Users can override (e.g. export OPENCLAW_PROMPT_MODE=full).
     export OPENCLAW_PROMPT_MODE="${OPENCLAW_PROMPT_MODE:-none}"
@@ -1325,6 +1333,10 @@ set -e
 
 LINGKONG_HOME="${LINGKONG_HOME:-$HOME/.lingkong}"
 export PATH="$LINGKONG_HOME/bin:${PATH:-}"
+if [[ -f "$LINGKONG_HOME/models/whisper/ggml-small.bin" ]]; then
+  export WHISPER_CPP_MODEL="$LINGKONG_HOME/models/whisper/ggml-small.bin"
+  export WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-zh}"
+fi
 export OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-$LINGKONG_HOME/openclaw}"
 export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
@@ -1603,7 +1615,7 @@ if [[ -z "${OPENCLAW_GATEWAY_TOKEN:-}" ]]; then
   fi
 fi
 export WHISPER_CPP_MODEL="${WHISPER_CPP_MODEL:-$LINGKONG_HOME/models/whisper/ggml-small.bin}"
-export WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-auto}"
+export WHISPER_CPP_LANG="${WHISPER_CPP_LANG:-zh}"
 
 # Whisper performance tuning (safe default): cap threads to avoid CPU saturation.
 if [[ -z "${WHISPER_CPP_THREADS:-}" ]]; then
