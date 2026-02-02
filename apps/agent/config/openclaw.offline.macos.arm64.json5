@@ -38,8 +38,9 @@
             id: "gemini-3-pro-preview",
             name: "LingKong (Gemma 3n) via local Gemini API",
             reasoning: false,
-            // Reply model is text-only; inbound voice notes are handled via tools.media.audio (local STT).
-            input: ["text"],
+            // Supports offline image understanding when tools.media.image is enabled and LingKong has the vision mmproj.
+            // Inbound voice notes are handled via tools.media.audio (local STT) so audio input is not required here.
+            input: ["text", "image"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 32768,
             maxTokens: 8192,
@@ -83,9 +84,10 @@
     // Media/link understanding runs automatically on inbound messages.
     // In offline mode we must avoid auto-selecting remote providers:
     // - enable audio transcription via local STT (whisper.cpp / whisper-cli)
-    // - disable image/video and link understanding by default
+    // - enable image understanding (offline) via LingKong vision mmproj + llama-mtmd-cli
+    // - keep video and link understanding disabled by default
     media: {
-      image: { enabled: false },
+      image: { enabled: true },
       video: { enabled: false },
       audio: {
         enabled: true,

@@ -551,7 +551,8 @@ write_openclaw_config_to() {
             id: "gemini-3-pro-preview",
             name: "LingKong (Gemma 3n) via local Gemini API",
             reasoning: false,
-            input: ["text"],
+            // Enable offline image understanding (requires the vision mmproj + llama-mtmd-cli).
+            input: ["text", "image"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 32768,
             maxTokens: 8192,
@@ -580,7 +581,7 @@ write_openclaw_config_to() {
       fetch: { enabled: false },
     },
     media: {
-      image: { enabled: false },
+      image: { enabled: true },
       video: { enabled: false },
       audio: { enabled: true },
     },
@@ -865,9 +866,9 @@ MODEL="$LINGKONG_HOME/models/gemma-3n-E2B-it-Q4_K_M.gguf"
 VISION="$LINGKONG_HOME/models/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO="$LINGKONG_HOME/models/gemma-3n-audio-mmproj-f16.gguf"
 # 可选多模态开关（提高启动/推理速度时可关闭；0=关闭，1=开启）
-# Default to text-only for best latency + KV cache persistence.
-# Users can opt in to vision by exporting LINGKONG_ENABLE_VISION_MMPROJ=1.
-ENABLE_VISION_MMPROJ="${LINGKONG_ENABLE_VISION_MMPROJ:-0}"
+# Default to vision-enabled so offline image understanding works out-of-the-box.
+# Users can opt out for best latency by exporting LINGKONG_ENABLE_VISION_MMPROJ=0.
+ENABLE_VISION_MMPROJ="${LINGKONG_ENABLE_VISION_MMPROJ:-1}"
 ENABLE_AUDIO_MMPROJ="${LINGKONG_ENABLE_AUDIO_MMPROJ:-0}"
 LLAMA_PORT="${LLAMA_PORT:-8081}"
 WEBUI_PORT="${WEBUI_PORT:-8080}"
