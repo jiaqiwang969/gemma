@@ -50,8 +50,8 @@ index f71edc664..b3d6a8e2b 100644
 +  const bodyTrimmed = (msg.body ?? "").trim();
 +  const inboundHasAudio =
 +    Boolean(msg.mediaType && msg.mediaType.startsWith("audio/")) ||
-+    /^<media:audio>(\\s*\\([^)]*\\))?$/i.test(bodyTrimmed) ||
-+    /^\\[Audio\\b/i.test(bodyTrimmed);
++    /^<media:audio>(\s*\([^)]*\))?$/i.test(bodyTrimmed) ||
++    /^\[Audio\b/i.test(bodyTrimmed);
    // When the user sends a WhatsApp voice note, prefer replying with *only* voice (no caption text),
    // but keep a text fallback if the audio send fails.
    let voiceOnlyFallbackText: string[] | null = null;
