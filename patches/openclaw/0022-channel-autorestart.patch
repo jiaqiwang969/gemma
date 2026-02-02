@@ -1,0 +1,95 @@
+diff --git a/src/gateway/server-channels.ts b/src/gateway/server-channels.ts
+index 73a6a11cd..f1c4f0346 100644
+--- a/src/gateway/server-channels.ts
++++ b/src/gateway/server-channels.ts
+@@ -19,6 +19,7 @@ type ChannelRuntimeStore = {
+   aborts: Map<string, AbortController>;
+   tasks: Map<string, Promise<unknown>>;
+   runtimes: Map<string, ChannelAccountSnapshot>;
++  restarts: Map<string, ReturnType<typeof setTimeout>>;
+ };
+ 
+ function createRuntimeStore(): ChannelRuntimeStore {
+@@ -26,6 +27,7 @@ function createRuntimeStore(): ChannelRuntimeStore {
+     aborts: new Map(),
+     tasks: new Map(),
+     runtimes: new Map(),
++    restarts: new Map(),
+   };
+ }
+ 
+@@ -109,6 +111,11 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
+ 
+     await Promise.all(
+       accountIds.map(async (id) => {
++        const pendingRestart = store.restarts.get(id);
++        if (pendingRestart) {
++          clearTimeout(pendingRestart);
++          store.restarts.delete(id);
++        }
+         if (store.tasks.has(id)) {
+           return;
+         }
+@@ -148,6 +155,8 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
+         });
+ 
+         const log = channelLogs[channelId];
++        let exitedWithError = false;
++        let exitMessage: string | null = null;
+         const task = startAccount({
+           cfg,
+           accountId: id,
+@@ -161,6 +170,8 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
+         const tracked = Promise.resolve(task)
+           .catch((err) => {
+             const message = formatErrorMessage(err);
++            exitedWithError = true;
++            exitMessage = message;
+             setRuntime(channelId, id, { accountId: id, lastError: message });
+             log.error?.(`[${id}] channel exited: ${message}`);
+           })
+@@ -172,6 +183,32 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
+               running: false,
+               lastStopAt: Date.now(),
+             });
++
++            // Reliability: if a channel task exits unexpectedly, restart it with backoff.
++            // This prevents long-running gateways from getting "stuck" with running=false after
++            // transient network errors (e.g., WhatsApp Web ECONNRESET).
++            if (!abort.signal.aborted && exitedWithError) {
++              const current = getRuntime(channelId, id);
++              const prevAttempts = current.reconnectAttempts ?? 0;
++              const attempts = prevAttempts + 1;
++              const capped = Math.min(6, attempts);
++              const delayMs = Math.min(60_000, 1000 * Math.pow(2, capped));
++              setRuntime(channelId, id, {
++                accountId: id,
++                reconnectAttempts: attempts,
++                connected: false,
++                lastDisconnect: {
++                  at: Date.now(),
++                  error: exitMessage ?? "channel exited",
++                },
++              });
++              log.warn?.(`[${id}] channel exited; restarting in ${delayMs}ms (attempt ${attempts})`);
++              const t = setTimeout(() => {
++                store.restarts.delete(id);
++                void startChannel(channelId, id);
++              }, delayMs);
++              store.restarts.set(id, t);
++            }
+           });
+         store.tasks.set(id, tracked);
+       }),
+@@ -194,6 +231,11 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
+ 
+     await Promise.all(
+       Array.from(knownIds.values()).map(async (id) => {
++        const pendingRestart = store.restarts.get(id);
++        if (pendingRestart) {
++          clearTimeout(pendingRestart);
++          store.restarts.delete(id);
++        }
+         const abort = store.aborts.get(id);
+         const task = store.tasks.get(id);
+         if (!abort && !task && !plugin?.gateway?.stopAccount) {
