@@ -865,7 +865,9 @@ MODEL="$LINGKONG_HOME/models/gemma-3n-E2B-it-Q4_K_M.gguf"
 VISION="$LINGKONG_HOME/models/gemma-3n-vision-mmproj-f16.gguf"
 AUDIO="$LINGKONG_HOME/models/gemma-3n-audio-mmproj-f16.gguf"
 # 可选多模态开关（提高启动/推理速度时可关闭；0=关闭，1=开启）
-ENABLE_VISION_MMPROJ="${LINGKONG_ENABLE_VISION_MMPROJ:-1}"
+# Default to text-only for best latency + KV cache persistence.
+# Users can opt in to vision by exporting LINGKONG_ENABLE_VISION_MMPROJ=1.
+ENABLE_VISION_MMPROJ="${LINGKONG_ENABLE_VISION_MMPROJ:-0}"
 ENABLE_AUDIO_MMPROJ="${LINGKONG_ENABLE_AUDIO_MMPROJ:-0}"
 LLAMA_PORT="${LLAMA_PORT:-8081}"
 WEBUI_PORT="${WEBUI_PORT:-8080}"

@@ -2054,14 +2054,20 @@ def parse_tools(tools: List[Dict], tool_config: Dict = None) -> str:
                 if allowed_names and name not in allowed_names:
                     continue
 
-                desc = func.get("description", "")
-                params = func.get("parameters", {})
+                desc = (func.get("description") or "").strip()
+                params = func.get("parameters") or {}
+                # Keep tool schemas compact to reduce prompt tokens/latency.
+                try:
+                    params_json = json.dumps(params, ensure_ascii=False, separators=(",", ":"))
+                except Exception:
+                    params_json = "{}"
 
-                tool_descriptions.append(f"""
-Function: {name}
-Description: {desc}
-Parameters: {json.dumps(params, indent=2)}
-""")
+                if desc:
+                    tool_descriptions.append(
+                        f"Function: {name}\nDescription: {desc}\nParameters: {params_json}\n"
+                    )
+                else:
+                    tool_descriptions.append(f"Function: {name}\nParameters: {params_json}\n")
         elif "codeExecution" in tool:
             has_code_execution = True
         elif "googleSearch" in tool:
@@ -3187,7 +3193,7 @@ def stream_generate_content(model_name: str):
     Gemini streamGenerateContent API - 流式输出
 
     与 generateContent 相同的输入格式，但返回 Server-Sent Events (SSE) 流。
-    每个 chunk 是一个完整的 JSON 响应，逐步包含更多文本。
+    每个 chunk 是一个完整的 JSON 响应。
 
     真实 Gemini API 流式响应格式:
     data: {"candidates":[{"content":{"parts":[{"text":"Hello"}],"role":"model"},...}],...}
@@ -3195,207 +3201,46 @@ def stream_generate_content(model_name: str):
     注意: alt=sse 参数由客户端指定
     """
     try:
-        request_started = time.perf_counter()
-        api_key = request.args.get("key", "")
-        alt = request.args.get("alt", "json")  # 默认 json，可以是 sse
+        # NOTE: OpenClaw (and many Gemini clients) call streamGenerateContent whenever it's available.
+        # Our non-stream generateContent endpoint contains the stable logic for:
+        # - tool/function call extraction (functionCall / functionResponse)
+        # - JSON schema enforcement
+        # - multimodal backends (image/audio)
+        #
+        # To keep compatibility, we currently perform a single-shot generateContent
+        # run and emit it as a single SSE event.
+        inner = generate_content(model_name)
 
-        data = request.json
-        if not data:
-            return jsonify({"error": {"message": "请求体为空", "code": "400"}}), 400
+        # generate_content can return a Flask Response (ok path) or a (payload, status) tuple (error paths).
+        if isinstance(inner, Response):
+            status_code = inner.status_code
+            body = inner.get_data(as_text=True)
+        else:
+            try:
+                resp_obj, status_code = inner  # type: ignore[misc]
+                if isinstance(resp_obj, Response):
+                    body = resp_obj.get_data(as_text=True)
+                else:
+                    body = json.dumps(resp_obj, ensure_ascii=False)
+            except Exception:
+                status_code = 500
+                body = json.dumps({"error": {"message": "upstream_error", "code": "500"}}, ensure_ascii=False)
 
-        contents = data.get("contents", [])
-        system_instruction = data.get("systemInstruction")
-        generation_config = data.get("generationConfig", {})
-        tools = data.get("tools", [])
-        tool_config = data.get("toolConfig", {})
-
-        if not contents:
-            return jsonify({"error": {"message": "contents 不能为空", "code": "400"}}), 400
-
-        # 解析配置 (与 generateContent 相同)
-        thinking_config = generation_config.get("thinkingConfig", {})
-        thinking_level = thinking_config.get("thinkingLevel", DEFAULT_THINKING_LEVEL)
-        max_tokens = generation_config.get("maxOutputTokens", DEFAULT_MAX_TOKENS)
-        temperature = generation_config.get("temperature", DEFAULT_TEMPERATURE)
-
-        # 构建 prompt
-        prompt_parts = []
-
-        if system_instruction:
-            sys_text = parse_system_instruction(system_instruction)
-            if sys_text:
-                prompt_parts.append(f"<start_of_turn>user\nSystem: {sys_text}<end_of_turn>")
-
-        if tools:
-            tools_prompt = parse_tools(tools, tool_config)
-            if tools_prompt:
-                prompt_parts.append(f"<start_of_turn>user\n{tools_prompt}<end_of_turn>")
-
-        thinking_prompt = THINKING_PROMPT_TEMPLATE.get(thinking_level, "")
-        if thinking_prompt:
-            prompt_parts.append(f"<start_of_turn>user\n{thinking_prompt}<end_of_turn>")
-
-        conversation, media_data = parse_gemini_contents(contents)
-        prompt_parts.append(conversation)
-
-        full_prompt = "".join(prompt_parts)
-
-        logger.info(f"streamGenerateContent: model={model_name}, thinking={thinking_level}")
-
-        image_data, audio_data = extract_audio_from_media(media_data) if media_data else ([], [])
-        session_id = data.get("session_id") or api_key or (request.remote_addr or "anonymous")
-        turn_index = _estimate_turn_index(contents)
-        user_text = _extract_user_text(contents)
-        image_paths = _save_media_items(
-            items=image_data,
-            session_id=session_id,
-            turn_index=turn_index,
-            kind="image",
-        )
-        audio_paths = _save_media_items(
-            items=audio_data,
-            session_id=session_id,
-            turn_index=turn_index,
-            kind="audio",
-        )
-        feedback_data = data.get("feedback")
-        implicit_feedback_score = data.get("implicit_feedback_score")
-        retrieved_doc_ids = data.get("retrieved_doc_ids")
-        embedding = data.get("multimodal_embedding") or data.get("embedding")
-        if embedding is None:
-            service = get_embedding_service()
-            if service is not None:
-                if EVOLUTION_EMBED_MEDIA and image_paths:
-                    embedding = service.embed_image_paths(image_paths)
-                elif EVOLUTION_EMBED_TEXT and user_text:
-                    embedding = service.embed_text(user_text)
-        logged = {"done": False}
+        if status_code != 200:
+            # Preserve error semantics for clients that don't tolerate SSE failures.
+            return inner
 
         def generate_stream():
-            """生成 SSE 流"""
-            if not _state.llama_server_ready:
-                if not start_llama_server():
-                    yield f"data: {json.dumps({'error': {'message': 'llama-server 未就绪'}})}\n\n"
-                    return
+            yield f"data: {body}\n\n"
 
-            try:
-                import requests as req
-
-                # 使用 llama-server 的流式 API
-                resp = req.post(
-                    f"{LLAMA_SERVER_BASE_URL}/completion",
-                    json={
-                        "prompt": full_prompt,
-                        "n_predict": max_tokens,
-                        "temperature": temperature,
-                        "stop": ["</s>", "<eos>", "<end_of_turn>"],
-                        "stream": True,
-                    },
-                    stream=True,
-                    timeout=120
-                )
-
-                accumulated_text = ""
-                prompt_tokens = 0
-                completion_tokens = 0
-
-                for line in resp.iter_lines():
-                    if line:
-                        line_str = line.decode('utf-8')
-                        if line_str.startswith('data: '):
-                            chunk_data = json.loads(line_str[6:])
-
-                            if "content" in chunk_data:
-                                new_text = chunk_data["content"]
-                                accumulated_text += new_text
-                                completion_tokens = len(accumulated_text) // 4
-
-                                # 构建流式响应 (与真实 API 格式一致)
-                                stream_response = {
-                                    "candidates": [{
-                                        "content": {
-                                            "parts": [{"text": accumulated_text}],
-                                            "role": "model"
-                                        },
-                                        "finishReason": None,
-                                        "index": 0,
-                                        "safetyRatings": None
-                                    }],
-                                    "usageMetadata": {
-                                        "promptTokenCount": prompt_tokens,
-                                        "candidatesTokenCount": completion_tokens,
-                                        "totalTokenCount": prompt_tokens + completion_tokens
-                                    },
-                                    "modelVersion": MODEL_VERSION
-                                }
-
-                                yield f"data: {json.dumps(stream_response, ensure_ascii=False)}\n\n"
-
-                            # 检查是否完成
-                            if chunk_data.get("stop"):
-                                # 最终响应
-                                final_response = {
-                                    "candidates": [{
-                                        "content": {
-                                            "parts": [{"text": accumulated_text}],
-                                            "role": "model"
-                                        },
-                                        "finishReason": "STOP",
-                                        "index": 0,
-                                        "safetyRatings": None
-                                    }],
-                                    "usageMetadata": {
-                                        "promptTokenCount": chunk_data.get("tokens_evaluated", 0),
-                                        "candidatesTokenCount": chunk_data.get("tokens_predicted", completion_tokens),
-                                        "totalTokenCount": chunk_data.get("tokens_evaluated", 0) + chunk_data.get("tokens_predicted", completion_tokens)
-                                    },
-                                    "modelVersion": MODEL_VERSION
-                                }
-                                if not logged["done"]:
-                                    response_time_ms = int(
-                                        (time.perf_counter() - request_started) * 1000
-                                    )
-                                    _record_evolution_interaction(
-                                        session_id=session_id,
-                                        turn_index=turn_index,
-                                        user_text=user_text,
-                                        response_text=accumulated_text,
-                                        image_paths=image_paths,
-                                        audio_paths=audio_paths,
-                                        response_time_ms=response_time_ms,
-                                        thought_signature=None,
-                                        feedback_data=feedback_data,
-                                        implicit_feedback_score=implicit_feedback_score,
-                                        retrieved_doc_ids=retrieved_doc_ids,
-                                        embedding=embedding,
-                                        metadata={
-                                            "model_name": model_name,
-                                            "thinking_level": thinking_level,
-                                            "finish_reason": "STOP",
-                                            "prompt_tokens": chunk_data.get("tokens_evaluated", 0),
-                                            "completion_tokens": chunk_data.get(
-                                                "tokens_predicted", completion_tokens
-                                            ),
-                                            "has_audio": bool(audio_data),
-                                            "has_image": bool(image_data),
-                                            "include_thoughts": True,
-                                        },
-                                    )
-                                    logged["done"] = True
-                                yield f"data: {json.dumps(final_response, ensure_ascii=False)}\n\n"
-
-            except Exception as e:
-                yield f"data: {json.dumps({'error': {'message': str(e)}})}\n\n"
-
-        # 返回 SSE 流
         return Response(
             generate_stream(),
-            mimetype='text/event-stream',
+            mimetype="text/event-stream",
             headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'
-            }
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     except Exception as e:

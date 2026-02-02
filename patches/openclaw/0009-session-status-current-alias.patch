@@ -1,0 +1,77 @@
+diff --git a/src/agents/openclaw-tools.session-status.test.ts b/src/agents/openclaw-tools.session-status.test.ts
+index 99bce1757..e17ebc493 100644
+--- a/src/agents/openclaw-tools.session-status.test.ts
++++ b/src/agents/openclaw-tools.session-status.test.ts
+@@ -106,6 +106,29 @@ describe("session_status tool", () => {
+     expect(details.statusText).not.toContain("OAuth/token status");
+   });
+ 
++  it("accepts sessionKey=current aliases for the current session", async () => {
++    loadSessionStoreMock.mockReset();
++    updateSessionStoreMock.mockReset();
++    loadSessionStoreMock.mockReturnValue({
++      main: {
++        sessionId: "s1",
++        updatedAt: 10,
++      },
++    });
++
++    const tool = createOpenClawTools({ agentSessionKey: "main" }).find(
++      (candidate) => candidate.name === "session_status",
++    );
++    expect(tool).toBeDefined();
++    if (!tool) {
++      throw new Error("missing session_status tool");
++    }
++
++    const result = await tool.execute("call-current", { sessionKey: "current" });
++    const details = result.details as { ok?: boolean; statusText?: string };
++    expect(details.ok).toBe(true);
++  });
++
+   it("errors for unknown session keys", async () => {
+     loadSessionStoreMock.mockReset();
+     updateSessionStoreMock.mockReset();
+diff --git a/src/agents/system-prompt.ts b/src/agents/system-prompt.ts
+index b1fde3732..7a2528305 100644
+--- a/src/agents/system-prompt.ts
++++ b/src/agents/system-prompt.ts
+@@ -64,7 +64,8 @@ function buildTimeSection(params: { userTimezone?: string }) {
+   return [
+     "## Current Date & Time",
+     `Time zone: ${params.userTimezone}`,
+-    "If you need the current date, time, or day of week, use the session_status tool.",
++    "Messages may include timestamps; prefer those for the current date/time/day-of-week.",
++    "If you still need the current date, time, or day of week (e.g. no timestamp), use session_status (omit sessionKey for current session).",
+     "",
+   ];
+ }
+diff --git a/src/agents/tools/session-status-tool.ts b/src/agents/tools/session-status-tool.ts
+index 798cf6bad..7d3298ab5 100644
+--- a/src/agents/tools/session-status-tool.ts
++++ b/src/agents/tools/session-status-tool.ts
+@@ -269,6 +269,24 @@ export function createSessionStatusTool(opts?: {
+       if (!requestedKeyRaw?.trim()) {
+         throw new Error("sessionKey required");
+       }
++      // Some models guess a "current" alias for the current session. Accept a few common
++      // variants so `session_status(sessionKey="current")` works the same as omitting
++      // sessionKey (which uses the caller's session).
++      if (requestedKeyParam) {
++        const normalized = requestedKeyParam
++          .trim()
++          .toLowerCase()
++          .replaceAll("-", "_")
++          .replace(/\s+/g, "_");
++        if (
++          normalized === "current" ||
++          normalized === "current_session" ||
++          normalized === "this" ||
++          normalized === "this_session"
++        ) {
++          requestedKeyRaw = opts?.agentSessionKey ?? requestedKeyRaw;
++        }
++      }
+ 
+       const requesterAgentId = resolveAgentIdFromSessionKey(
+         opts?.agentSessionKey ?? requestedKeyRaw,
