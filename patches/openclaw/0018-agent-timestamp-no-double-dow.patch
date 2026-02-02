@@ -1,0 +1,42 @@
+diff --git a/src/gateway/server-methods/agent-timestamp.test.ts b/src/gateway/server-methods/agent-timestamp.test.ts
+index 1b291ca8f..9da74920d 100644
+--- a/src/gateway/server-methods/agent-timestamp.test.ts
++++ b/src/gateway/server-methods/agent-timestamp.test.ts
+@@ -21,14 +21,13 @@ describe("injectTimestamp", () => {
+     expect(result).toMatch(/^\[Wed 2026-01-28 20:30 EST\] Is it the weekend\?$/);
+   });
+ 
+-  it("uses channel envelope format with DOW prefix", () => {
++  it("uses channel envelope format (DOW included by formatZonedTimestamp)", () => {
+     const now = new Date();
+     const expected = formatZonedTimestamp(now, "America/New_York");
+ 
+     const result = injectTimestamp("hello", { timezone: "America/New_York" });
+ 
+-    // DOW prefix + formatZonedTimestamp format
+-    expect(result).toBe(`[Wed ${expected}] hello`);
++    expect(result).toBe(`[${expected}] hello`);
+   });
+ 
+   it("always uses 24-hour format", () => {
+diff --git a/src/gateway/server-methods/agent-timestamp.ts b/src/gateway/server-methods/agent-timestamp.ts
+index 715262de2..c2ac6cac7 100644
+--- a/src/gateway/server-methods/agent-timestamp.ts
++++ b/src/gateway/server-methods/agent-timestamp.ts
+@@ -61,13 +61,9 @@ export function injectTimestamp(message: string, opts?: TimestampInjectionOption
+     return message;
+   }
+ 
+-  // 3-letter DOW: small models (8B) can't reliably derive day-of-week from
+-  // a date, and may treat a bare "Wed" as a typo. Costs ~1 token.
+-  const dow = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "short" }).format(
+-    now,
+-  );
+-
+-  return `[${dow} ${formatted}] ${message}`;
++  // formatZonedTimestamp already includes a compact 3-letter DOW prefix (via LingKong patch),
++  // so avoid double-stamping here.
++  return `[${formatted}] ${message}`;
+ }
+ 
+ /**

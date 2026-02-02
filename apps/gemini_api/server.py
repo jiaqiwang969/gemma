@@ -235,7 +235,14 @@ def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
 MODEL_VERSION = "gemma-3n-local"
 API_VERSION = "v1beta"
 DEFAULT_MAX_TOKENS = 2048
-DEFAULT_TEMPERATURE = 1.0
+# Offline assistants should strongly prefer accuracy and determinism.
+# Keep this configurable via env for power users.
+DEFAULT_TEMPERATURE = float(
+    os.environ.get(
+        "GEMINI_DEFAULT_TEMPERATURE",
+        "0.2" if is_offline_mode() else "1.0",
+    )
+)
 
 # Evolution logging (SQLite + memory index)
 GEMINI_API_HOME = Path.home() / ".gemma3n" / "gemini_api"

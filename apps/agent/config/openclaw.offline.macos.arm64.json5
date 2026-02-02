@@ -73,8 +73,9 @@
   canvasHost: { enabled: false },
 
   tools: {
-    // Keep full local tooling, but prohibit anything that can cause internet traffic.
-    profile: "full",
+    // Offline voice assistants are latency-sensitive. Default to a tiny tool surface
+    // (tools add prompt tokens even when unused); power users can switch profiles later.
+    profile: "minimal",
     deny: [
       "group:web",
       "browser",
