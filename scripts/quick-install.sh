@@ -1069,6 +1069,9 @@ start_openclaw() {
     export OPENCLAW_CONFIG_PATH="$OPENCLAW_CONFIG_PATH"
     export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
     export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+    # Default to a smaller system prompt for low-latency voice assistant UX.
+    # Users can override (e.g. export OPENCLAW_PROMPT_MODE=full).
+    export OPENCLAW_PROMPT_MODE="${OPENCLAW_PROMPT_MODE:-minimal}"
 
     nohup "$LINGKONG_HOME/bin/openclaw" gateway run --port "$OPENCLAW_PORT" --force --allow-unconfigured > "$LOG_DIR/openclaw.log" 2>&1 &
     echo $! > "$PID_DIR/openclaw.pid"
@@ -1319,6 +1322,7 @@ export OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-$LINGKONG_HOME/openclaw}"
 export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
 export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+export OPENCLAW_PROMPT_MODE="${OPENCLAW_PROMPT_MODE:-minimal}"
 
 for i in {1..120}; do
   if curl -s --connect-timeout 1 http://127.0.0.1:5001/health >/dev/null 2>&1; then
@@ -1566,6 +1570,7 @@ export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="${OPENCLAW_CONFIG_PATH:-$STATE_DIR/openclaw.json}"
 export OPENCLAW_OFFLINE="${OPENCLAW_OFFLINE:-1}"
 export LINGKONG_OFFLINE="${LINGKONG_OFFLINE:-1}"
+export OPENCLAW_PROMPT_MODE="${OPENCLAW_PROMPT_MODE:-minimal}"
 
 # Gateway token is required even for loopback-only deployments.
 # Keep it on disk so launchd/background runs can reconnect consistently.

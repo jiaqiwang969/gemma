@@ -1,0 +1,47 @@
+diff --git a/src/agents/pi-embedded-runner/compact.ts b/src/agents/pi-embedded-runner/compact.ts
+index ea50e2165..39199a342 100644
+--- a/src/agents/pi-embedded-runner/compact.ts
++++ b/src/agents/pi-embedded-runner/compact.ts
+@@ -315,7 +315,16 @@ export async function compactEmbeddedPiSessionDirect(
+       config: params.config,
+     });
+     const isDefaultAgent = sessionAgentId === defaultAgentId;
+-    const promptMode = isSubagentSessionKey(params.sessionKey) ? "minimal" : "full";
++    const promptMode: "full" | "minimal" | "none" = (() => {
++      if (isSubagentSessionKey(params.sessionKey)) {
++        return "minimal";
++      }
++      const envMode = process.env.OPENCLAW_PROMPT_MODE?.trim().toLowerCase();
++      if (envMode === "minimal" || envMode === "none" || envMode === "full") {
++        return envMode;
++      }
++      return "full";
++    })();
+     const docsPath = await resolveOpenClawDocsPath({
+       workspaceDir: effectiveWorkspace,
+       argv1: process.argv[1],
+diff --git a/src/agents/pi-embedded-runner/run/attempt.ts b/src/agents/pi-embedded-runner/run/attempt.ts
+index a839c10a0..f36bb292e 100644
+--- a/src/agents/pi-embedded-runner/run/attempt.ts
++++ b/src/agents/pi-embedded-runner/run/attempt.ts
+@@ -333,7 +333,19 @@ export async function runEmbeddedAttempt(
+       },
+     });
+     const isDefaultAgent = sessionAgentId === defaultAgentId;
+-    const promptMode = isSubagentSessionKey(params.sessionKey) ? "minimal" : "full";
++    const promptMode: "full" | "minimal" | "none" = (() => {
++      // Subagents should always run with reduced prompt context.
++      if (isSubagentSessionKey(params.sessionKey)) {
++        return "minimal";
++      }
++      // Allow deploy-time tuning for low-latency assistants (e.g. WhatsApp voice bots)
++      // without changing config schemas. Defaults to "full" for backwards compatibility.
++      const envMode = process.env.OPENCLAW_PROMPT_MODE?.trim().toLowerCase();
++      if (envMode === "minimal" || envMode === "none" || envMode === "full") {
++        return envMode;
++      }
++      return "full";
++    })();
+     const docsPath = await resolveOpenClawDocsPath({
+       workspaceDir: effectiveWorkspace,
+       argv1: process.argv[1],
