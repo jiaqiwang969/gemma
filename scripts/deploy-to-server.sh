@@ -127,9 +127,26 @@ maybe_download_node_runtime() {
 # 测试连接
 echo "▶ 测试服务器连接..."
 ensure_known_host
-if ! run_ssh "echo 'connected'" >/dev/null 2>&1; then
+set +e
+conn_out="$(run_ssh "echo 'connected'" 2>&1)"
+conn_rc=$?
+set -e
+if [[ "$conn_rc" -ne 0 ]]; then
     echo "❌ 无法连接服务器，请检查 SSH 配置"
-    if [[ "$DEPLOY_SSH_BATCH" == "1" ]]; then
+    if [[ -n "$conn_out" ]]; then
+        echo "$conn_out"
+    fi
+    if echo "$conn_out" | grep -qi "Permission denied"; then
+        echo ""
+        echo "提示: 服务器拒绝了当前 SSH key。请把下面这个公钥加入 ${SERVER} 的 ~/.ssh/authorized_keys："
+        if [[ -f "$HOME/.ssh/id_ed25519.pub" ]]; then
+            cat "$HOME/.ssh/id_ed25519.pub"
+        else
+            echo "未找到 $HOME/.ssh/id_ed25519.pub"
+        fi
+        echo ""
+        echo "（如果你需要用密码登录来添加 key，可临时运行：DEPLOY_SSH_BATCH=0 ./scripts/deploy-to-server.sh）"
+    elif [[ "$DEPLOY_SSH_BATCH" == "1" ]]; then
         echo "提示: 当前为非交互模式 (DEPLOY_SSH_BATCH=1)，请确保已配置免密 SSH key。"
         echo "      如需交互式密码登录，可运行: DEPLOY_SSH_BATCH=0 ./scripts/deploy-to-server.sh"
     fi
