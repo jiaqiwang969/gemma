@@ -1,0 +1,57 @@
+diff --git a/src/auto-reply/reply/dispatch-from-config.ts b/src/auto-reply/reply/dispatch-from-config.ts
+index 5a45d4b69..5e6cbd2c1 100644
+--- a/src/auto-reply/reply/dispatch-from-config.ts
++++ b/src/auto-reply/reply/dispatch-from-config.ts
+@@ -35,24 +35,18 @@ const isInboundAudioContext = (ctx: FinalizedMsgContext): boolean => {
+     return true;
+   }
+ 
+-  const body =
+-    typeof ctx.BodyForCommands === "string"
+-      ? ctx.BodyForCommands
+-      : typeof ctx.CommandBody === "string"
+-        ? ctx.CommandBody
+-        : typeof ctx.RawBody === "string"
+-          ? ctx.RawBody
+-          : typeof ctx.Body === "string"
+-            ? ctx.Body
+-            : "";
+-  const trimmed = body.trim();
+-  if (!trimmed) {
+-    return false;
+-  }
+-  if (AUDIO_PLACEHOLDER_RE.test(trimmed)) {
+-    return true;
+-  }
+-  return AUDIO_HEADER_RE.test(trimmed);
++  const bodies = [ctx.BodyForCommands, ctx.CommandBody, ctx.RawBody, ctx.Body]
++    .filter((value): value is string => typeof value === "string")
++    .map((value) => value.trim())
++    .filter(Boolean);
++
++  for (const trimmed of bodies) {
++    if (AUDIO_PLACEHOLDER_RE.test(trimmed) || AUDIO_HEADER_RE.test(trimmed)) {
++      return true;
++    }
++  }
++
++  return false;
+ };
+ 
+ const resolveSessionTtsAuto = (
+diff --git a/src/web/auto-reply/deliver-reply.ts b/src/web/auto-reply/deliver-reply.ts
+index f71edc664..b3d6a8e2b 100644
+--- a/src/web/auto-reply/deliver-reply.ts
++++ b/src/web/auto-reply/deliver-reply.ts
+@@ -94,6 +94,10 @@ export async function deliverWebReply(params: {
+ 
+   const remainingText = [...textChunks];
+-  const inboundHasAudio = Boolean(msg.mediaType && msg.mediaType.startsWith("audio/"));
++  const bodyTrimmed = (msg.body ?? "").trim();
++  const inboundHasAudio =
++    Boolean(msg.mediaType && msg.mediaType.startsWith("audio/")) ||
++    /^<media:audio>(\\s*\\([^)]*\\))?$/i.test(bodyTrimmed) ||
++    /^\\[Audio\\b/i.test(bodyTrimmed);
+   // When the user sends a WhatsApp voice note, prefer replying with *only* voice (no caption text),
+   // but keep a text fallback if the audio send fails.
+   let voiceOnlyFallbackText: string[] | null = null;
