@@ -1,0 +1,35 @@
+diff --git a/src/auto-reply/reply/get-reply-run.ts b/src/auto-reply/reply/get-reply-run.ts
+index a59f5e5d2..f0b0f0b0f 100644
+--- a/src/auto-reply/reply/get-reply-run.ts
++++ b/src/auto-reply/reply/get-reply-run.ts
+@@ -20,7 +20,8 @@ import {
+   type SessionEntry,
+   updateSessionStore,
+ } from "../../config/sessions.js";
+ import { logVerbose } from "../../globals.js";
++import { isOfflineMode } from "../../infra/offline.js";
+ import { clearCommandLane, getQueueSize } from "../../process/command-queue.js";
+ import { normalizeMainKey } from "../../routing/session-key.js";
+ import { isReasoningTagProvider } from "../../utils/provider-utils.js";
+@@ -213,6 +214,21 @@ export async function runPreparedReply(
+       text: "I didn't receive any text in your message. Please resend or add a caption.",
+     };
+   }
++  if (isOfflineMode()) {
++    const baseBodyLower = baseBodyTrimmed.toLowerCase();
++    const hasImageDescription = (ctx.MediaUnderstanding ?? []).some(
++      (item) => item.kind === "image.description" && (item.text ?? "").trim(),
++    );
++    // Offline mode prefers "vision -> short description -> chat" and avoids inlining base64
++    // images into session history. If we still see a raw placeholder, ask the user to resend.
++    if (baseBodyLower.includes("<media:image>") && !hasImageDescription) {
++      await typing.onReplyStart();
++      typing.cleanup();
++      return {
++        text: "我没看清图片，请再发一张清晰的。",
++      };
++    }
++  }
+   let prefixedBodyBase = await applySessionHints({
+     baseBody: baseBodyFinal,
+     abortedLastRun,

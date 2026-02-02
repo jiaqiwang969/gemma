@@ -575,16 +575,23 @@ write_openclaw_config_to() {
   },
 
   tools: {
-    profile: "full",
+    // Default to minimal tool surface for lower latency/token usage; power users can
+    // switch profiles later.
+    profile: "minimal",
     deny: ["group:web", "browser"],
     web: {
       search: { enabled: false },
       fetch: { enabled: false },
     },
     media: {
-      image: { enabled: true },
+      image: {
+        enabled: true,
+        // Keep the injected vision description short and in Chinese so the main reply stays Chinese.
+        maxChars: 400,
+        prompt: "请用中文一句话描述图片的主要内容；不要推测；不要解释。",
+      },
       video: { enabled: false },
-      audio: { enabled: true },
+      audio: { enabled: true, language: "zh" },
     },
     links: { enabled: false },
     agentToAgent: { enabled: true },
