@@ -38,7 +38,9 @@
             id: "gemini-3-pro-preview",
             name: "LingKong (Gemma 3n) via local Gemini API",
             reasoning: false,
-            // Supports offline image understanding when tools.media.image is enabled and LingKong has the vision mmproj.
+            // Supports offline image understanding (requires vision mmproj). In offline mode, OpenClaw's
+            // media-understanding runs first and injects a text description; the main chat prompt avoids
+            // inlining base64 media to keep session history small.
             // Inbound voice notes are handled via tools.media.audio (local STT) so audio input is not required here.
             input: ["text", "image"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -100,6 +102,16 @@
   messages: {
     // Keep replies clean (no "[openclaw]" prefix).
     responsePrefix: "",
+    // When the agent is busy and the user sends multiple WhatsApp messages,
+    // process them one-by-one (instead of bundling them into a single ambiguous prompt).
+    queue: {
+      byChannel: {
+        whatsapp: "followup",
+      },
+      debounceMsByChannel: {
+        whatsapp: 250,
+      },
+    },
     // Voice UX: if the user sends a voice message, reply with voice by default.
     // (Text messages still reply with text.)
     tts: {

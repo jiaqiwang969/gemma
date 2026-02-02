@@ -1,0 +1,212 @@
+diff --git a/src/media-understanding/runner.ts b/src/media-understanding/runner.ts
+index 6bbcf304b..af03a258d 100644
+--- a/src/media-understanding/runner.ts
++++ b/src/media-understanding/runner.ts
+@@ -645,6 +645,69 @@ function resolveWhisperCppOutputPath(args: string[]): string | null {
+   return `${outputBase}.txt`;
+ }
+ 
++async function maybeTranscodeAudioForWhisperCli(params: {
++  inputPath: string;
++  outputDir: string;
++  timeoutMs: number;
++}): Promise<{ path: string; didTranscode: boolean }> {
++  const ext = path.extname(params.inputPath).toLowerCase();
++  if (ext === ".wav") {
++    return { path: params.inputPath, didTranscode: false };
++  }
++
++  const wavPath = path.join(params.outputDir, "whisper-input.wav");
++  const transcodeTimeoutMs = Math.min(90_000, Math.max(10_000, params.timeoutMs));
++
++  // On macOS, `afconvert` is available out of the box and supports Opus/OGG from WhatsApp.
++  if (process.platform === "darwin") {
++    try {
++      await runExec(
++        "afconvert",
++        ["-f", "WAVE", "-d", "LEI16@16000", "-c", "1", params.inputPath, wavPath],
++        { timeoutMs: transcodeTimeoutMs, maxBuffer: CLI_OUTPUT_MAX_BUFFER },
++      );
++      if (await fileExists(wavPath)) {
++        return { path: wavPath, didTranscode: true };
++      }
++    } catch {
++      // Fall through to ffmpeg if present.
++    }
++  }
++
++  // Fallback: use ffmpeg if installed (best-effort for non-macOS environments).
++  if (await hasBinary("ffmpeg")) {
++    try {
++      await runExec(
++        "ffmpeg",
++        [
++          "-y",
++          "-nostdin",
++          "-hide_banner",
++          "-loglevel",
++          "error",
++          "-i",
++          params.inputPath,
++          "-ar",
++          "16000",
++          "-ac",
++          "1",
++          "-f",
++          "wav",
++          wavPath,
++        ],
++        { timeoutMs: transcodeTimeoutMs, maxBuffer: CLI_OUTPUT_MAX_BUFFER },
++      );
++      if (await fileExists(wavPath)) {
++        return { path: wavPath, didTranscode: true };
++      }
++    } catch {
++      // Best-effort: leave input unchanged.
++    }
++  }
++
++  return { path: params.inputPath, didTranscode: false };
++}
++
+ async function resolveCliOutput(params: {
+   command: string;
+   args: string[];
+@@ -1023,8 +1086,18 @@ async function runCliEntry(params: {
+     timeoutMs,
+   });
+   const outputDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-media-cli-"));
+-  const mediaPath = pathResult.path;
+-  const outputBase = path.join(outputDir, path.parse(mediaPath).name);
++  const rawMediaPath = pathResult.path;
++  let mediaPath = rawMediaPath;
++  const commandId = commandBase(command);
++  if (capability === "audio" && commandId === "whisper-cli") {
++    const converted = await maybeTranscodeAudioForWhisperCli({
++      inputPath: rawMediaPath,
++      outputDir,
++      timeoutMs,
++    });
++    mediaPath = converted.path;
++  }
++  const outputBase = path.join(outputDir, path.parse(rawMediaPath).name);
+ 
+   const templCtx: MsgContext = {
+     ...ctx,
+diff --git a/src/media-understanding/runner.whisper-cli-transcode.test.ts b/src/media-understanding/runner.whisper-cli-transcode.test.ts
+new file mode 100644
+index 000000000..46c5fdbba
+--- /dev/null
++++ b/src/media-understanding/runner.whisper-cli-transcode.test.ts
+@@ -0,0 +1,111 @@
++import fs from "node:fs/promises";
++import os from "node:os";
++import path from "node:path";
++import { afterEach, describe, expect, it, vi } from "vitest";
++import type { MsgContext } from "../auto-reply/templating.js";
++import type { OpenClawConfig } from "../config/config.js";
++
++const runExecMock = vi.fn();
++
++vi.mock("../process/exec.js", () => ({
++  runExec: (...args: unknown[]) => runExecMock(...args),
++}));
++
++const envSnapshot = () => ({
++  PATH: process.env.PATH,
++  WHISPER_CPP_MODEL: process.env.WHISPER_CPP_MODEL,
++  OPENCLAW_OFFLINE: process.env.OPENCLAW_OFFLINE,
++});
++
++const restoreEnv = (snapshot: ReturnType<typeof envSnapshot>) => {
++  process.env.PATH = snapshot.PATH;
++  process.env.WHISPER_CPP_MODEL = snapshot.WHISPER_CPP_MODEL;
++  process.env.OPENCLAW_OFFLINE = snapshot.OPENCLAW_OFFLINE;
++};
++
++describe("whisper-cli input transcoding", () => {
++  afterEach(() => {
++    runExecMock.mockReset();
++  });
++
++  it("transcodes non-wav audio before invoking whisper-cli", async () => {
++    // afconvert is macOS-only; the production code falls back to ffmpeg on other platforms.
++    if (process.platform !== "darwin") {
++      return;
++    }
++
++    const snapshot = envSnapshot();
++    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-whisper-transcode-"));
++    try {
++      const binDir = path.join(tmpDir, "bin");
++      await fs.mkdir(binDir, { recursive: true });
++      const whisperBin = path.join(binDir, "whisper-cli");
++      await fs.writeFile(whisperBin, "#!/usr/bin/env bash\nexit 0\n");
++      await fs.chmod(whisperBin, 0o755);
++      process.env.PATH = `${binDir}:${snapshot.PATH ?? ""}`;
++
++      const modelPath = path.join(tmpDir, "model.bin");
++      await fs.writeFile(modelPath, "model");
++      process.env.WHISPER_CPP_MODEL = modelPath;
++      process.env.OPENCLAW_OFFLINE = "1";
++
++      const oggPath = path.join(tmpDir, "input.ogg");
++      await fs.writeFile(oggPath, Buffer.from("OggS"));
++
++      let lastWhisperMediaArg: string | null = null;
++      runExecMock.mockImplementation(async (command: string, args: string[]) => {
++        if (command === "afconvert") {
++          const out = args.at(-1);
++          if (out) {
++            await fs.writeFile(out, Buffer.from("RIFF"));
++          }
++          return { stdout: "", stderr: "" };
++        }
++        if (command === "whisper-cli") {
++          lastWhisperMediaArg = args.at(-1) ?? null;
++          const ofIndex = args.findIndex((v) => v === "-of" || v === "--output-file");
++          const outputBase = ofIndex >= 0 ? args[ofIndex + 1] : undefined;
++          if (outputBase) {
++            await fs.writeFile(`${outputBase}.txt`, "请问今天是星期几\n");
++          }
++          return { stdout: "", stderr: "" };
++        }
++        return { stdout: "", stderr: "" };
++      });
++
++      const { buildProviderRegistry, createMediaAttachmentCache, normalizeMediaAttachments, runCapability } =
++        await import("./runner.js");
++
++      const ctx: MsgContext = {
++        Body: "<media:audio>",
++        MediaPath: oggPath,
++        MediaType: "audio/ogg; codecs=opus",
++      };
++      const media = normalizeMediaAttachments(ctx);
++      const cache = createMediaAttachmentCache(media);
++
++      const cfg = {
++        tools: { media: { audio: { enabled: true } } },
++      } as unknown as OpenClawConfig;
++
++      try {
++        const result = await runCapability({
++          capability: "audio",
++          cfg,
++          ctx,
++          attachments: cache,
++          media,
++          providerRegistry: buildProviderRegistry({}),
++        });
++        expect(result.outputs[0]?.text).toBe("请问今天是星期几");
++        expect(lastWhisperMediaArg).toMatch(/\.wav$/);
++      } finally {
++        await cache.cleanup();
++      }
++    } finally {
++      restoreEnv(snapshot);
++      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
++    }
++  });
++});
++

@@ -551,7 +551,8 @@ write_openclaw_config_to() {
             id: "gemini-3-pro-preview",
             name: "LingKong (Gemma 3n) via local Gemini API",
             reasoning: false,
-            // Enable offline image understanding (requires the vision mmproj + llama-mtmd-cli).
+            // Enable offline image understanding (requires vision mmproj). In offline mode, OpenClaw
+            // uses media-understanding to inject a text description and avoids inlining base64 media.
             input: ["text", "image"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 32768,
@@ -591,6 +592,11 @@ write_openclaw_config_to() {
 
   messages: {
     responsePrefix: "",
+    // When busy, process WhatsApp backlog one-by-one (avoid "collected" prompts).
+    queue: {
+      byChannel: { whatsapp: "followup" },
+      debounceMsByChannel: { whatsapp: 250 },
+    },
     tts: {
       auto: "inbound",
       provider: "macos-say",

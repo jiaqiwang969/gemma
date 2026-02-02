@@ -1,0 +1,36 @@
+diff --git a/src/media-understanding/apply.ts b/src/media-understanding/apply.ts
+index 000439a0d..fd8ce5be9 100644
+--- a/src/media-understanding/apply.ts
++++ b/src/media-understanding/apply.ts
+@@ -407,6 +407,18 @@ export async function applyMediaUnderstanding(params: {
+         ctx.RawBody = originalUserText;
+       }
+       ctx.MediaUnderstanding = [...(ctx.MediaUnderstanding ?? []), ...outputs];
++
++      // Offline UX/perf: once media-understanding has produced a text description for images,
++      // drop the raw media pointers so the main agent prompt doesn't inline base64 payloads
++      // into session history.
++      if (outputs.some((output) => output.kind === "image.description")) {
++        ctx.MediaPath = undefined;
++        ctx.MediaPaths = undefined;
++        ctx.MediaUrl = undefined;
++        ctx.MediaUrls = undefined;
++        ctx.MediaType = undefined;
++        ctx.MediaTypes = undefined;
++      }
+     }
+     if (fileBlocks.length > 0) {
+       ctx.Body = appendFileBlocks(ctx.Body, fileBlocks);
+diff --git a/src/media-understanding/runner.ts b/src/media-understanding/runner.ts
+index 6bbcf304b..9f9f62ae6 100644
+--- a/src/media-understanding/runner.ts
++++ b/src/media-understanding/runner.ts
+@@ -1206,7 +1206,7 @@ export async function runCapability(params: {
+   // Skip image understanding when the primary model supports vision natively.
+   // The image will be injected directly into the model context instead.
+   const activeProvider = params.activeModel?.provider?.trim();
+-  if (capability === "image" && activeProvider) {
++  if (capability === "image" && activeProvider && !isOfflineMode()) {
+     const catalog = await loadModelCatalog({ config: cfg });
+     const entry = findModelInCatalog(catalog, activeProvider, params.activeModel?.model ?? "");
+     if (modelSupportsVision(entry)) {

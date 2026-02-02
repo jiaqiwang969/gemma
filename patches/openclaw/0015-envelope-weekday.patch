@@ -1,0 +1,52 @@
+diff --git a/src/auto-reply/envelope.test.ts b/src/auto-reply/envelope.test.ts
+index ecb35f0dd..44d249c8e 100644
+--- a/src/auto-reply/envelope.test.ts
++++ b/src/auto-reply/envelope.test.ts
+@@ -39,7 +39,7 @@ describe("formatAgentEnvelope", () => {
+ 
+     process.env.TZ = originalTz;
+ 
+-    expect(body).toMatch(/\[WebChat 2025-01-01 19:04 [^\]]+\] hello/);
++    expect(body).toMatch(/\[WebChat [A-Za-z]{3} 2025-01-01 19:04 [^\]]+\] hello/);
+   });
+ 
+   it("formats timestamps in UTC when configured", () => {
+@@ -68,7 +68,7 @@ describe("formatAgentEnvelope", () => {
+       body: "hello",
+     });
+ 
+-    expect(body).toMatch(/\[WebChat 2025-01-02 04:04 [^\]]+\] hello/);
++    expect(body).toMatch(/\[WebChat [A-Za-z]{3} 2025-01-02 04:04 [^\]]+\] hello/);
+   });
+ 
+   it("omits timestamps when configured", () => {
+diff --git a/src/auto-reply/envelope.ts b/src/auto-reply/envelope.ts
+index 96b81b6b0..5562ffce7 100644
+--- a/src/auto-reply/envelope.ts
++++ b/src/auto-reply/envelope.ts
+@@ -106,6 +106,7 @@ function formatUtcTimestamp(date: Date): string {
+ export function formatZonedTimestamp(date: Date, timeZone?: string): string | undefined {
+   const parts = new Intl.DateTimeFormat("en-US", {
+     timeZone,
++    weekday: "short",
+     year: "numeric",
+     month: "2-digit",
+     day: "2-digit",
+@@ -115,6 +116,7 @@ export function formatZonedTimestamp(date: Date, timeZone?: string): string | un
+     timeZoneName: "short",
+   }).formatToParts(date);
+   const pick = (type: string) => parts.find((part) => part.type === type)?.value;
++  const weekday = pick("weekday")?.trim();
+   const yyyy = pick("year");
+   const mm = pick("month");
+   const dd = pick("day");
+@@ -127,7 +129,8 @@ export function formatZonedTimestamp(date: Date, timeZone?: string): string | un
+   if (!yyyy || !mm || !dd || !hh || !min) {
+     return undefined;
+   }
+-  return `${yyyy}-${mm}-${dd} ${hh}:${min}${tz ? ` ${tz}` : ""}`;
++  const weekdayPrefix = weekday ? `${weekday} ` : "";
++  return `${weekdayPrefix}${yyyy}-${mm}-${dd} ${hh}:${min}${tz ? ` ${tz}` : ""}`;
+ }
+ 
+ function formatTimestamp(
