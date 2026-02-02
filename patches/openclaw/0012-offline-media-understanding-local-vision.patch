@@ -1,0 +1,43 @@
+diff --git a/src/media-understanding/runner.ts b/src/media-understanding/runner.ts
+index 021fda3d9..c0a5a07dc 100644
+--- a/src/media-understanding/runner.ts
++++ b/src/media-understanding/runner.ts
+@@ -24,7 +24,7 @@ import {
+ } from "../agents/model-catalog.js";
+ import { applyTemplate } from "../auto-reply/templating.js";
+ import { logVerbose, shouldLogVerbose } from "../globals.js";
+-import { isOfflineMode } from "../infra/offline.js";
++import { isLocalhostUrl, isOfflineMode } from "../infra/offline.js";
+ import { runExec } from "../process/exec.js";
+ import { MediaAttachmentCache, normalizeAttachments, selectAttachments } from "./attachments.js";
+ import {
+@@ -506,10 +506,27 @@ async function resolveAutoEntries(params: {
+     // For audio, still allow truly-local STT (sherpa/whisper-cpp) if installed.
+     if (params.capability === "audio") {
+       const localAudio = await resolveLocalAudioEntry();
+-      if (localAudio) {
+-        return [localAudio];
++      return localAudio ? [localAudio] : [];
++    }
++
++    // For images/videos, allow using the active reply model as long as it's bound to a
++    // localhost baseUrl (LingKong). This keeps image understanding available offline
++    // without falling back to remote APIs or CLIs.
++    const activeEntry = await resolveActiveModelEntry(params);
++    if (activeEntry?.type === "provider") {
++      const providerId = (activeEntry.provider ?? "").trim();
++      if (providerId) {
++        const providerCfg =
++          (params.cfg.models?.providers as Record<string, { baseUrl?: string }> | undefined)?.[
++            providerId
++          ];
++        const baseUrl = typeof providerCfg?.baseUrl === "string" ? providerCfg.baseUrl : "";
++        if (baseUrl && isLocalhostUrl(baseUrl)) {
++          return [activeEntry];
++        }
+       }
+     }
++
+     return [];
+   }
+ 
