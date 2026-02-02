@@ -1,0 +1,58 @@
+diff --git a/src/gateway/protocol/schema/agent.ts b/src/gateway/protocol/schema/agent.ts
+index 9e11a6341..da4b0c7be 100644
+--- a/src/gateway/protocol/schema/agent.ts
++++ b/src/gateway/protocol/schema/agent.ts
+@@ -15,7 +15,8 @@ export const AgentEventSchema = Type.Object(
+ export const SendParamsSchema = Type.Object(
+   {
+     to: NonEmptyString,
+-    message: NonEmptyString,
++    // Message body is optional when sending media-only payloads; callers may pass "".
++    message: Type.String(),
+     mediaUrl: Type.Optional(Type.String()),
+     mediaUrls: Type.Optional(Type.Array(Type.String())),
+     gifPlayback: Type.Optional(Type.Boolean()),
+diff --git a/src/gateway/server-methods/send.ts b/src/gateway/server-methods/send.ts
+index 246ee27e2..a0dd06d85 100644
+--- a/src/gateway/server-methods/send.ts
++++ b/src/gateway/server-methods/send.ts
+@@ -86,7 +86,20 @@ export const sendHandlers: GatewayRequestHandlers = {
+     }
+     const to = request.to.trim();
+     const message = request.message.trim();
+-    const mediaUrls = Array.isArray(request.mediaUrls) ? request.mediaUrls : undefined;
++    const mediaUrl =
++      typeof request.mediaUrl === "string" && request.mediaUrl.trim().length
++        ? request.mediaUrl.trim()
++        : undefined;
++    const mediaUrlsRaw = Array.isArray(request.mediaUrls) ? request.mediaUrls : [];
++    const mediaUrls =
++      mediaUrlsRaw.length > 0
++        ? mediaUrlsRaw.map((v) => String(v).trim()).filter((v) => v.length > 0)
++        : undefined;
++    const hasMedia = Boolean(mediaUrl || (mediaUrls?.length ?? 0) > 0);
++    if (!message && !hasMedia) {
++      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "message or media is required"));
++      return;
++    }
+     const channelInput = typeof request.channel === "string" ? request.channel : undefined;
+     const normalizedChannel = channelInput ? normalizeChannelId(channelInput) : null;
+     if (channelInput && !normalizedChannel) {
+@@ -132,7 +145,7 @@ export const sendHandlers: GatewayRequestHandlers = {
+         }
+         const outboundDeps = context.deps ? createOutboundSendDeps(context.deps) : undefined;
+         const mirrorPayloads = normalizeReplyPayloadsForDelivery([
+-          { text: message, mediaUrl: request.mediaUrl, mediaUrls },
++          { text: message, mediaUrl, mediaUrls },
+         ]);
+         const mirrorText = mirrorPayloads
+           .map((payload) => payload.text)
+@@ -170,7 +183,7 @@ export const sendHandlers: GatewayRequestHandlers = {
+           channel: outboundChannel,
+           to: resolved.to,
+           accountId,
+-          payloads: [{ text: message, mediaUrl: request.mediaUrl, mediaUrls }],
++          payloads: [{ text: message, mediaUrl, mediaUrls }],
+           gifPlayback: request.gifPlayback,
+           deps: outboundDeps,
+           mirror: providedSessionKey

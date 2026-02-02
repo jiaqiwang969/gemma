@@ -1,0 +1,76 @@
+diff --git a/src/auto-reply/reply/normalize-reply.ts b/src/auto-reply/reply/normalize-reply.ts
+index ec4441684..8853dfed5 100644
+--- a/src/auto-reply/reply/normalize-reply.ts
++++ b/src/auto-reply/reply/normalize-reply.ts
+@@ -20,6 +20,59 @@ export type NormalizeReplyOptions = {
+   onSkip?: (reason: NormalizeReplySkipReason) => void;
+ };
+ 
++function normalizeWeekdayOnlyReply(text: string): string {
++  const trimmed = text.trim();
++  if (!trimmed) {
++    return text;
++  }
++
++  // Canonicalize common Chinese variants.
++  const zh = new Map<string, string>([
++    ["周一", "星期一"],
++    ["周二", "星期二"],
++    ["周三", "星期三"],
++    ["周四", "星期四"],
++    ["周五", "星期五"],
++    ["周六", "星期六"],
++    ["周日", "星期日"],
++    ["周天", "星期日"],
++    ["星期天", "星期日"],
++  ]);
++  const mappedZh = zh.get(trimmed);
++  if (mappedZh) {
++    return mappedZh;
++  }
++
++  // If the entire reply is just an English weekday (with optional punctuation),
++  // map it to the Chinese weekday form expected by the WhatsApp voice assistant.
++  const bare = trimmed.toLowerCase().replace(/[^a-z]/g, "");
++  const en = new Map<string, string>([
++    ["mon", "星期一"],
++    ["monday", "星期一"],
++    ["tue", "星期二"],
++    ["tues", "星期二"],
++    ["tuesday", "星期二"],
++    ["wed", "星期三"],
++    ["wednesday", "星期三"],
++    ["thu", "星期四"],
++    ["thur", "星期四"],
++    ["thurs", "星期四"],
++    ["thursday", "星期四"],
++    ["fri", "星期五"],
++    ["friday", "星期五"],
++    ["sat", "星期六"],
++    ["saturday", "星期六"],
++    ["sun", "星期日"],
++    ["sunday", "星期日"],
++  ]);
++  const mappedEn = en.get(bare);
++  if (mappedEn) {
++    return mappedEn;
++  }
++
++  return text;
++}
++
+ export function normalizeReplyPayload(
+   payload: ReplyPayload,
+   opts: NormalizeReplyOptions = {},
+@@ -76,6 +129,11 @@ export function normalizeReplyPayload(
+     text = enrichedPayload.text;
+   }
+ 
++  if (text) {
++    text = normalizeWeekdayOnlyReply(text);
++    enrichedPayload.text = text;
++  }
++
+   // Resolve template variables in responsePrefix if context is provided
+   const effectivePrefix = opts.responsePrefixContext
+     ? resolveResponsePrefixTemplate(opts.responsePrefix, opts.responsePrefixContext)

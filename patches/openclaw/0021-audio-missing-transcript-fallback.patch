@@ -1,0 +1,19 @@
+diff --git a/src/auto-reply/reply/get-reply-run.ts b/src/auto-reply/reply/get-reply-run.ts
+index a3dc5e9e0..a59f5e5d2 100644
+--- a/src/auto-reply/reply/get-reply-run.ts
++++ b/src/auto-reply/reply/get-reply-run.ts
+@@ -199,6 +199,14 @@ export async function runPreparedReply(
+     ((baseBodyTrimmedRaw.length === 0 && rawBodyTrimmed.length > 0) || isBareNewOrReset);
+   const baseBodyFinal = isBareSessionReset ? BARE_SESSION_RESET_PROMPT : baseBody;
+   const baseBodyTrimmed = baseBodyFinal.trim();
++  const transcript = ctx.Transcript?.trim() ?? "";
++  // When a WhatsApp voice note arrives, inbound text is often just "<media:audio>".
++  // If transcription failed (or hasn't run), do not invoke the model; ask the user to resend.
++  if (baseBodyTrimmed.toLowerCase().includes("<media:audio>") && !transcript) {
++    await typing.onReplyStart();
++    typing.cleanup();
++    return { text: "我没听清，请再发一次语音。" };
++  }
+   if (!baseBodyTrimmed) {
+     await typing.onReplyStart();
+     logVerbose("Inbound body empty after normalization; skipping agent run");
