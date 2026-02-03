@@ -1482,6 +1482,43 @@ service_status() {
     echo "  $LOG_DIR/openclaw.launchd.log"
 }
 
+warmup_models() {
+    # Warm up the local vision path so the first inbound image doesn't pay the cold-start cost.
+    # Runs fully offline (localhost only). Disable with: LINGKONG_WARMUP_MODELS=0
+    if [[ "${LINGKONG_WARMUP_MODELS:-1}" != "1" ]]; then
+        return 0
+    fi
+    if ! curl -s --connect-timeout 1 "http://localhost:5001/health" >/dev/null 2>&1; then
+        return 0
+    fi
+    # 1x1 PNG (base64), enough to trigger the vision codepath.
+    local png_b64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+XkT8AAAAASUVORK5CYII="
+    local req_json
+    req_json="$(mktemp "${TMPDIR:-/tmp}/lingkong-warmup.XXXXXX.json")"
+    cat >"$req_json" <<EOF
+{
+  "contents": [
+    {
+      "role": "user",
+      "parts": [
+        { "text": "请用中文一句话描述图片内容；只输出答案。" },
+        { "inlineData": { "mimeType": "image/png", "data": "${png_b64}" } }
+      ]
+    }
+  ],
+  "generationConfig": {
+    "maxOutputTokens": 32,
+    "temperature": 0.0,
+    "thinkingConfig": { "thinkingLevel": "none", "includeThoughts": false }
+  }
+}
+EOF
+    curl -sS -m 120 "http://localhost:5001/v1beta/models/gemini-3-pro-preview:generateContent" \
+        -H 'Content-Type: application/json' \
+        -d "@$req_json" >/dev/null 2>&1 || true
+    rm -f "$req_json" >/dev/null 2>&1 || true
+}
+
 # 主函数
 case "${1:-start}" in
     start|up)
@@ -1489,6 +1526,7 @@ case "${1:-start}" in
         echo -e "${CYAN}🐉 启动 灵空 AI...${NC}"
         echo ""
         start_gemini_api
+        warmup_models >/dev/null 2>&1 &
         start_webui
         start_openclaw || true
         echo ""
@@ -1506,6 +1544,10 @@ case "${1:-start}" in
         if [[ "$(uname)" == "Darwin" ]]; then
             open "http://localhost:$WEBUI_PORT" 2>/dev/null || true
         fi
+        ;;
+    warmup)
+        warmup_models
+        echo -e "${GREEN}[完成]${NC} 模型预热完成"
         ;;
     stop|down)
         echo -e "${CYAN}停止 灵空 AI...${NC}"
