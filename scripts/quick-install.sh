@@ -588,7 +588,7 @@ write_openclaw_config_to() {
         enabled: true,
         // Keep the injected vision description short and in Chinese so the main reply stays Chinese.
         maxChars: 400,
-        prompt: "请用中文一句话概括图片内容，尽量包含主要物体和场景；不要推测；不要解释。",
+        prompt: "请用中文一句话描述图片内容；必须用中文，不要英文；尽量包含主要物体和场景；不要推测；不要解释；不要换行。",
       },
       video: { enabled: false },
       audio: { enabled: true, language: "zh" },
