@@ -1,18 +1,46 @@
 diff --git a/src/auto-reply/reply/get-reply-run.ts b/src/auto-reply/reply/get-reply-run.ts
-index a3dc5e9e0..a59f5e5d2 100644
+index a3dc5e9e0..86f2387f1 100644
 --- a/src/auto-reply/reply/get-reply-run.ts
 +++ b/src/auto-reply/reply/get-reply-run.ts
-@@ -199,6 +199,14 @@ export async function runPreparedReply(
+@@ -199,6 +199,42 @@ export async function runPreparedReply(
      ((baseBodyTrimmedRaw.length === 0 && rawBodyTrimmed.length > 0) || isBareNewOrReset);
    const baseBodyFinal = isBareSessionReset ? BARE_SESSION_RESET_PROMPT : baseBody;
    const baseBodyTrimmed = baseBodyFinal.trim();
 +  const transcript = ctx.Transcript?.trim() ?? "";
-+  // When a WhatsApp voice note arrives, inbound text is often just "<media:audio>".
++  const baseBodyLower = baseBodyTrimmed.toLowerCase();
++  const hasAudioPlaceholder = baseBodyLower.includes("<media:audio>");
++  const hasAudioHeader = baseBodyLower.includes("[audio");
++  // When a WhatsApp voice note arrives, inbound text is often just "<media:audio>" or an [Audio] header.
 +  // If transcription failed (or hasn't run), do not invoke the model; ask the user to resend.
-+  if (baseBodyTrimmed.toLowerCase().includes("<media:audio>") && !transcript) {
++  if ((hasAudioPlaceholder || hasAudioHeader) && !transcript) {
 +    await typing.onReplyStart();
 +    typing.cleanup();
 +    return { text: "我没听清，请再发一次语音。" };
++  }
++
++  // Fastpath: avoid LLM guessing for the very common "今天星期几" query.
++  // Use the machine's local clock (offline) and return ONLY the weekday in Chinese.
++  const weekdayQuery = (transcript || rawBodyTrimmed || baseBodyTrimmed).replace(/\s+/g, "");
++  const isRelativeDayQuery =
++    weekdayQuery.includes("明天") ||
++    weekdayQuery.includes("后天") ||
++    weekdayQuery.includes("昨天") ||
++    weekdayQuery.includes("前天") ||
++    weekdayQuery.includes("下周") ||
++    weekdayQuery.includes("下星期") ||
++    weekdayQuery.includes("下礼拜");
++  const isWeekdayTodayQuery =
++    weekdayQuery.includes("今天星期几") ||
++    weekdayQuery.includes("今天是星期几") ||
++    weekdayQuery === "星期几" ||
++    weekdayQuery === "星期几?" ||
++    weekdayQuery === "星期几？";
++  if (isWeekdayTodayQuery && !isRelativeDayQuery) {
++    const day = new Date().getDay(); // 0=Sun, 1=Mon, ...
++    const weekday = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][day] ?? "星期日";
++    await typing.onReplyStart();
++    typing.cleanup();
++    return { text: weekday };
 +  }
    if (!baseBodyTrimmed) {
      await typing.onReplyStart();

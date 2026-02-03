@@ -1,8 +1,8 @@
 diff --git a/src/web/inbound/media.ts b/src/web/inbound/media.ts
-index b99721ffb..19634e5f9 100644
+index b99721ffb..0b46362ea 100644
 --- a/src/web/inbound/media.ts
 +++ b/src/web/inbound/media.ts
-@@ -33,8 +33,30 @@ export async function downloadInboundMedia(
+@@ -33,18 +33,53 @@ export async function downloadInboundMedia(
      return undefined;
    }
    try {
@@ -12,34 +12,61 @@ index b99721ffb..19634e5f9 100644
 +    const baseMsg = msg as WAMessage;
 +    const normalizedMsg = { ...(msg as WAMessage), message: message as proto.IMessage } as WAMessage;
 +
-+    try {
-+      const buffer = await downloadMediaMessage(
-+        baseMsg,
-+        "buffer",
-+        {},
-+        {
-+          reuploadRequest: sock.updateMediaMessage,
-+          logger: sock.logger,
-+        },
-+      );
-+      return { buffer, mimetype };
-+    } catch (err) {
-+      // Retry with normalized message content (handles ephemeral/view-once wrappers).
-+      logVerbose(`downloadMediaMessage failed (raw): ${String(err)}`);
++    // WhatsApp media downloads can be flaky right after connect/resume; retry quickly.
++    const retryDelaysMs = [0, 700] as const;
++    for (const delayMs of retryDelaysMs) {
++      if (delayMs > 0) {
++        await new Promise((resolve) => setTimeout(resolve, delayMs));
++      }
++
++      try {
++        const buffer = await downloadMediaMessage(
++          baseMsg,
++          "buffer",
++          {},
++          {
++            reuploadRequest: sock.updateMediaMessage,
++            logger: sock.logger,
++          },
++        );
++        return { buffer, mimetype };
++      } catch (err) {
++        logVerbose(`downloadMediaMessage failed (raw): ${String(err)}`);
++      }
++
++      try {
++        const buffer = await downloadMediaMessage(
++          normalizedMsg,
++          "buffer",
++          {},
++          {
++            reuploadRequest: sock.updateMediaMessage,
++            logger: sock.logger,
++          },
++        );
++        return { buffer, mimetype };
++      } catch (err) {
++        logVerbose(`downloadMediaMessage failed (normalized): ${String(err)}`);
++      }
 +    }
 +
-     const buffer = await downloadMediaMessage(
++    return undefined;
++  } catch (err) {
++    logVerbose(`downloadMediaMessage failed (unexpected): ${String(err)}`);
++    return undefined;
++  }
+-    const buffer = await downloadMediaMessage(
 -      msg as WAMessage,
-+      normalizedMsg,
-       "buffer",
-       {},
-       {
-@@ -44,7 +66,7 @@ export async function downloadInboundMedia(
-     );
-     return { buffer, mimetype };
-   } catch (err) {
+-      "buffer",
+-      {},
+-      {
+-        reuploadRequest: sock.updateMediaMessage,
+-        logger: sock.logger,
+-      },
+-    );
+-    return { buffer, mimetype };
+-  } catch (err) {
 -    logVerbose(`downloadMediaMessage failed: ${String(err)}`);
-+    logVerbose(`downloadMediaMessage failed (normalized): ${String(err)}`);
-     return undefined;
-   }
+-    return undefined;
+-  }
  }
